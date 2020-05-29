@@ -1,22 +1,19 @@
-#include <ttkIcoSphereFromPoint.h>
-
-#include <vtkDataObject.h> // For port info
-#include <vtkObjectFactory.h> // for new macro
+#include <ttkIcosphereFromPoint.h>
 
 #include <vtkPointData.h>
 #include <vtkPointSet.h>
 #include <vtkUnstructuredGrid.h>
 
-vtkStandardNewMacro(ttkIcoSphereFromPoint);
+vtkStandardNewMacro(ttkIcosphereFromPoint);
 
-ttkIcoSphereFromPoint::ttkIcoSphereFromPoint() : ttkIcoSphere() {
-  this->setDebugMsgPrefix("IcoSphereFromPoint");
+ttkIcosphereFromPoint::ttkIcosphereFromPoint() : ttkIcosphere() {
+  this->setDebugMsgPrefix("IcosphereFromPoint");
   this->SetNumberOfInputPorts(1);
 }
-ttkIcoSphereFromPoint::~ttkIcoSphereFromPoint() {
+ttkIcosphereFromPoint::~ttkIcosphereFromPoint() {
 }
 
-int ttkIcoSphereFromPoint::FillInputPortInformation(int port,
+int ttkIcosphereFromPoint::FillInputPortInformation(int port,
                                                     vtkInformation *info) {
   if(port == 0)
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPointSet");
@@ -48,7 +45,7 @@ int copyArrayData(vtkDataArray *oldArray,
   return 1;
 }
 
-int ttkIcoSphereFromPoint::RequestData(vtkInformation *request,
+int ttkIcosphereFromPoint::RequestData(vtkInformation *request,
                                        vtkInformationVector **inputVector,
                                        vtkInformationVector *outputVector) {
   auto input = vtkPointSet::GetData(inputVector[0], 0);
@@ -56,7 +53,7 @@ int ttkIcoSphereFromPoint::RequestData(vtkInformation *request,
 
   // compute spheres
   int status
-    = this->ttkIcoSphere::RequestData(request, inputVector, outputVector);
+    = this->ttkIcosphere::RequestData(request, inputVector, outputVector);
   if(!status)
     return 0;
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ServerManagerConfiguration>
     <ProxyGroup name="filters">
-        <SourceProxy name="IcoSphereFromPoint" class="ttkIcoSphereFromPoint" label="TTK IcoSphereFromPoint">
-            <Documentation long_help="TTK filter that creates an IcoSphereFromPoint" short_help="TTK filter that creates an IcoSphereFromPoint">
+        <SourceProxy name="IcosphereFromPoint" class="ttkIcosphereFromPoint" label="TTK IcosphereFromPoint">
+            <Documentation long_help="TTK filter that creates an IcosphereFromPoint" short_help="TTK filter that creates an IcosphereFromPoint">
                 This filter creates for every vertex of an input vtkPointSet an IcoSphere with a specified number of subdivisions and radius.
             </Documentation>
 
