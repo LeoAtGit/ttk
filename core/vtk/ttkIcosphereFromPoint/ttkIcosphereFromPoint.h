@@ -1,5 +1,5 @@
 /// \ingroup vtk
-/// \class ttkIcoSphereFromPoint
+/// \class ttkIcosphereFromPoint
 /// \author Jonas Lukasczyk (jl@jluk.de)
 /// \date 01.09.2019
 ///
@@ -12,12 +12,12 @@
 #pragma once
 
 // VTK Module
-#include <ttkIcoSphereFromPointModule.h>
+#include <ttkIcosphereFromPointModule.h>
 
 // VTK Includes
-#include <ttkIcoSphere.h>
+#include <ttkIcosphere.h>
 
-class TTKICOSPHEREFROMPOINT_EXPORT ttkIcoSphereFromPoint : public ttkIcoSphere {
+class TTKICOSPHEREFROMPOINT_EXPORT ttkIcosphereFromPoint : public ttkIcosphere {
 
 private:
   bool CopyPointData{true};
@@ -26,12 +26,12 @@ public:
   vtkSetMacro(CopyPointData, bool);
   vtkGetMacro(CopyPointData, bool);
 
-  static ttkIcoSphereFromPoint *New();
-  vtkTypeMacro(ttkIcoSphereFromPoint, ttkIcoSphere);
+  static ttkIcosphereFromPoint *New();
+  vtkTypeMacro(ttkIcosphereFromPoint, ttkIcosphere);
 
 protected:
-  ttkIcoSphereFromPoint();
-  ~ttkIcoSphereFromPoint();
+  ttkIcosphereFromPoint();
+  ~ttkIcosphereFromPoint();
 
   int FillInputPortInformation(int port, vtkInformation *info) override;
 
