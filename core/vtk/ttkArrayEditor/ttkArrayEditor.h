@@ -24,10 +24,12 @@ private:
   std::string DataString{""};
   std::vector<std::pair<int, std::string>> TargetArraySelection;
 
+  // TODO: Switch to SetInputArrayToProcess interface
   std::string TargetArrayName;
   std::pair<int, std::string> TargetArray;
   int TargetArrayType;
   int TargetArrayIndexation[2];
+  bool ReplaceExistingArrays{true};
 
   std::vector<std::pair<int, std::string>> SourceArraySelection;
 
@@ -41,6 +43,8 @@ public:
   vtkGetMacro(TargetAttributeType, int);
   vtkSetMacro(DataString, std::string);
   vtkGetMacro(DataString, std::string);
+  vtkSetMacro(ReplaceExistingArrays, bool);
+  vtkGetMacro(ReplaceExistingArrays, bool);
 
   int SetTargetArray(
     int idx, int port, int connection, int arrayAssociation, const char *name) {

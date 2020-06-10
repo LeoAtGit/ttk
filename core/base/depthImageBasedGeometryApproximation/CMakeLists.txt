@@ -5,4 +5,4 @@ ttk_add_base_library(depthImageBasedGeometryApproximation
     DepthImageBasedGeometryApproximation.h
   DEPENDS
     triangulation
-  )
+)

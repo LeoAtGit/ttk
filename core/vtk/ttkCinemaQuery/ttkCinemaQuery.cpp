@@ -31,19 +31,17 @@ int ttkCinemaQuery::FillInputPortInformation(int port, vtkInformation *info) {
   if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkTable");
     info->Set(vtkAlgorithm::INPUT_IS_REPEATABLE(), 1);
-
     return 1;
   }
-  return 1;
+  return 0;
 }
 
 int ttkCinemaQuery::FillOutputPortInformation(int port, vtkInformation *info) {
   if(port == 0) {
     info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkTable");
-  } else {
-    return 0;
+    return 1;
   }
-  return 1;
+  return 0;
 }
 
 int ttkCinemaQuery::RequestData(vtkInformation *request,

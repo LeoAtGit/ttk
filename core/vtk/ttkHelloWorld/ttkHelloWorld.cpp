@@ -40,12 +40,11 @@ ttkHelloWorld::~ttkHelloWorld() {
  * the port information.
  */
 int ttkHelloWorld::FillInputPortInformation(int port, vtkInformation *info) {
-  if(port == 0)
+  if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
-  else
-    return 0;
-
-  return 1;
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -64,12 +63,11 @@ int ttkHelloWorld::FillInputPortInformation(int port, vtkInformation *info) {
  * initialize empty output data objects based on this information.
  */
 int ttkHelloWorld::FillOutputPortInformation(int port, vtkInformation *info) {
-  if(port == 0)
+  if(port == 0) {
     info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
-  else
-    return 0;
-
-  return 1;
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -137,6 +135,8 @@ int ttkHelloWorld::RequestData(vtkInformation *request,
   //       call SetInputArrayToProcess (see HelloWorld.xml file).
   //
   vtkDataArray *inputArray = this->GetInputArrayToProcess(0, inputVector);
+  if(!inputArray)
+    return 0;
 
   // Create an output array that has the same data type as the input array
   // Note: vtkSmartPointers are well documented
@@ -164,7 +164,7 @@ int ttkHelloWorld::RequestData(vtkInformation *request,
                          (TTK_TT *)triangulation->getData())));
 
   // On error cancel filter execution
-  if(status == 0)
+  if(!status)
     return 0;
 
   // Get output vtkDataSet (which was already instantiated based on the
