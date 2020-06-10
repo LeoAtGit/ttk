@@ -28,7 +28,7 @@ int ttkMeshGraph::FillInputPortInformation(int port, vtkInformation *info) {
 }
 
 int ttkMeshGraph::FillOutputPortInformation(int port, vtkInformation *info) {
-  if(port == 0)
+  if(port == 0){
     info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkUnstructuredGrid");
     return 1;
   }

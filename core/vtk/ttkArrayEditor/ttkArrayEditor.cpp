@@ -31,17 +31,17 @@ int ttkArrayEditor::FillInputPortInformation(int port, vtkInformation *info) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataObject");
     if(port == 1)
       info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 1);
-  } else
-    return 0;
-  return 1;
+    return 1;
+  }
+  return 0;
 }
 
 int ttkArrayEditor::FillOutputPortInformation(int port, vtkInformation *info) {
-  if(port == 0)
+  if(port == 0){
     info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
-  else
-    return 0;
-  return 1;
+    return 1;
+  }
+  return 0;
 }
 
 // =============================================================================
