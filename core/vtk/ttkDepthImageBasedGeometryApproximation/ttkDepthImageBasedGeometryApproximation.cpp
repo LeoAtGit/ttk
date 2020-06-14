@@ -1,7 +1,7 @@
 #include <ttkDepthImageBasedGeometryApproximation.h>
 #include <ttkUtils.h>
 
-#include <vtkObjectFactory.h> // for new macro
+#include <vtkInformation.h>
 
 #include <vtkCellData.h>
 #include <vtkImageData.h>

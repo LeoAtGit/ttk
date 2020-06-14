@@ -1,6 +1,8 @@
 #include <ttkLDistanceMatrix.h>
 #include <ttkUtils.h>
 
+#include <vtkDataSet.h>
+
 #include <vtkDataArray.h>
 #include <vtkDoubleArray.h>
 #include <vtkInformationVector.h>

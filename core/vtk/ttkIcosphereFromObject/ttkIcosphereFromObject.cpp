@@ -1,7 +1,9 @@
 #include <ttkIcosphereFromObject.h>
 
 #include <vtkDataSet.h>
+#include <vtkInformation.h>
 #include <vtkMultiBlockDataSet.h>
+#include <vtkObjectFactory.h>
 
 vtkStandardNewMacro(ttkIcosphereFromObject);
 

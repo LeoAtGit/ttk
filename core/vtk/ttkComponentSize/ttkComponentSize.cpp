@@ -1,6 +1,8 @@
 #include <ttkComponentSize.h>
 #include <ttkUtils.h>
 
+#include <vtkInformation.h>
+
 #include <vtkCellData.h>
 #include <vtkConnectivityFilter.h>
 #include <vtkDoubleArray.h>

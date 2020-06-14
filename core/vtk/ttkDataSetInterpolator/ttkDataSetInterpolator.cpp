@@ -1,4 +1,7 @@
 #include <ttkDataSetInterpolator.h>
+#include <vtkDataSet.h>
+#include <vtkInformation.h>
+#include <vtkObjectFactory.h>
 #include <vtkPointData.h>
 #include <vtkProbeFilter.h>
 
@@ -65,7 +68,7 @@ int ttkDataSetInterpolator::RequestData(vtkInformation *request,
 
   const size_t numberOfArrays = inputPointData->GetNumberOfArrays();
   for(size_t i = 0; i < numberOfArrays; ++i)
-    outputPointData->AddArray(inputPointData->GetArray(i));
+    outputPointData->AddArray(inputPointData->GetAbstractArray(i));
 
   this->printMsg(
     "Computing " + std::to_string(target->GetNumberOfPoints()) + " locations",

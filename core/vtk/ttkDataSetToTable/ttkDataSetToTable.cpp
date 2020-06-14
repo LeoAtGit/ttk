@@ -1,5 +1,8 @@
 #include <ttkDataSetToTable.h>
 
+#include <vtkInformation.h>
+#include <vtkObjectFactory.h>
+
 #include <vtkCellData.h>
 #include <vtkDataSet.h>
 #include <vtkPointData.h>

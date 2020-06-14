@@ -1,8 +1,6 @@
 #include <ttkArrayEditor.h>
 
-#include <vtkDataObject.h> // For port info
-#include <vtkObjectFactory.h> // for new macro
-
+#include <vtkInformation.h>
 #include <vtkInformationVector.h>
 
 #include <vtkAbstractArray.h>
@@ -37,7 +35,7 @@ int ttkArrayEditor::FillInputPortInformation(int port, vtkInformation *info) {
 }
 
 int ttkArrayEditor::FillOutputPortInformation(int port, vtkInformation *info) {
-  if(port == 0){
+  if(port == 0) {
     info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
     return 1;
   }

@@ -3,6 +3,9 @@
 #include <vtkFloatArray.h>
 #include <vtkPointData.h>
 
+#include <vtkDataSet.h>
+#include <vtkInformation.h>
+
 #include <array>
 
 vtkStandardNewMacro(ttkTextureMapFromField);

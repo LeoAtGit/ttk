@@ -1,5 +1,7 @@
 #include <ttkIcospheresFromPoints.h>
 
+#include <vtkInformation.h>
+#include <vtkObjectFactory.h>
 #include <vtkPointData.h>
 #include <vtkPointSet.h>
 #include <vtkUnstructuredGrid.h>
@@ -10,16 +12,17 @@ ttkIcospheresFromPoints::ttkIcospheresFromPoints() : ttkIcosphere() {
   this->setDebugMsgPrefix("IcospheresFromPoints");
   this->SetNumberOfInputPorts(1);
 }
+
 ttkIcospheresFromPoints::~ttkIcospheresFromPoints() {
 }
 
 int ttkIcospheresFromPoints::FillInputPortInformation(int port,
                                                       vtkInformation *info) {
-  if(port == 0)
+  if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPointSet");
-  else
-    return 0;
-  return 1;
+    return 1;
+  }
+  return 0;
 }
 
 template <typename VTK_TT>

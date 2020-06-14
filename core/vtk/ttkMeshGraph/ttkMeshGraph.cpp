@@ -5,6 +5,7 @@
 #include <vtkCellData.h>
 #include <vtkDataSetTriangleFilter.h>
 #include <vtkIdTypeArray.h>
+#include <vtkInformation.h>
 #include <vtkInformationVector.h>
 #include <vtkPointData.h>
 #include <vtkUnstructuredGrid.h>
@@ -20,7 +21,7 @@ ttkMeshGraph::~ttkMeshGraph() {
 }
 
 int ttkMeshGraph::FillInputPortInformation(int port, vtkInformation *info) {
-  if(port == 0){
+  if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkUnstructuredGrid");
     return 1;
   }
@@ -28,7 +29,7 @@ int ttkMeshGraph::FillInputPortInformation(int port, vtkInformation *info) {
 }
 
 int ttkMeshGraph::FillOutputPortInformation(int port, vtkInformation *info) {
-  if(port == 0){
+  if(port == 0) {
     info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkUnstructuredGrid");
     return 1;
   }

@@ -3,6 +3,7 @@
 #include <vtkCompositeDataPipeline.h>
 #include <vtkDoubleArray.h>
 #include <vtkFieldData.h>
+#include <vtkInformation.h>
 #include <vtkInformationVector.h>
 #include <vtkMultiBlockDataSet.h>
 

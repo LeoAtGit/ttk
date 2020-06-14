@@ -1,22 +1,20 @@
 #include <ttkAlgorithm.h>
 #include <ttkUtils.h>
 
-#include <vtkDataObject.h> // For output port info
-#include <vtkObjectFactory.h> // for new macro
-
-#include <vtkSmartPointer.h>
-
-#include <vtkInformationVector.h>
-
+#include <vtkCommand.h>
 #include <vtkCompositeDataPipeline.h>
-
 #include <vtkFieldData.h>
-
 #include <vtkImageData.h>
+#include <vtkInformation.h>
+#include <vtkInformationIntegerKey.h>
+#include <vtkInformationVector.h>
 #include <vtkMultiBlockDataSet.h>
 #include <vtkPolyData.h>
+#include <vtkSmartPointer.h>
 #include <vtkTable.h>
 #include <vtkUnstructuredGrid.h>
+
+#include <Triangulation.h>
 
 // TODO: use a class here to add semantic about the four fields
 // and clear access methods

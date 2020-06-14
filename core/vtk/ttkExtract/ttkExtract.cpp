@@ -1,13 +1,13 @@
 #include <ttkExtract.h>
 
-#include <vtkDataObject.h> // For port info
-#include <vtkObjectFactory.h> // for new macro
+#include <vtkInformationVector.h>
 
 #include <vtkMultiBlockDataSet.h>
 #include <vtkSmartPointer.h>
 #include <vtkTable.h>
 #include <vtkUnstructuredGrid.h>
 
+#include <vtkInformation.h>
 #include <vtkInformationVector.h>
 #include <vtkStreamingDemandDrivenPipeline.h>
 
@@ -457,8 +457,9 @@ int ttkExtract::ExtractGeometry(vtkDataObject *output,
 
   // Input Topo
   size_t nInCells = inputAsUG->GetNumberOfCells();
-  vtkIdType *inConnectivityList = inputAsUG->GetCells()->GetPointer();
-
+  //   vtkIdType *inConnectivityList = inputAsUG->GetCells()->GetPointer();
+  vtkIdType *inConnectivityList
+    = inputAsUG->GetCells()->GetData()->GetPointer(0);
   // Marked Points:
   //     -1: does not satisfy condition
   //     -2: satisfies condition

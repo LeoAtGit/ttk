@@ -20,6 +20,7 @@
 
 // VTK Includes
 #include <ttkAlgorithm.h>
+#include <vtkSmartPointer.h>
 
 class vtkMultiBlockDataSet;
 

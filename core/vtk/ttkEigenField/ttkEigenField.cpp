@@ -7,6 +7,9 @@
 #include <vtkPointData.h>
 #include <vtkSmartPointer.h>
 
+#include <vtkDataSet.h>
+#include <vtkInformation.h>
+
 #ifndef TTK_ENABLE_KAMIKAZE
 #define TTK_ABORT_KK(COND, MSG, RET) \
   if(COND) {                         \

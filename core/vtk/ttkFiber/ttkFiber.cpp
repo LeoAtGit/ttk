@@ -1,6 +1,7 @@
 #include <ttkFiber.h>
 
 #include <vtkContourFilter.h>
+#include <vtkInformation.h>
 
 vtkStandardNewMacro(ttkFiber);
 

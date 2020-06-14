@@ -1,6 +1,6 @@
 #include <ttkPlanarGraphLayout.h>
 
-#include <vtkObjectFactory.h> // for new macro
+#include <vtkInformation.h>
 
 #include <ttkMacros.h>
 

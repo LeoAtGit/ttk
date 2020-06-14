@@ -1,8 +1,7 @@
 #include <ttkGridLayout.h>
 
-#include <vtkInformationVector.h>
-#include <vtkObjectFactory.h> // for new macro
-
+#include <vtkInformation.h>
+#include <vtkObjectFactory.h>
 #include <vtkSmartPointer.h>
 
 #include <vtkDataSet.h>
@@ -23,19 +22,19 @@ ttkGridLayout::~ttkGridLayout() {
 }
 
 int ttkGridLayout::FillInputPortInformation(int port, vtkInformation *info) {
-  if(port == 0)
+  if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkMultiBlockDataSet");
-  else
-    return 0;
-  return 1;
+    return 1;
+  }
+  return 0;
 }
 
 int ttkGridLayout::FillOutputPortInformation(int port, vtkInformation *info) {
-  if(port == 0)
+  if(port == 0) {
     info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
-  else
-    return 0;
-  return 1;
+    return 1;
+  }
+  return 0;
 }
 
 int ttkGridLayout::CopyObject(vtkDataObject *output, vtkDataObject *input) {

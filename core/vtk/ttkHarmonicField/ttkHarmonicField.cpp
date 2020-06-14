@@ -3,6 +3,7 @@
 // VTK includes
 #include <vtkDoubleArray.h>
 #include <vtkFloatArray.h>
+#include <vtkInformation.h>
 #include <vtkObjectFactory.h>
 #include <vtkPointData.h>
 #include <vtkSmartPointer.h>

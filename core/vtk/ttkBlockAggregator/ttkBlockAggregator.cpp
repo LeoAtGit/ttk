@@ -1,5 +1,8 @@
 #include <ttkBlockAggregator.h>
 
+#include <vtkInformation.h>
+#include <vtkSmartPointer.h>
+
 #include <vtkDoubleArray.h>
 #include <vtkFieldData.h>
 #include <vtkInformationVector.h>

@@ -19,17 +19,23 @@
 
 // VTK Includes
 #include <vtkAlgorithm.h>
-#include <vtkCellArray.h>
-#include <vtkCommand.h>
-#include <vtkDataSet.h>
-#include <vtkInformation.h>
-#include <vtkInformationIntegerKey.h>
-#include <vtkPoints.h>
-#include <vtkSmartPointer.h>
+
+// Forward declarations
+class vtkCellArray;
+class vtkCommand;
+class vtkDataSet;
+class vtkInformation;
+class vtkInformationIntegerKey;
+class vtkPoints;
+namespace ttk {
+  class Triangulation;
+}
+
+template <typename A>
+class vtkSmartPointer;
 
 // Base Includes
 #include <Debug.h>
-#include <Triangulation.h>
 
 class TTKALGORITHM_EXPORT ttkAlgorithm : public vtkAlgorithm,
                                          virtual public ttk::Debug {

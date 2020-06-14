@@ -8,6 +8,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkUnstructuredGrid.h>
 
+#include <vtkInformation.h>
+
 vtkStandardNewMacro(ttkIcosphere);
 
 ttkIcosphere::ttkIcosphere() {

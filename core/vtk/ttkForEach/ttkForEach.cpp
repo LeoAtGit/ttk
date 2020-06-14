@@ -1,5 +1,8 @@
 #include <ttkForEach.h>
 
+#include <vtkDataSet.h>
+#include <vtkInformation.h>
+
 #include <vtkCellData.h>
 #include <vtkDoubleArray.h>
 #include <vtkFieldData.h>

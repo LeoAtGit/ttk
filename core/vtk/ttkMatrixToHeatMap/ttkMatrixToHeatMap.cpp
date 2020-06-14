@@ -1,4 +1,5 @@
 #include <ttkMatrixToHeatMap.h>
+#include <vtkCellArray.h>
 #include <vtkCellData.h>
 #include <vtkDataArray.h>
 #include <vtkDataObject.h>
