@@ -297,7 +297,14 @@ else()
   endif()
 endif()
 
-
+find_package(WEBSOCKETPP)
+if(NOT WEBSOCKETPP_FOUND)
+  option(TTK_ENABLE_WEBSOCKETIO "Enable WebSocketIO module" OFF)
+  message(STATUS "WebSocketPP not found, disabling WebSocketIO module in TTK.")
+else()
+  option(TTK_ENABLE_WEBSOCKETIO "Enable WebSocketIO module" ON)
+  message(STATUS "WebSocketPP found, enabling WebSocketIO module in TTK.")
+endif()
 
 if (TTK_ENABLE_MPI)
   find_package(MPI REQUIRED)

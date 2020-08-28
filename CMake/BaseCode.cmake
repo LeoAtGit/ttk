@@ -185,6 +185,11 @@ function(ttk_set_compile_options library)
     target_compile_definitions(${library} PUBLIC TTK_ENABLE_64BIT_IDS)
   endif()
 
+  if (TTK_ENABLE_WEBSOCKETIO)
+    target_compile_definitions(${library} PUBLIC TTK_ENABLE_WEBSOCKETIO)
+    target_include_directories(${library} PUBLIC ${WEBSOCKETPP_INCLUDE_DIR})
+  endif()
+
 endfunction()
 
 # Used by basedCode requiring "Python.h"
@@ -234,7 +239,7 @@ function(ttk_find_python)
     option(TTK_ENABLE_SCIKIT_LEARN "Enable scikit-learn support" ON)
   else()
     option(TTK_ENABLE_SCIKIT_LEARN "Enable scikit-learn support" OFF)
-    message(STATUS 
+    message(STATUS
       "Improper python/numpy setup. Disabling sckikit-learn support in TTK.")
   endif()
 
