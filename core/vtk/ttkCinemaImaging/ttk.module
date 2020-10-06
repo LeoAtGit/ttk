@@ -2,7 +2,12 @@ NAME
   ttkCinemaImaging
 SOURCES
   ttkCinemaImaging.cpp
+  ttkCinemaImagingEmbree.cpp
+  ttkCinemaImagingVTK.cpp
 HEADERS
   ttkCinemaImaging.h
+  ttkCinemaImagingEmbree.h
+  ttkCinemaImagingVTK.h
 DEPENDS
+  cinemaImaging
   ttkAlgorithm

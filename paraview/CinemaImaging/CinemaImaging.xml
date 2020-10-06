@@ -11,9 +11,10 @@
                     <Group name="filters" />
                 </ProxyGroupDomain>
                 <DataTypeDomain name="input_type">
-                    <DataType value="vtkDataObject" />
+                    <DataType value="vtkUnstructuredGrid" />
+                    <DataType value="vtkPolyData" />
                 </DataTypeDomain>
-                <Documentation>vtkDataObject to be depicted.</Documentation>
+                <Documentation>Triangulation that is going to be depicted.</Documentation>
             </InputProperty>
             <InputProperty name="SamplingGrid" port_index="1" command="SetInputConnection">
                 <ProxyGroupDomain name="groups">
@@ -27,6 +28,13 @@
             </InputProperty>
 
             <!-- Global Options -->
+            <IntVectorProperty name="Backend" label="Backend" command="SetBackend" number_of_elements="1" default_values="0">
+                <EnumerationDomain name="enum">
+                    <Entry value="0" text="VTK OpenGL"/>
+                    <Entry value="1" text="Embree"/>
+                </EnumerationDomain>
+                <Documentation>Rendering Backend</Documentation>
+            </IntVectorProperty>
             <IntVectorProperty name="Resolution" label="Resolution" command="SetResolution" number_of_elements="2" default_values="256 256">
                 <Documentation>Image Resolution</Documentation>
             </IntVectorProperty>
@@ -86,6 +94,7 @@
 
             <!-- Groups -->
             <PropertyGroup panel_widget="Line" label="Output Options">
+                <Property name="Backend" />
                 <Property name="Resolution" />
                 <Property name="GenerateScalarImages" />
             </PropertyGroup>

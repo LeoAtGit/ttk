@@ -26,11 +26,38 @@
 // TTK includes
 #include <ttkAlgorithm.h>
 
+class vtkPolyData;
+class vtkMultiBlockDataSet;
+class vtkPointSet;
+class vtkFieldData;
+class vtkImageData;
+class vtkPointData;
+
 class TTKCINEMAIMAGING_EXPORT ttkCinemaImaging : public ttkAlgorithm {
+
+private:
+  int Backend{0};
+
+  int Resolution[2]{256, 256};
+  bool GenerateScalarImages{true};
+
+  int CamProjectionMode{0};
+  bool CamFocusAuto{true};
+  double CamFocus[3]{0, 0, 0};
+  bool CamNearFarAuto{true};
+  double CamNearFar[2]{0, 1};
+
+  bool CamHeightAuto{true};
+  double CamHeight{1};
+  double CamAngle{90};
 
 public:
   static ttkCinemaImaging *New();
   vtkTypeMacro(ttkCinemaImaging, ttkAlgorithm);
+
+  // Backend
+  vtkSetMacro(Backend, int);
+  vtkGetMacro(Backend, int);
 
   // General Settings
   vtkSetVector2Macro(Resolution, int);
@@ -62,9 +89,33 @@ public:
   vtkSetMacro(CamAngle, double);
   vtkGetMacro(CamAngle, double);
 
+  static int addFieldDataArray(
+    vtkFieldData* fd,
+    vtkDataArray* array,
+    int tupelIdx,
+    std::string name = ""
+  );
+
+  static int addAllFieldDataArrays(
+    vtkPointSet* inputGrid,
+    vtkImageData* image,
+    int tupelIdx
+  );
+
+  static int computeDirFromFocus(
+    vtkPointSet* inputGrid
+  );
+
+  static int ensureGridData(
+    vtkPointData* fd,
+    std::string name,
+    int nTuples,
+    const std::vector<double>& defaultValues
+  );
+
 protected:
   ttkCinemaImaging();
-  ~ttkCinemaImaging() override;
+  ~ttkCinemaImaging();
 
   int FillInputPortInformation(int port, vtkInformation *info) override;
   int FillOutputPortInformation(int port, vtkInformation *info) override;
@@ -72,18 +123,4 @@ protected:
   int RequestData(vtkInformation *request,
                   vtkInformationVector **inputVector,
                   vtkInformationVector *outputVector) override;
-
-private:
-  int Resolution[2]{256, 256};
-  bool GenerateScalarImages{true};
-
-  int CamProjectionMode{0};
-  bool CamFocusAuto{true};
-  double CamFocus[3]{0, 0, 0};
-  bool CamNearFarAuto{true};
-  double CamNearFar[2]{0, 1};
-
-  bool CamHeightAuto{true};
-  double CamHeight{1};
-  double CamAngle{90};
 };
