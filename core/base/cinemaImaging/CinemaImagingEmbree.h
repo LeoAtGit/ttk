@@ -9,10 +9,10 @@
 
 #pragma once
 
-#if TTK_ENABLE_EMBREE
 #include <Debug.h>
+
+#if TTK_ENABLE_EMBREE
 #include <string>
-#include <vector>
 #include <embree3/rtcore.h>
 #include <limits>
 #endif
