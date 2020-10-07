@@ -185,7 +185,7 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
         inputObject,
         aInputGrid
       );
-  } if(this->Backend==1) {
+  } else if(this->Backend==1) {
     ttk::ttkCinemaImagingEmbree renderer;
     renderer.setDebugLevel(this->debugLevel_);
     renderer.setThreadNumber(this->threadNumber_);
