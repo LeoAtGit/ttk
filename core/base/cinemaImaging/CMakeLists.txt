@@ -7,5 +7,4 @@ ttk_add_base_library(cinemaImaging
     CinemaImagingNative.h
   DEPENDS
     triangulation
-    embree
 )
