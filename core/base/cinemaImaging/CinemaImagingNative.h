@@ -31,16 +31,17 @@ namespace ttk {
       const IT* connectivityList,
 
       const double resolution[2],
-      const double camCenter[3],
-      const double camDir[3],
+      const double camPos[3],
+      const double camDirRaw[3],
       const double camUp[3],
-      const double& camHeight
+      const double& camHeight,
+      const bool& orthographicProjection
     ) const;
   };
 };
 
 template<typename IT>
-int CinemaImagingNative::renderImage(
+int ttk::CinemaImagingNative::renderImage(
   float* depthBuffer,
   unsigned int* primitiveIds,
   float* barycentricCoordinates,
@@ -51,20 +52,21 @@ int CinemaImagingNative::renderImage(
   const IT* connectivityList,
 
   const double resolution[2],
-  const double camCenter[3],
-  const double camDir[3],
+  const double camPos[3],
+  const double camDirRaw[3],
   const double camUp[3],
-  const double& camHeight
+  const double& camHeight,
+  const bool& orthographicProjection
 ) const {
   ttk::Timer timer;
+  int resX = resolution[0];
+  int resY = resolution[1];
+
   this->printMsg(
-      "Rendering Image ("+std::string(orthographicProjection ? "O" : "P")+ "|"+std::to_string(resolution[0])+"x"+std::to_string(resolution[1])+")",
+      "Rendering Image ("+std::string(orthographicProjection ? "O" : "P")+ "|"+std::to_string(resX)+"x"+std::to_string(resY)+")",
       0,0,this->threadNumber_,
       ttk::debug::LineMode::REPLACE
   );
-
-  struct RTCIntersectContext context;
-  rtcInitIntersectContext(&context);
 
   // Compute camera size
   const double aspect = resolution[0] / resolution[1];
@@ -113,8 +115,6 @@ int CinemaImagingNative::renderImage(
                               - camUpTrue[2] * camHeightWorldHalf};
 
   float nan = std::numeric_limits<float>::quiet_NaN();
-  int resX = resolution[0];
-  int resY = resolution[1];
   size_t pixelIndex = 0;
   size_t bcIndex = 0;
 
@@ -145,12 +145,19 @@ int CinemaImagingNative::renderImage(
           // barycentricCoordinates[bcIndex++] = rayhit.hit.u;
           // barycentricCoordinates[bcIndex++] = rayhit.hit.v;
         } else {
-          // depthBuffer[pixelIndex] = nan;
+           depthBuffer[pixelIndex] = nan;
           // primitiveIds[pixelIndex] = CinemaImagingEmbree::INVALID_ID;
           // barycentricCoordinates[bcIndex++] = nan;
           // barycentricCoordinates[bcIndex++] = nan;
         }
         pixelIndex++;
       }
-    }
+  }
+
+  this->printMsg(
+      "Rendering Image ("+std::string(orthographicProjection ? "O" : "P")+ "|"+std::to_string(resX)+"x"+std::to_string(resY)+")",
+      1,timer.getElapsedTime(),this->threadNumber_
+  );
+
+  return 1;
 };

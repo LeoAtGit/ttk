@@ -13,6 +13,10 @@
 #include <vtkDoubleArray.h>
 #include <ttkUtils.h>
 
+#include <ttkCinemaImagingVTK.h>
+#include <ttkCinemaImagingEmbree.h>
+#include <ttkCinemaImagingNative.h>
+
 vtkStandardNewMacro(ttkCinemaImaging);
 
 ttkCinemaImaging::ttkCinemaImaging() {
@@ -46,23 +50,6 @@ int ttkCinemaImaging::FillOutputPortInformation(int port,
   return 0;
 };
 
-int addGobalArray(
-    std::vector<vtkSmartPointer<vtkAbstractArray>> &globalArrays,
-    std::string name,
-    size_t nValues,
-    const double *values
-){
-    auto array = vtkSmartPointer<vtkDoubleArray>::New();
-    array->SetName(name.data());
-    array->SetNumberOfComponents(nValues);
-    array->SetNumberOfTuples(1);
-    for(size_t i = 0; i < nValues; i++)
-        array->SetValue(i, values[i]);
-    globalArrays.push_back(array);
-
-    return 1;
-};
-
 int ttkCinemaImaging::RequestData(vtkInformation *request,
                                   vtkInformationVector **inputVector,
                                   vtkInformationVector *outputVector) {
@@ -74,6 +61,9 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
   auto inputObject = vtkPointSet::GetData(inputVector[0]);
   auto inputGrid = vtkPointSet::GetData(inputVector[1]);
   auto outputImages = vtkMultiBlockDataSet::GetData(outputVector);
+
+  if(!inputObject || !inputGrid)
+    return 0;
 
   // ---------------------------------------------------------------------------
   // Parameters
@@ -117,7 +107,7 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
       double gDiameter = std::max(dxG, std::max(dyG, dzG));
       defaultNearFar[0] = gDiameter / 2 - dO / 2;
       // Ensure that camNear is not 0
-      defaultNearFar[0] = std::max(defaultNearFar[0], 0.00001);
+      defaultNearFar[0] = std::max(defaultNearFar[0], 0.01);
       defaultNearFar[1] = defaultNearFar[0] + dO;
     }
 
@@ -131,23 +121,23 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
   aInputGrid->ShallowCopy(inputGrid);
   int n = aInputGrid->GetNumberOfPoints();
   auto aInputGridPD = aInputGrid->GetPointData();
-  ttkCinemaImaging::ensureGridData( aInputGridPD, "Resolution", n, {(double)this->Resolution[0],(double)this->Resolution[1]} );
-  ttkCinemaImaging::ensureGridData( aInputGridPD, "ProjectionMode", n, {(double)this->CamProjectionMode} );
-  if(aInputGridPD->HasArray("CamDir"))
-    ttkCinemaImaging::ensureGridData( aInputGridPD, "CamDir", n, {0,0,-1} );
+  ttkCinemaImaging::EnsureGridData( aInputGridPD, "Resolution", n, {(double)this->Resolution[0],(double)this->Resolution[1]} );
+  ttkCinemaImaging::EnsureGridData( aInputGridPD, "ProjectionMode", n, {(double)this->CamProjectionMode} );
+  if(aInputGridPD->HasArray("CamDirection"))
+    ttkCinemaImaging::EnsureGridData( aInputGridPD, "CamDirection", n, {0,0,-1} );
   else {
-    ttkCinemaImaging::ensureGridData( aInputGridPD, "CamFocus", n, defaultFocus );
-    ttkCinemaImaging::computeDirFromFocus(aInputGrid);
+    ttkCinemaImaging::EnsureGridData( aInputGridPD, "CamFocus", n, defaultFocus );
+    ttkCinemaImaging::ComputeDirFromFocus(aInputGrid);
   }
-  ttkCinemaImaging::ensureGridData( aInputGridPD, "CamNearFar", n, defaultNearFar );
-  ttkCinemaImaging::ensureGridData( aInputGridPD, "CamHeight", n, {defaultHeight} );
-  ttkCinemaImaging::ensureGridData( aInputGridPD, "CamAngle", n, {defaultAngle} );
-  ttkCinemaImaging::ensureGridData( aInputGridPD, "CamUp", n, {0,1,0} );
+  ttkCinemaImaging::EnsureGridData( aInputGridPD, "CamNearFar", n, defaultNearFar );
+  ttkCinemaImaging::EnsureGridData( aInputGridPD, "CamHeight", n, {defaultHeight} );
+  ttkCinemaImaging::EnsureGridData( aInputGridPD, "CamAngle", n, {defaultAngle} );
+  ttkCinemaImaging::EnsureGridData( aInputGridPD, "CamUp", n, {0,1,0} );
 
   // print parameters
   {
     this->printMsg({
-      {"Backend", this->Backend==0 ? std::string("VTK_OPENGL") : std::string("EMBREE")},
+      {"Backend", this->Backend==0 ? std::string("VTK_OPENGL") : this->Backend==1 ? std::string("EMBREE") : std::string("NATIVE")},
       {"Resolution", std::to_string(this->Resolution[0]) + " x "
                       + std::to_string(this->Resolution[1])},
       {"Projection", this->GetCamProjectionMode() ? "Perspective" : "Orthographic"},
@@ -164,22 +154,16 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
     this->printMsg(ttk::debug::Separator::L1);
   }
 
-  vtkCellArray* inputObjectCells = nullptr;
-  if(inputObject->IsA("vtkPolyData")){
-      inputObjectCells = static_cast<vtkPolyData*>(inputObject)->GetPolys();
-  } else if(inputObject->IsA("vtkUnstructuredGrid")){
-      inputObjectCells = static_cast<vtkUnstructuredGrid*>(inputObject)->GetCells();
-  } else {
-      this->printErr("Input has to be a vtkPolyData or vtkUnstructuredGrid.");
-      return 0;
-  }
+  auto cells = ttkCinemaImaging::GetCells(inputObject);
+  if(!cells)
+    return 0;
 
-  size_t nTriangles = inputObjectCells->GetNumberOfCells();
+  size_t nTriangles = cells->GetNumberOfCells();
   // make sure that cells consists only of triangles
   {
       auto offsets = static_cast<vtkIdType*>(
           ttkUtils::GetVoidPointer(
-              inputObjectCells->GetOffsetsArray()
+              cells->GetOffsetsArray()
           )
       );
       vtkIdType j=0;
@@ -193,48 +177,51 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
 
   int status = 0;
   if(this->Backend==0){
-//       ttk::ttkCinemaImagingVTK ciVTK;
-//       ciVTK.setDebugLevel( this->debugLevel_ );
-//       ciVTK.setThreadNumber( this->threadNumber_ );
-//       status = ciVTK.RenderImages(
-//         outputImages,
-
-//         inputObject,
-//         inputGrid,
-
-//         resolution,
-//         this->CamProjectionMode,
-//         this->CamAngle,
-//         camFocus,
-//         camNearFar,
-//         camHeight,
-//         camDir,
-//         camUp,
-//         this->GenerateScalarImages
-//       );
+    ttk::ttkCinemaImagingVTK renderer;
+    renderer.setDebugLevel(this->debugLevel_);
+    renderer.setThreadNumber(this->threadNumber_);
+    status = renderer.RenderVTKObject(
+        outputImages,
+        inputObject,
+        aInputGrid
+      );
+  } if(this->Backend==1) {
+    ttk::ttkCinemaImagingEmbree renderer;
+    renderer.setDebugLevel(this->debugLevel_);
+    renderer.setThreadNumber(this->threadNumber_);
+    status = renderer.RenderVTKObject(
+        outputImages,
+        inputObject,
+        aInputGrid
+      );
   } else {
-    //   status = this->RenderImagesViaEmbree(
-    //     outputImages,
-
-    //     inputObjectCells,
-    //     inputObject,
-    //     aInputGrid
-    //   );
+    ttk::ttkCinemaImagingNative renderer;
+    renderer.setDebugLevel(this->debugLevel_);
+    renderer.setThreadNumber(this->threadNumber_);
+    status = renderer.RenderVTKObject(
+        outputImages,
+        inputObject,
+        aInputGrid
+      );
   }
+
   if(!status)
     return 0;
-
-//   // print stats
-//   this->printMsg(ttk::debug::Separator::L2);
-//   this->printMsg(
-//      "Complete (#i: " + std::to_string(inputGrid->GetNumberOfPoints())+"|#t:"+"-"+")",
-//      1, globalTimer.getElapsedTime());
-//   this->printMsg(ttk::debug::Separator::L1);
 
   return 1;
 }
 
-int ttkCinemaImaging::addFieldDataArray(
+vtkCellArray* ttkCinemaImaging::GetCells(vtkPointSet* pointSet){
+  switch(pointSet->GetDataObjectType()) {
+    case VTK_UNSTRUCTURED_GRID:
+      return static_cast<vtkUnstructuredGrid*>(pointSet)->GetCells();
+    case VTK_POLY_DATA:
+      return static_cast<vtkPolyData*>(pointSet)->GetPolys();
+  }
+  return nullptr;
+};
+
+int ttkCinemaImaging::AddFieldDataArray(
   vtkFieldData* fd,
   vtkDataArray* array,
   int tupelIdx,
@@ -243,18 +230,26 @@ int ttkCinemaImaging::addFieldDataArray(
   if(!array)
     return 0;
 
-  auto newArray = vtkSmartPointer<vtkDataArray>::Take( array->NewInstance() );
+  size_t nComponents = array->GetNumberOfComponents();
+
+  auto newArray = vtkSmartPointer<vtkDoubleArray>::New();
   newArray->SetName( name.empty() ? array->GetName() : name.data() );
-  newArray->SetNumberOfComponents( array->GetNumberOfComponents() );
+  newArray->SetNumberOfComponents( nComponents );
   newArray->SetNumberOfTuples( 1 );
-  newArray->SetTuple( 0, tupelIdx, array );
+
+  if(newArray->GetDataType()==array->GetDataType()){
+    newArray->SetTuple( 0, tupelIdx, array );
+  } else {
+    for(size_t i=0; i<nComponents; i++)
+        newArray->SetValue(i, array->GetVariantValue(tupelIdx*nComponents+i).ToDouble());
+  }
 
   fd->AddArray( newArray );
 
   return 1;
 };
 
-int ttkCinemaImaging::addAllFieldDataArrays(
+int ttkCinemaImaging::AddAllFieldDataArrays(
   vtkPointSet* inputGrid,
   vtkImageData* image,
   int tupelIdx
@@ -263,24 +258,24 @@ int ttkCinemaImaging::addAllFieldDataArrays(
 
   auto inputGridPD = inputGrid->GetPointData();
   for(int i=0; i<inputGridPD->GetNumberOfArrays(); i++){
-    addFieldDataArray(
+    ttkCinemaImaging::AddFieldDataArray(
       imageFD,
       inputGridPD->GetArray(i),
       tupelIdx
     );
   }
 
-  addFieldDataArray(
+  ttkCinemaImaging::AddFieldDataArray(
     imageFD,
     inputGrid->GetPoints()->GetData(),
     tupelIdx,
-    "CamPos"
+    "CamPosition"
   );
 
   return 1;
 };
 
-int ttkCinemaImaging::computeDirFromFocus(
+int ttkCinemaImaging::ComputeDirFromFocus(
   vtkPointSet* inputGrid
 ){
   auto pos = static_cast<float*>(ttkUtils::GetVoidPointer(inputGrid->GetPoints()));
@@ -289,7 +284,7 @@ int ttkCinemaImaging::computeDirFromFocus(
   int nTuples = inputGrid->GetNumberOfPoints();
 
   auto newArray = vtkSmartPointer<vtkDoubleArray>::New();
-  newArray->SetName("CamDir");
+  newArray->SetName("CamDirection");
   newArray->SetNumberOfComponents( 3 );
   newArray->SetNumberOfTuples( nTuples );
 
@@ -303,7 +298,7 @@ int ttkCinemaImaging::computeDirFromFocus(
   return 1;
 };
 
-int ttkCinemaImaging::ensureGridData(
+int ttkCinemaImaging::EnsureGridData(
   vtkPointData* fd,
   std::string name,
   int nTuples,

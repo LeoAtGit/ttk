@@ -8,17 +8,20 @@
 #include <vtkMultiBlockDataSet.h>
 #include <vtkImageData.h>
 #include <vtkCellData.h>
+#include <vtkCellArray.h>
 
 #include <vtkUnsignedIntArray.h>
 #include <vtkFloatArray.h>
 
-#include <CinemaImagingEmbree.h>
+ttk::ttkCinemaImagingEmbree::ttkCinemaImagingEmbree(){
+    this->setDebugMsgPrefix("CinemaImaging(Embree)");
+};
+ttk::ttkCinemaImagingEmbree::~ttkCinemaImagingEmbree(){
+}
 
-
-int ttk::ttkCinemaImagingEmbree::RenderImages(
+int ttk::ttkCinemaImagingEmbree::RenderVTKObject(
   vtkMultiBlockDataSet* outputImages,
 
-  vtkCellArray* inputObjectCells,
   vtkPointSet* inputObject,
   vtkPointSet* inputGrid
 ) const {
@@ -26,18 +29,16 @@ int ttk::ttkCinemaImagingEmbree::RenderImages(
 
 #if TTK_ENABLE_EMBREE
 
+  auto inputObjectCells = ttkCinemaImaging::GetCells(inputObject);
+
   // get point and cell data of input object
   auto inputObjectPD = inputObject->GetPointData();
   size_t nInputObjectPDArrays = inputObjectPD->GetNumberOfArrays();
   auto inputObjectCD = inputObject->GetCellData();
   size_t nInputObjectCDArrays = inputObjectCD->GetNumberOfArrays();
 
-  ttk::CinemaImagingEmbree ciEmbree;
-  ciEmbree.setDebugLevel(this->debugLevel_);
-  ciEmbree.setThreadNumber(this->threadNumber_);
-
   RTCDevice device;
-  status = ciEmbree.initializeDevice(device);
+  status = this->initializeDevice(device);
   if(!status)
     return 0;
 
@@ -48,7 +49,7 @@ int ttk::ttkCinemaImagingEmbree::RenderImages(
   );
 
   RTCScene scene;
-  status = ciEmbree.initializeScene<vtkIdType>(
+  status = this->initializeScene<vtkIdType>(
       scene,
 
       device,
@@ -72,7 +73,7 @@ int ttk::ttkCinemaImagingEmbree::RenderImages(
   int nSamplingPositions = inputGrid->GetNumberOfPoints();
   auto camParameters = inputGrid->GetPointData();
   auto camUp = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamUp")));
-  auto camDir = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamDir")));
+  auto camDir = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamDirection")));
   auto camHeight = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamHeight")));
   auto camAngle = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamAngle")));
   auto resolution = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("Resolution")));
@@ -108,7 +109,7 @@ int ttk::ttkCinemaImagingEmbree::RenderImages(
       outputImagePD->AddArray(barycentricCoordinates);
 
       // Render Object
-      status = ciEmbree.renderImage(
+      status = this->renderImage(
         (float*) ttkUtils::GetVoidPointer(depthBuffer),
         (unsigned int*) ttkUtils::GetVoidPointer(primitiveIdArray),
         (float*) ttkUtils::GetVoidPointer(barycentricCoordinates),
@@ -137,7 +138,7 @@ int ttk::ttkCinemaImagingEmbree::RenderImages(
 
         switch(outputArray->GetDataType()){
           vtkTemplateMacro(
-            status = ciEmbree.interpolateArray(
+            status = this->interpolateArray(
               (VTK_TT*) ttkUtils::GetVoidPointer(outputArray),
 
               (const unsigned int*) ttkUtils::GetVoidPointer(primitiveIdArray),
@@ -167,7 +168,7 @@ int ttk::ttkCinemaImagingEmbree::RenderImages(
 
         switch(outputArray->GetDataType()){
           vtkTemplateMacro(
-            status = ciEmbree.lookupArray(
+            status = this->lookupArray(
               (VTK_TT*) ttkUtils::GetVoidPointer(outputArray),
 
               (const unsigned int*) ttkUtils::GetVoidPointer(primitiveIdArray),
@@ -183,7 +184,7 @@ int ttk::ttkCinemaImagingEmbree::RenderImages(
           return 0;
       }
 
-      ttkCinemaImaging::addAllFieldDataArrays(
+      ttkCinemaImaging::AddAllFieldDataArrays(
         inputGrid,
         outputImage,
         i
@@ -193,7 +194,7 @@ int ttk::ttkCinemaImagingEmbree::RenderImages(
   }
   this->printMsg(ttk::debug::Separator::L2);
 
-  ciEmbree.deallocateScene(device,scene);
+  this->deallocateScene(device,scene);
 
 #endif
 

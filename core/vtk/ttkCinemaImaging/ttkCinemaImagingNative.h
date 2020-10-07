@@ -1,15 +1,15 @@
 #pragma once
 
-#include <CinemaImagingEmbree.h>
+#include <CinemaImagingNative.h>
 
 class vtkMultiBlockDataSet;
 class vtkPointSet;
 
 namespace ttk {
-  class ttkCinemaImagingEmbree : public CinemaImagingEmbree {
+  class ttkCinemaImagingNative : public CinemaImagingNative {
   public:
-    ttkCinemaImagingEmbree();
-    ~ttkCinemaImagingEmbree();
+    ttkCinemaImagingNative();
+    ~ttkCinemaImagingNative();
 
     int RenderVTKObject(
         vtkMultiBlockDataSet* outputImages,

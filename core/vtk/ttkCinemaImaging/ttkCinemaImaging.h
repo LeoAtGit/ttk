@@ -89,24 +89,26 @@ public:
   vtkSetMacro(CamAngle, double);
   vtkGetMacro(CamAngle, double);
 
-  static int addFieldDataArray(
+  static vtkCellArray* GetCells(vtkPointSet* pointSet);
+
+  static int AddFieldDataArray(
     vtkFieldData* fd,
     vtkDataArray* array,
     int tupelIdx,
     std::string name = ""
   );
 
-  static int addAllFieldDataArrays(
+  static int AddAllFieldDataArrays(
     vtkPointSet* inputGrid,
     vtkImageData* image,
     int tupelIdx
   );
 
-  static int computeDirFromFocus(
+  static int ComputeDirFromFocus(
     vtkPointSet* inputGrid
   );
 
-  static int ensureGridData(
+  static int EnsureGridData(
     vtkPointData* fd,
     std::string name,
     int nTuples,

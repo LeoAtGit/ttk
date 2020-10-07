@@ -41,6 +41,11 @@ namespace ttk {
      */
     template <class dataType, class idType>
     int execute(
+      // output
+      float *pointCoordinates,
+      idType *connectivityList,
+      double *triangleDistortions,
+
       // input
       const dataType *depthValues,
       const double *camPos,
@@ -48,18 +53,18 @@ namespace ttk {
       const double *camUp,
       const double *camNearFar,
       const double *camHeight,
-      const double *resolution,
-
-      // output
-      float *pointCoordinates,
-      idType *cells_co,
-      idType *cells_off,
-      double *triangleDistortions) const;
+      const double *resolution
+    ) const;
   };
 } // namespace ttk
 
 template <class dataType, class idType>
 int ttk::DepthImageBasedGeometryApproximation::execute(
+  // output
+  float *pointCoordinates,
+  idType *connectivityList,
+  double *triangleDistortions,
+
   // input
   const dataType *depthValues,
   const double *camPos,
@@ -67,13 +72,15 @@ int ttk::DepthImageBasedGeometryApproximation::execute(
   const double *camUp,
   const double *camNearFar,
   const double *camHeight,
-  const double *resolution,
+  const double *resolution
+) const {
 
-  // output
-  float *pointCoordinates,
-  idType *cells_co,
-  idType *cells_off,
-  double *triangleDistortions) const {
+  double camDirMag = std::sqrt(camDir[0]*camDir[0] + camDir[1]*camDir[1] + camDir[2]*camDir[2]);
+  double camDirN[3]{
+      camDir[0]/camDirMag,
+      camDir[1]/camDirMag,
+      camDir[2]/camDirMag
+  };
 
   this->printMsg(ttk::debug::Separator::L2, ttk::debug::LineMode::NEW,
                  ttk::debug::Priority::DETAIL);
@@ -82,9 +89,9 @@ int ttk::DepthImageBasedGeometryApproximation::execute(
                   {"CamPos", "[" + std::to_string(camPos[0]) + ","
                                + std::to_string(camPos[1]) + ","
                                + std::to_string(camPos[2]) + "]"},
-                  {"CamDir", "[" + std::to_string(camDir[0]) + ","
-                               + std::to_string(camDir[1]) + ","
-                               + std::to_string(camDir[2]) + "]"},
+                  {"CamDir", "[" + std::to_string(camDirN[0]) + ","
+                               + std::to_string(camDirN[1]) + ","
+                               + std::to_string(camDirN[2]) + "]"},
                   {"CamHeight", std::to_string(camHeight[0])},
                   {"CamNearFar", "[" + std::to_string(camNearFar[0]) + ","
                                    + std::to_string(camNearFar[1]) + "]"}},
@@ -107,10 +114,10 @@ int ttk::DepthImageBasedGeometryApproximation::execute(
   double camSize[2]
     = {resolution[0] / resolution[1] * camHeight[0], camHeight[0]};
 
-  // Compute camRight = camDir x CamUp
-  double camRight[3] = {camDir[1] * camUp[2] - camDir[2] * camUp[1],
-                        camDir[2] * camUp[0] - camDir[0] * camUp[2],
-                        camDir[0] * camUp[1] - camDir[1] * camUp[0]};
+  // Compute camRight = camDirN x CamUp
+  double camRight[3] = {camDirN[1] * camUp[2] - camDirN[2] * camUp[1],
+                        camDirN[2] * camUp[0] - camDirN[0] * camUp[2],
+                        camDirN[0] * camUp[1] - camDirN[1] * camUp[0]};
   double temp = sqrt(camRight[0] * camRight[0] + camRight[1] * camRight[1]
                      + camRight[2] * camRight[2]);
   camRight[0] /= temp;
@@ -119,9 +126,9 @@ int ttk::DepthImageBasedGeometryApproximation::execute(
 
   // Compute true up std::vector
   double camUpTrue[3]
-    = {camDir[1] * (-camRight[2]) - camDir[2] * (-camRight[1]),
-       camDir[2] * (-camRight[0]) - camDir[0] * (-camRight[2]),
-       camDir[0] * (-camRight[1]) - camDir[1] * (-camRight[0])};
+    = {camDirN[1] * (-camRight[2]) - camDirN[2] * (-camRight[1]),
+       camDirN[2] * (-camRight[0]) - camDirN[0] * (-camRight[2]),
+       camDirN[0] * (-camRight[1]) - camDirN[1] * (-camRight[0])};
   temp = sqrt(camUpTrue[0] * camUpTrue[0] + camUpTrue[1] * camUpTrue[1]
               + camUpTrue[2] * camUpTrue[2]);
   camUpTrue[0] /= temp;
@@ -169,17 +176,18 @@ int ttk::DepthImageBasedGeometryApproximation::execute(
 
         // double d = (double)(depthValues[ pixelIndex ])*delta+camNearFar[0];
         const double depth = ((double)depthValues[pixelIndex]);
-        double d = depth > 0.98 ? 0 : depth * delta + camNearFar[0];
+        // double d = depth > 0.98 ? 0 : depth * delta + camNearFar[0];
+        double d = depth * delta + camNearFar[0];
         double u = ((double)x) * pixelWidthWorld;
 
         // compute vertex coordinate
         size_t pointCoordinateOffset = pixelIndex * 3;
         pointCoordinates[pointCoordinateOffset]
-          = camPosCorner[0] + u * camRight[0] + vTimesUp[0] + d * camDir[0];
+          = camPosCorner[0] + u * camRight[0] + vTimesUp[0] + d * camDirN[0];
         pointCoordinates[pointCoordinateOffset + 1]
-          = camPosCorner[1] + u * camRight[1] + vTimesUp[1] + d * camDir[1];
+          = camPosCorner[1] + u * camRight[1] + vTimesUp[1] + d * camDirN[1];
         pointCoordinates[pointCoordinateOffset + 2]
-          = camPosCorner[2] + u * camRight[2] + vTimesUp[2] + d * camDir[2];
+          = camPosCorner[2] + u * camRight[2] + vTimesUp[2] + d * camDirN[2];
       }
     }
   }
@@ -215,13 +223,13 @@ int ttk::DepthImageBasedGeometryApproximation::execute(
         size_t i2 = i0 + resolutionST[0];
         size_t i3 = i2 + 1;
 
-        cells_co[triangleIndexOffset++] = i0;
-        cells_co[triangleIndexOffset++] = i2;
-        cells_co[triangleIndexOffset++] = i1;
+        connectivityList[triangleIndexOffset++] = i0;
+        connectivityList[triangleIndexOffset++] = i2;
+        connectivityList[triangleIndexOffset++] = i1;
 
-        cells_co[triangleIndexOffset++] = i1;
-        cells_co[triangleIndexOffset++] = i2;
-        cells_co[triangleIndexOffset++] = i3;
+        connectivityList[triangleIndexOffset++] = i1;
+        connectivityList[triangleIndexOffset++] = i2;
+        connectivityList[triangleIndexOffset++] = i3;
 
         double i0Depth = depthValues[i0];
         double i1Depth = depthValues[i1];
@@ -230,32 +238,20 @@ int ttk::DepthImageBasedGeometryApproximation::execute(
 
         // wow
         triangleDistortions[triangleDistortionOffset++]
-          = i0Depth > 0.98 || i2Depth > 0.98 || i1Depth > 0.98
+          = isnan(i0Depth) || isnan(i2Depth) || isnan(i1Depth)
               ? myNan
               : std::max(
                 absDiff(i0Depth, i1Depth),
                 std::max(absDiff(i1Depth, i2Depth), absDiff(i0Depth, i2Depth)));
 
         triangleDistortions[triangleDistortionOffset++]
-          = i1Depth > 0.98 || i2Depth > 0.98 || i3Depth > 0.98
+          = isnan(i1Depth) || isnan(i2Depth) || isnan(i3Depth)
               ? myNan
               : std::max(
                 absDiff(i1Depth, i3Depth),
                 std::max(absDiff(i3Depth, i2Depth), absDiff(i2Depth, i1Depth)));
       }
     }
-
-    const auto nbTri = yl * trianglesPerRow;
-
-#ifdef TTK_ENABLE_OPENMP
-#pragma omp parallel for num_threads(this->threadNumber_)
-#endif
-    for(size_t i = 0; i < nbTri; i++) {
-      cells_off[i] = i * 3;
-    }
-
-    // offset cell array has one additional entry for last cell end:
-    cells_off[nbTri] = nbTri * 3;
   }
 
   // Print performance
@@ -263,5 +259,5 @@ int ttk::DepthImageBasedGeometryApproximation::execute(
                    + std::to_string(resolutionST[1]) + ")",
                  1, t.getElapsedTime(), this->threadNumber_);
 
-  return 0;
+  return 1;
 }

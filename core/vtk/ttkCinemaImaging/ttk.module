@@ -2,10 +2,12 @@ NAME
   ttkCinemaImaging
 SOURCES
   ttkCinemaImaging.cpp
+  ttkCinemaImagingNative.cpp
   ttkCinemaImagingEmbree.cpp
   ttkCinemaImagingVTK.cpp
 HEADERS
   ttkCinemaImaging.h
+  ttkCinemaImagingNative.h
   ttkCinemaImagingEmbree.h
   ttkCinemaImagingVTK.h
 DEPENDS

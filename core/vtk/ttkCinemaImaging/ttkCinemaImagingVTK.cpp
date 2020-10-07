@@ -1,5 +1,7 @@
 #include <ttkCinemaImagingVTK.h>
 
+#include <ttkCinemaImaging.h>
+
 #include <vtkSmartPointer.h>
 #include <vtkDataSetSurfaceFilter.h>
 
@@ -24,6 +26,7 @@
 
 #include <vtkPointData.h>
 #include <vtkCellData.h>
+#include <ttkUtils.h>
 
 ttk::ttkCinemaImagingVTK::ttkCinemaImagingVTK(){
     this->setDebugMsgPrefix("CinemaImaging(VTK)");
@@ -104,84 +107,56 @@ int ttk::ttkCinemaImagingVTK::addValuePass(
   return 1;
 };
 
-int ttk::ttkCinemaImagingVTK::addGobalArray(
-    std::vector<vtkAbstractArray*>& globalArrays,
-    std::string name,
-    size_t nValues,
-    const double *values
+int ttk::ttkCinemaImagingVTK::RenderVTKObject(
+  vtkMultiBlockDataSet* outputImages,
+
+  vtkPointSet* inputObject,
+  vtkPointSet* inputGrid
 ) const {
-    auto array = vtkSmartPointer<vtkDoubleArray>::New();
-    array->SetName(name.data());
-    array->SetNumberOfComponents(nValues);
-    array->SetNumberOfTuples(1);
-    for(size_t i = 0; i < nValues; i++)
-        array->SetValue(i, values[i]);
-    globalArrays.push_back(array);
-
-    return 1;
-};
-
-int ttk::ttkCinemaImagingVTK::RenderImages(
-    vtkMultiBlockDataSet* outputImages,
-
-    vtkPointSet* inputObject,
-    vtkPointSet* inputGrid,
-
-    const double defaultResolution[2],
-    const int    projectionMode,
-    const double defaultCamAngle,
-    const double defaultCamFocus[3],
-    const double defaultCamNearFar[2],
-    const double defaultCamHeight,
-    const double defaultCamDir[3],
-    const double defaultCamUp[3],
-    const bool   generateScalarImages
-) const {
-  ttk::Timer timer;
-
-  double resolution[2] = {defaultResolution[0],defaultResolution[1]};
-  double camFocus[3] = {defaultCamFocus[0],defaultCamFocus[1],defaultCamFocus[2]};
-  double camNearFar[2] = {defaultCamNearFar[0],defaultCamNearFar[1]};
-  double camHeight = defaultCamHeight;
-  double camDir[3] = {defaultCamDir[0],defaultCamDir[1],defaultCamDir[2]};
-  double camUp[3] = {defaultCamUp[0],defaultCamUp[1],defaultCamUp[2]};
-
-  // Camera
-  auto camera = vtkSmartPointer<vtkCamera>::New();
-  camera->SetClippingRange(camNearFar);
-  camera->SetFocalPoint(camFocus);
-  if(projectionMode == 0) {
-    camera->SetParallelProjection(true);
-    camera->SetParallelScale(
-      camHeight * 0.5); // *0.5 to convert CamHeight to weird VTK convention
-  } else {
-    camera->SetParallelProjection(false);
-    camera->SetViewAngle( defaultCamAngle );
-  }
-
-  // Initialize Depth Renderer and Components
-  this->printMsg(
-    "Initializing Rendering Pipeline",
-    0, ttk::debug::LineMode::REPLACE
-  );
 
   auto inputObjectAsPD = vtkSmartPointer<vtkPolyData>::New();
   if(inputObject->IsA("vtkPolyData")){
     inputObjectAsPD->ShallowCopy(inputObject);
   } else {
-    this->printWrn("VTK backend can only handle vtkPolyData input.");
-    this->printWrn(" -> Extracting input surface");
     auto surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
-    surfaceFilter->SetInputDataObject( inputObject );
+    surfaceFilter->SetInputDataObject(inputObject);
     surfaceFilter->Update();
-    inputObjectAsPD->ShallowCopy(surfaceFilter->GetOutput());
+    inputObjectAsPD->ShallowCopy( surfaceFilter->GetOutput() );
   }
+
+  // get point and cell data of input object
+  // auto inputObjectPD = inputObject->GetPointData();
+  // size_t nInputObjectPDArrays = inputObjectPD->GetNumberOfArrays();
+  // auto inputObjectCD = inputObject->GetCellData();
+  // size_t nInputObjectCDArrays = inputObjectCD->GetNumberOfArrays();
+
+  // ---------------------------------------------------------------------------
+  // Prepare Field Data for Depth Values
+  // ---------------------------------------------------------------------------
+
+  // iterate over sampling locations
+  this->printMsg(ttk::debug::Separator::L2);
+  float* samplingPositions = static_cast<float*>(ttkUtils::GetVoidPointer(inputGrid->GetPoints()));
+  int nSamplingPositions = inputGrid->GetNumberOfPoints();
+  auto camParameters = inputGrid->GetPointData();
+  auto camUp = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamUp")));
+  auto camFocus = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamFocus")));
+  auto camHeight = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamHeight")));
+  auto camAngle = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamAngle")));
+  auto camNearFar = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamNearFar")));
+  auto resolution = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("Resolution")));
+  auto projectionMode = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("ProjectionMode")));
+
+  // Camera
+  auto camera = vtkSmartPointer<vtkCamera>::New();
 
   // Depth Pass Elements
   auto rendererDepth = vtkSmartPointer<vtkRenderer>::New();
   this->setupRenderer(rendererDepth, inputObjectAsPD, camera);
+
   auto windowDepth = vtkSmartPointer<vtkRenderWindow>::New();
   this->setupWindow(windowDepth, rendererDepth, resolution);
+
   auto windowDepthToImageFilter
     = vtkSmartPointer<vtkWindowToImageFilter>::New();
   windowDepthToImageFilter->SetInput(windowDepth);
@@ -199,191 +174,94 @@ int ttk::ttkCinemaImagingVTK::RenderImages(
   auto valuePassCollection = vtkSmartPointer<vtkRenderPassCollection>::New();
   std::vector<std::string> valuePassNames;
   size_t firstValuePassIndex = 0;
-  if( generateScalarImages ) {
-    auto preventVTKBug = [](vtkPointSet *object) {
-      auto pd = object->GetPointData();
 
-      if(pd->GetNumberOfArrays()<1) {
-        size_t nP = object->GetNumberOfPoints();
+  auto preventVTKBug = [](vtkPointSet *object) {
+    auto pd = object->GetPointData();
+    auto cd = object->GetCellData();
 
-        auto fakeArray = vtkSmartPointer<vtkSignedCharArray>::New();
-        fakeArray->SetName("Fake");
-        fakeArray->SetNumberOfComponents(1);
-        fakeArray->SetNumberOfTuples(nP);
-        auto fakeArrayData = (signed char *)fakeArray->GetVoidPointer(0);
-        for(size_t i = 0; i<nP; i++)
-          fakeArrayData[i] = 0;
-        pd->AddArray(fakeArray);
-        return 1;
-      }
-      return 0;
-    };
+    if(pd->GetNumberOfArrays()<1 && cd->GetNumberOfArrays()>0) {
+      size_t nP = object->GetNumberOfPoints();
 
-    if(preventVTKBug(inputObjectAsPD)) {
-      firstValuePassIndex = 1;
-    };
-
-    this->addValuePass(inputObjectAsPD, 0, valuePassCollection, valuePassNames);
-    this->addValuePass(inputObjectAsPD, 1, valuePassCollection, valuePassNames);
-    nValuePasses = valuePassNames.size();
-
-    auto sequence = vtkSmartPointer<vtkSequencePass>::New();
-    sequence->SetPasses(valuePassCollection);
-
-    auto cameraPass = vtkSmartPointer<vtkCameraPass>::New();
-    cameraPass->SetDelegatePass(sequence);
-
-    auto glRenderer = vtkOpenGLRenderer::SafeDownCast(rendererScalars);
-    glRenderer->SetPass(cameraPass);
-
-    // First pass to setup everything
-    windowScalars->Render();
-  }
-
-  this->printMsg(
-    "Initializing Rendering Pipeline",
-    1, timer.getElapsedTime()
-  );
-  timer.reStart();
-
-  // ---------------------------------------------------------------------------
-  // Prepare Field Data for Depth Values
-  // ---------------------------------------------------------------------------
-  std::vector<vtkAbstractArray*> globalArrays;
-  {
-    this->addGobalArray(globalArrays, "CamHeight", 1, &camHeight);
-    this->addGobalArray(globalArrays, "CamNearFar", 2, camNearFar);
-    this->addGobalArray(globalArrays, "Resolution", 2, resolution);
-
-    auto inputObjectFD = inputObjectAsPD->GetFieldData();
-    for(size_t i = 0, j = inputObjectFD->GetNumberOfArrays(); i < j; i++) {
-      auto array = inputObjectFD->GetAbstractArray(i);
-      auto copy = vtkSmartPointer<vtkAbstractArray>::Take(array->NewInstance());
-      copy->DeepCopy(array);
-      globalArrays.push_back(array);
+      auto fakeArray = vtkSmartPointer<vtkSignedCharArray>::New();
+      fakeArray->SetName("Fake");
+      fakeArray->SetNumberOfComponents(1);
+      fakeArray->SetNumberOfTuples(nP);
+      auto fakeArrayData = (signed char *)fakeArray->GetVoidPointer(0);
+      for(size_t i = 0; i<nP; i++)
+        fakeArrayData[i] = 0;
+      pd->AddArray(fakeArray);
+      return 1;
     }
-  }
-  size_t nGlobalArrays = globalArrays.size();
+    return 0;
+  };
 
-  // ---------------------------------------------------------------------------
-  // Iterate over Locations
-  // ---------------------------------------------------------------------------
-  auto inputGridPD = inputGrid->GetPointData();
-  size_t nInputGridPD = inputGridPD->GetNumberOfArrays();
+  if(preventVTKBug(inputObjectAsPD)) {
+    firstValuePassIndex = 1;
+  };
 
-  double *camFocusData = nullptr;
-  double *camDirData = nullptr;
-  double *camUpData = nullptr;
+  this->addValuePass(inputObjectAsPD, 0, valuePassCollection, valuePassNames);
+  this->addValuePass(inputObjectAsPD, 1, valuePassCollection, valuePassNames);
+  nValuePasses = valuePassNames.size();
 
-  {
-    auto checkGridArray
-      = [](vtkFieldData *fd, std::string name, std::string &gridFieldNames,
-          double *&data, const ttkCinemaImagingVTK *caller) {
-          if(fd->HasArray(name.data())) {
-            auto field
-              = vtkDoubleArray::SafeDownCast(fd->GetAbstractArray(name.data()));
-            if(!field) {
-              caller->printErr(
-                "Sampling grid field '" + name
-                + "' is not a vtkDoubleArray with three components.");
-              return 0;
-            }
-            data = (double *)field->GetVoidPointer(0);
-            gridFieldNames += " '" + name + "'";
-          }
-          return 1;
-        };
+  auto sequence = vtkSmartPointer<vtkSequencePass>::New();
+  sequence->SetPasses(valuePassCollection);
 
-    std::string gridFieldNames = "";
-    if(!checkGridArray(
-        inputGridPD, "CamFocus", gridFieldNames, camFocusData, this))
-      return 0;
-    if(!checkGridArray(
-        inputGridPD, "CamDirection", gridFieldNames, camDirData, this))
-      return 0;
-    if(!checkGridArray(inputGridPD, "CamUp", gridFieldNames, camUpData, this))
-      return 0;
+  auto cameraPass = vtkSmartPointer<vtkCameraPass>::New();
+  cameraPass->SetDelegatePass(sequence);
 
-    if(gridFieldNames.compare("") != 0)
-      this->printMsg("Sampling grid has field(s): " + gridFieldNames);
-  }
+  auto glRenderer = vtkOpenGLRenderer::SafeDownCast(rendererScalars);
+  glRenderer->SetPass(cameraPass);
 
-  // -------------------------------------------------------------------------
-  // Render Images for all Camera Locations
-  // -------------------------------------------------------------------------
-  {
-    timer.reStart();
-    size_t n = inputGrid->GetNumberOfPoints();
-    this->printMsg(
-      "Rendering " + std::to_string(n) + " images with "
-        + std::to_string(nValuePasses + 1) + " fields",
-      0, ttk::debug::LineMode::REPLACE
-    );
+  // First pass to setup everything
+  windowScalars->Render();
 
-    double camPosition[3] = {0, 0, 0};
-    auto readCameraData = [](double target[3], double *src, int index) {
-      target[0] = src[index];
-      target[1] = src[index + 1];
-      target[2] = src[index + 2];
-    };
+  for(int i=0; i<nSamplingPositions; i++) {
+      ttk::Timer timer;
+      int resX = resolution[i*2];
+      int resY = resolution[i*2+1];
 
-    auto addCamFieldData
-      = [](vtkFieldData *fd, std::string name, double *data) {
-          auto array = vtkSmartPointer<vtkDoubleArray>::New();
-          array->SetName(name.data());
-          array->SetNumberOfComponents(3);
-          array->SetNumberOfTuples(1);
-          array->SetValue(0, data[0]);
-          array->SetValue(1, data[1]);
-          array->SetValue(2, data[2]);
-          fd->AddArray(array);
-        };
+      this->printMsg(
+        "Rendering Image ("+std::string(projectionMode[i] ? "P" : "O")+ "|"+std::to_string(resX)+"x"+std::to_string(resY)+")",
+        0,0,this->threadNumber_,
+        ttk::debug::LineMode::REPLACE
+      );
 
-    for(size_t i = 0; i < n; i++) {
-      // Set Camera Position
-      inputGrid->GetPoint(i, camPosition);
+      double camPos[3]{samplingPositions[i*3],samplingPositions[i*3+1],samplingPositions[i*3+2]};
 
-      // Cam Up Fix
-      if(camPosition[0] == 0 && camPosition[2] == 0) {
-        camPosition[0] = 0.00000000001;
-        camPosition[2] = 0.00000000001;
-      }
-      camera->SetPosition(camPosition);
-
-      if(camUpData != nullptr) {
-        readCameraData(camUp, camUpData, i * 3);
-        vtkMath::Normalize(camUp);
-      }
-      camera->SetViewUp(camUp);
-
-      if(camFocusData != nullptr) {
-        readCameraData(camFocus, camFocusData, i * 3);
-        camera->SetFocalPoint(camFocus);
-      }
-      if(camDirData != nullptr) {
-        readCameraData(camDir, camDirData, i * 3);
-        camFocus[0] = camPosition[0] + camDir[0];
-        camFocus[1] = camPosition[1] + camDir[1];
-        camFocus[2] = camPosition[2] + camDir[2];
-        camera->SetFocalPoint(camFocus);
+      if(projectionMode[i] == 0) {
+        camera->SetParallelProjection(true);
+        camera->SetParallelScale(
+          camHeight[i] * 0.5); // *0.5 to convert CamHeight to weird VTK convention
       } else {
-        camDir[0] = camFocus[0] - camPosition[0];
-        camDir[1] = camFocus[1] - camPosition[1];
-        camDir[2] = camFocus[2] - camPosition[2];
-        vtkMath::Normalize(camDir);
+        camera->SetParallelProjection(false);
+        camera->SetViewAngle( camAngle[i] );
       }
 
-      // Initialize Output Image
+      camera->SetPosition(camPos);
+      camera->SetViewUp(&camUp[i*3]);
+      camera->SetFocalPoint(&camFocus[i*3]);
+      camera->SetClippingRange(&camNearFar[i*2]);
+
+      // Initialize Output
       auto outputImage = vtkSmartPointer<vtkImageData>::New();
+      outputImage->SetDimensions(resolution[i*2],resolution[i*2+1],1);
+      outputImage->SetSpacing(1,1,1);
+      outputImage->SetOrigin(0,0,0);
+      outputImage->AllocateScalars(VTK_FLOAT,1);
+
       auto outputImagePD = outputImage->GetPointData();
 
       // Initialize as depth image
-      {
-        windowDepthToImageFilter->Modified();
-        windowDepthToImageFilter->Update();
-        outputImage->DeepCopy(windowDepthToImageFilter->GetOutput());
-        outputImagePD->GetAbstractArray(0)->SetName("Depth");
-      }
+      windowDepthToImageFilter->Modified();
+      windowDepthToImageFilter->Update();
+      outputImage->DeepCopy(windowDepthToImageFilter->GetOutput());
+      outputImagePD->GetAbstractArray(0)->SetName("Depth");
+
+      ttkCinemaImaging::AddAllFieldDataArrays(
+        inputGrid,
+        outputImage,
+        i
+      );
 
       // Render Scalar Images
       if(nValuePasses > firstValuePassIndex) {
@@ -400,45 +278,337 @@ int ttk::ttkCinemaImagingVTK::RenderImages(
         }
       }
 
-      // Add Field Data
-      {
-        auto outputImageFD = outputImage->GetFieldData();
-
-        // Global Arrays
-        for(size_t j = 0; j < nGlobalArrays; j++) {
-          outputImageFD->AddArray(globalArrays[j]);
-        }
-
-        // Specific Arrays
-        addCamFieldData(outputImageFD, "CamPosition", camPosition);
-        addCamFieldData(outputImageFD, "CamDirection", camDir);
-        addCamFieldData(outputImageFD, "CamUp", camera->GetViewUp());
-
-        for(size_t j = 0; j < nInputGridPD; j++) {
-          auto array = inputGridPD->GetAbstractArray(j);
-          auto newArray
-            = vtkSmartPointer<vtkAbstractArray>::Take(array->NewInstance());
-          std::string name(array->GetName());
-          if(outputImageFD->HasArray(name.data()))
-            name += "FromGrid";
-          newArray->SetName(name.data());
-          newArray->SetNumberOfComponents(array->GetNumberOfComponents());
-          newArray->SetNumberOfTuples(1);
-          newArray->SetTuple(0, i, array);
-
-          outputImageFD->AddArray(newArray);
-        }
-      }
-
-      // Add Image to MultiBlock
+      // Add to output collection
       outputImages->SetBlock(i, outputImage);
-    }
 
-    this->printMsg("Rendering " + std::to_string(n) + " images with "
-        + std::to_string(nValuePasses + 1) + " fields",
-      1, timer.getElapsedTime()
-    );
+      this->printMsg(
+        "Rendering Image ("+std::string(projectionMode[i] ? "P" : "O")+ "|"+std::to_string(resX)+"x"+std::to_string(resY)+")",
+        1,timer.getElapsedTime(),this->threadNumber_
+      );
   }
+  this->printMsg(ttk::debug::Separator::L2);
 
   return 1;
 };
+
+// int ttk::ttkCinemaImagingVTK::RenderImages(
+//     vtkMultiBlockDataSet* outputImages,
+
+//     vtkPointSet* inputObject,
+//     vtkPointSet* inputGrid,
+
+//     const double defaultResolution[2],
+//     const int    projectionMode,
+//     const double defaultCamAngle,
+//     const double defaultCamFocus[3],
+//     const double defaultCamNearFar[2],
+//     const double defaultCamHeight,
+//     const double defaultCamDir[3],
+//     const double defaultCamUp[3],
+//     const bool   generateScalarImages
+// ) const {
+//   ttk::Timer timer;
+
+//   double resolution[2] = {defaultResolution[0],defaultResolution[1]};
+//   double camFocus[3] = {defaultCamFocus[0],defaultCamFocus[1],defaultCamFocus[2]};
+//   double camNearFar[2] = {defaultCamNearFar[0],defaultCamNearFar[1]};
+//   double camHeight = defaultCamHeight;
+//   double camDir[3] = {defaultCamDir[0],defaultCamDir[1],defaultCamDir[2]};
+//   double camUp[3] = {defaultCamUp[0],defaultCamUp[1],defaultCamUp[2]};
+
+//   // Camera
+//   auto camera = vtkSmartPointer<vtkCamera>::New();
+//   camera->SetClippingRange(camNearFar);
+//   camera->SetFocalPoint(camFocus);
+//   if(projectionMode == 0) {
+//     camera->SetParallelProjection(true);
+//     camera->SetParallelScale(
+//       camHeight * 0.5); // *0.5 to convert CamHeight to weird VTK convention
+//   } else {
+//     camera->SetParallelProjection(false);
+//     camera->SetViewAngle( defaultCamAngle );
+//   }
+
+//   // Initialize Depth Renderer and Components
+//   this->printMsg(
+//     "Initializing Rendering Pipeline",
+//     0, ttk::debug::LineMode::REPLACE
+//   );
+
+//   auto inputObjectAsPD = vtkSmartPointer<vtkPolyData>::New();
+//   if(inputObject->IsA("vtkPolyData")){
+//     inputObjectAsPD->ShallowCopy(inputObject);
+//   } else {
+//     this->printWrn("VTK backend can only handle vtkPolyData input.");
+//     this->printWrn(" -> Extracting input surface");
+//     auto surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+//     surfaceFilter->SetInputDataObject( inputObject );
+//     surfaceFilter->Update();
+//     inputObjectAsPD->ShallowCopy(surfaceFilter->GetOutput());
+//   }
+
+//   // Depth Pass Elements
+//   auto rendererDepth = vtkSmartPointer<vtkRenderer>::New();
+//   this->setupRenderer(rendererDepth, inputObjectAsPD, camera);
+//   auto windowDepth = vtkSmartPointer<vtkRenderWindow>::New();
+//   this->setupWindow(windowDepth, rendererDepth, resolution);
+//   auto windowDepthToImageFilter
+//     = vtkSmartPointer<vtkWindowToImageFilter>::New();
+//   windowDepthToImageFilter->SetInput(windowDepth);
+//   windowDepthToImageFilter->SetInputBufferTypeToZBuffer();
+
+//   // Value passes Elements
+//   size_t nValuePasses = 0;
+
+//   auto rendererScalars = vtkSmartPointer<vtkRenderer>::New();
+//   this->setupRenderer(rendererScalars, inputObjectAsPD, camera);
+
+//   auto windowScalars = vtkSmartPointer<vtkRenderWindow>::New();
+//   this->setupWindow(windowScalars, rendererScalars, resolution);
+
+//   auto valuePassCollection = vtkSmartPointer<vtkRenderPassCollection>::New();
+//   std::vector<std::string> valuePassNames;
+//   size_t firstValuePassIndex = 0;
+//   if( generateScalarImages ) {
+//     auto preventVTKBug = [](vtkPointSet *object) {
+//       auto pd = object->GetPointData();
+
+//       if(pd->GetNumberOfArrays()<1) {
+//         size_t nP = object->GetNumberOfPoints();
+
+//         auto fakeArray = vtkSmartPointer<vtkSignedCharArray>::New();
+//         fakeArray->SetName("Fake");
+//         fakeArray->SetNumberOfComponents(1);
+//         fakeArray->SetNumberOfTuples(nP);
+//         auto fakeArrayData = (signed char *)fakeArray->GetVoidPointer(0);
+//         for(size_t i = 0; i<nP; i++)
+//           fakeArrayData[i] = 0;
+//         pd->AddArray(fakeArray);
+//         return 1;
+//       }
+//       return 0;
+//     };
+
+//     if(preventVTKBug(inputObjectAsPD)) {
+//       firstValuePassIndex = 1;
+//     };
+
+//     this->addValuePass(inputObjectAsPD, 0, valuePassCollection, valuePassNames);
+//     this->addValuePass(inputObjectAsPD, 1, valuePassCollection, valuePassNames);
+//     nValuePasses = valuePassNames.size();
+
+//     auto sequence = vtkSmartPointer<vtkSequencePass>::New();
+//     sequence->SetPasses(valuePassCollection);
+
+//     auto cameraPass = vtkSmartPointer<vtkCameraPass>::New();
+//     cameraPass->SetDelegatePass(sequence);
+
+//     auto glRenderer = vtkOpenGLRenderer::SafeDownCast(rendererScalars);
+//     glRenderer->SetPass(cameraPass);
+
+//     // First pass to setup everything
+//     windowScalars->Render();
+//   }
+
+//   this->printMsg(
+//     "Initializing Rendering Pipeline",
+//     1, timer.getElapsedTime()
+//   );
+//   timer.reStart();
+
+//   // ---------------------------------------------------------------------------
+//   // Prepare Field Data for Depth Values
+//   // ---------------------------------------------------------------------------
+//   std::vector<vtkAbstractArray*> globalArrays;
+//   {
+//     this->addGobalArray(globalArrays, "CamHeight", 1, &camHeight);
+//     this->addGobalArray(globalArrays, "CamNearFar", 2, camNearFar);
+//     this->addGobalArray(globalArrays, "Resolution", 2, resolution);
+
+//     auto inputObjectFD = inputObjectAsPD->GetFieldData();
+//     for(size_t i = 0, j = inputObjectFD->GetNumberOfArrays(); i < j; i++) {
+//       auto array = inputObjectFD->GetAbstractArray(i);
+//       auto copy = vtkSmartPointer<vtkAbstractArray>::Take(array->NewInstance());
+//       copy->DeepCopy(array);
+//       globalArrays.push_back(array);
+//     }
+//   }
+//   size_t nGlobalArrays = globalArrays.size();
+
+//   // ---------------------------------------------------------------------------
+//   // Iterate over Locations
+//   // ---------------------------------------------------------------------------
+//   auto inputGridPD = inputGrid->GetPointData();
+//   size_t nInputGridPD = inputGridPD->GetNumberOfArrays();
+
+//   double *camFocusData = nullptr;
+//   double *camDirData = nullptr;
+//   double *camUpData = nullptr;
+
+//   {
+//     auto checkGridArray
+//       = [](vtkFieldData *fd, std::string name, std::string &gridFieldNames,
+//           double *&data, const ttkCinemaImagingVTK *caller) {
+//           if(fd->HasArray(name.data())) {
+//             auto field
+//               = vtkDoubleArray::SafeDownCast(fd->GetAbstractArray(name.data()));
+//             if(!field) {
+//               caller->printErr(
+//                 "Sampling grid field '" + name
+//                 + "' is not a vtkDoubleArray with three components.");
+//               return 0;
+//             }
+//             data = (double *)field->GetVoidPointer(0);
+//             gridFieldNames += " '" + name + "'";
+//           }
+//           return 1;
+//         };
+
+//     std::string gridFieldNames = "";
+//     if(!checkGridArray(
+//         inputGridPD, "CamFocus", gridFieldNames, camFocusData, this))
+//       return 0;
+//     if(!checkGridArray(
+//         inputGridPD, "CamDirection", gridFieldNames, camDirData, this))
+//       return 0;
+//     if(!checkGridArray(inputGridPD, "CamUp", gridFieldNames, camUpData, this))
+//       return 0;
+
+//     if(gridFieldNames.compare("") != 0)
+//       this->printMsg("Sampling grid has field(s): " + gridFieldNames);
+//   }
+
+//   // -------------------------------------------------------------------------
+//   // Render Images for all Camera Locations
+//   // -------------------------------------------------------------------------
+//   {
+//     timer.reStart();
+//     size_t n = inputGrid->GetNumberOfPoints();
+//     this->printMsg(
+//       "Rendering " + std::to_string(n) + " images with "
+//         + std::to_string(nValuePasses + 1) + " fields",
+//       0, ttk::debug::LineMode::REPLACE
+//     );
+
+//     double camPosition[3] = {0, 0, 0};
+//     auto readCameraData = [](double target[3], double *src, int index) {
+//       target[0] = src[index];
+//       target[1] = src[index + 1];
+//       target[2] = src[index + 2];
+//     };
+
+//     auto addCamFieldData
+//       = [](vtkFieldData *fd, std::string name, double *data) {
+//           auto array = vtkSmartPointer<vtkDoubleArray>::New();
+//           array->SetName(name.data());
+//           array->SetNumberOfComponents(3);
+//           array->SetNumberOfTuples(1);
+//           array->SetValue(0, data[0]);
+//           array->SetValue(1, data[1]);
+//           array->SetValue(2, data[2]);
+//           fd->AddArray(array);
+//         };
+
+//     for(size_t i = 0; i < n; i++) {
+//       // Set Camera Position
+//       inputGrid->GetPoint(i, camPosition);
+
+//       // Cam Up Fix
+//       if(camPosition[0] == 0 && camPosition[2] == 0) {
+//         camPosition[0] = 0.00000000001;
+//         camPosition[2] = 0.00000000001;
+//       }
+//       camera->SetPosition(camPosition);
+
+//       if(camUpData != nullptr) {
+//         readCameraData(camUp, camUpData, i * 3);
+//         vtkMath::Normalize(camUp);
+//       }
+//       camera->SetViewUp(camUp);
+
+//       if(camFocusData != nullptr) {
+//         readCameraData(camFocus, camFocusData, i * 3);
+//         camera->SetFocalPoint(camFocus);
+//       }
+//       if(camDirData != nullptr) {
+//         readCameraData(camDir, camDirData, i * 3);
+//         camFocus[0] = camPosition[0] + camDir[0];
+//         camFocus[1] = camPosition[1] + camDir[1];
+//         camFocus[2] = camPosition[2] + camDir[2];
+//         camera->SetFocalPoint(camFocus);
+//       } else {
+//         camDir[0] = camFocus[0] - camPosition[0];
+//         camDir[1] = camFocus[1] - camPosition[1];
+//         camDir[2] = camFocus[2] - camPosition[2];
+//         vtkMath::Normalize(camDir);
+//       }
+
+//       // Initialize Output Image
+//       auto outputImage = vtkSmartPointer<vtkImageData>::New();
+//       auto outputImagePD = outputImage->GetPointData();
+
+//       // Initialize as depth image
+//       {
+//         windowDepthToImageFilter->Modified();
+//         windowDepthToImageFilter->Update();
+//         outputImage->DeepCopy(windowDepthToImageFilter->GetOutput());
+//         outputImagePD->GetAbstractArray(0)->SetName("Depth");
+//       }
+
+//       // Render Scalar Images
+//       if(nValuePasses > firstValuePassIndex) {
+//         windowScalars->Render();
+
+//         for(size_t j = firstValuePassIndex; j < nValuePasses; j++) {
+//           auto valuePass = vtkValuePass::SafeDownCast(
+//             valuePassCollection->GetItemAsObject(j));
+//           auto newValueArray = vtkSmartPointer<vtkFloatArray>::New();
+//           newValueArray->DeepCopy(
+//             valuePass->GetFloatImageDataArray(rendererScalars));
+//           newValueArray->SetName(valuePassNames[j].data());
+//           outputImagePD->AddArray(newValueArray);
+//         }
+//       }
+
+//       // Add Field Data
+//       {
+//         auto outputImageFD = outputImage->GetFieldData();
+
+//         // Global Arrays
+//         for(size_t j = 0; j < nGlobalArrays; j++) {
+//           outputImageFD->AddArray(globalArrays[j]);
+//         }
+
+//         // Specific Arrays
+//         addCamFieldData(outputImageFD, "CamPosition", camPosition);
+//         addCamFieldData(outputImageFD, "CamDirection", camDir);
+//         addCamFieldData(outputImageFD, "CamUp", camera->GetViewUp());
+
+//         for(size_t j = 0; j < nInputGridPD; j++) {
+//           auto array = inputGridPD->GetAbstractArray(j);
+//           auto newArray
+//             = vtkSmartPointer<vtkAbstractArray>::Take(array->NewInstance());
+//           std::string name(array->GetName());
+//           if(outputImageFD->HasArray(name.data()))
+//             name += "FromGrid";
+//           newArray->SetName(name.data());
+//           newArray->SetNumberOfComponents(array->GetNumberOfComponents());
+//           newArray->SetNumberOfTuples(1);
+//           newArray->SetTuple(0, i, array);
+
+//           outputImageFD->AddArray(newArray);
+//         }
+//       }
+
+//       // Add Image to MultiBlock
+//       outputImages->SetBlock(i, outputImage);
+//     }
+
+//     this->printMsg("Rendering " + std::to_string(n) + " images with "
+//         + std::to_string(nValuePasses + 1) + " fields",
+//       1, timer.getElapsedTime()
+//     );
+//   }
+
+//   return 1;
+// };

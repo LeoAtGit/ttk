@@ -13,11 +13,16 @@
 /// analysis when outlier critical points can be easily identified. It is
 /// also useful for data simplification.
 ///
-/// \b Related \b publication \n
+/// \b Related \b publications \n
 /// "Generalized Topological Simplification of Scalar Fields on Surfaces" \n
 /// Julien Tierny, Valerio Pascucci \n
 /// Proc. of IEEE VIS 2012.\n
 /// IEEE Transactions on Visualization and Computer Graphics, 2012.
+///
+/// "Localized Topological Simplification of Scalar Data"
+/// Jonas Lukasczyk, Christoph Garth, Ross Maciejewski, Julien Tierny
+/// Proc. of IEEE VIS 2020.
+/// IEEE Transactions on Visualization and Computer Graphics
 ///
 /// \sa ttkTopologicalSimplification.cpp %for a usage example.
 
@@ -295,7 +300,7 @@ int ttk::TopologicalSimplification::execute(
   this->printMsg("Maintaining " + std::to_string(constraintNumber)
                    + " constraints (" + std::to_string(authorizedMinima.size())
                    + " minima and " + std::to_string(authorizedMaxima.size())
-                   + "maxima)",
+                   + " maxima)",
                  debug::Priority::DETAIL);
 
   // declare the tuple-comparison functor

@@ -104,62 +104,58 @@ int ttkDepthImageBasedGeometryApproximation::RequestData(
     // Prepare output cell buffer that holds two triangles for every quad
     // consisting of 4 vertices
     auto cells = vtkSmartPointer<vtkCellArray>::New();
-    size_t nTriangles = 2 * (resX - 1) * (resY - 1);
-    // Vectors to hold raw approximated geometry
+    size_t nTriangles = 2*(resX-1)*(resY-1);
 
     auto triangleDistortions = vtkSmartPointer<vtkDoubleArray>::New();
     triangleDistortions->SetName("TriangleDistortion");
     triangleDistortions->SetNumberOfComponents(1);
     triangleDistortions->SetNumberOfTuples(nTriangles);
 
-    // retrieve the numerous input array of the method.
-    // TODO: use setter getter instead, 10 parameters is too much.
-    // Input
-    double *camPositionPtr
-      = static_cast<double *>(ttkUtils::GetVoidPointer(camPosition));
-    double *camDirectionPtr
-      = static_cast<double *>(ttkUtils::GetVoidPointer(camDirection));
-    double *camUpPtr = static_cast<double *>(ttkUtils::GetVoidPointer(camUp));
-    double *camNearFarPtr
-      = static_cast<double *>(ttkUtils::GetVoidPointer(camNearFar));
-    double *camHeightPtr
-      = static_cast<double *>(ttkUtils::GetVoidPointer(camHeight));
-    double *resolutionPtr
-      = static_cast<double *>(ttkUtils::GetVoidPointer(resolution));
-    // Output
-    float *pointsPtr // may be double, error then
-      = static_cast<float *>(ttkUtils::GetVoidPointer(points));
-    double *triangleDistortionsPtr
-      = static_cast<double *>(ttkUtils::GetVoidPointer(triangleDistortions));
-    // Cells output
-    std::vector<vtkIdType> cellsCo;
-    cellsCo.resize(nTriangles * 3);
-    std::vector<vtkIdType> cellsOff;
-    cellsOff.resize(nTriangles + 1);
+    auto connectivityArray = vtkSmartPointer<vtkIntArray>::New();
+    connectivityArray->SetNumberOfTuples(3*nTriangles);
 
     // Approximate geometry
+    int status = 0;
     switch(depthArray->GetDataType()) {
-      vtkTemplateMacro({
-        VTK_TT *depthArrayPtr
-          = static_cast<VTK_TT *>(ttkUtils::GetVoidPointer(depthArray));
-        this->execute(
-          // Input
-          depthArrayPtr, camPositionPtr, camDirectionPtr, camUpPtr,
-          camNearFarPtr, camHeightPtr, resolutionPtr,
-
+      vtkTemplateMacro(
+        (status=this->execute<VTK_TT,int>(
           // Output
-          pointsPtr, cellsCo.data(), cellsOff.data(), triangleDistortionsPtr);
-      });
-    }
+          static_cast<float *>(ttkUtils::GetVoidPointer(points)),
+          static_cast<int*>(ttkUtils::GetVoidPointer(connectivityArray)),
+          static_cast<double *>(ttkUtils::GetVoidPointer(triangleDistortions)),
 
-    ttkUtils::FillCellArrayFromDual(
-      cellsCo.data(), cellsOff.data(), nTriangles, cells);
+          // Input
+          static_cast<VTK_TT *>(ttkUtils::GetVoidPointer(depthArray)),
+          static_cast<double *>(ttkUtils::GetVoidPointer(camPosition)),
+          static_cast<double *>(ttkUtils::GetVoidPointer(camDirection)),
+          static_cast<double *>(ttkUtils::GetVoidPointer(camUp)),
+          static_cast<double *>(ttkUtils::GetVoidPointer(camNearFar)),
+          static_cast<double *>(ttkUtils::GetVoidPointer(camHeight)),
+          static_cast<double *>(ttkUtils::GetVoidPointer(resolution))
+          )
+        )
+      );
+    }
+    if(!status)
+      return 0;
 
     // Represent approximated geometry via VTK
     auto mesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
     {
+      auto offsetArray = vtkSmartPointer<vtkIntArray>::New();
+      {
+        offsetArray->SetNumberOfTuples(nTriangles+1);
+        auto offsetArrayData = static_cast<int*>(ttkUtils::GetVoidPointer(offsetArray));
+        for(size_t t=0; t<nTriangles; t++)
+          offsetArrayData[t] = t*3;
+        offsetArrayData[nTriangles] = 3*nTriangles;
+      }
+
+      auto cellArray = vtkSmartPointer<vtkCellArray>::New();
+      cellArray->SetData(offsetArray, connectivityArray);
+
       mesh->SetPoints(points);
-      mesh->SetCells(VTK_TRIANGLE, cells);
+      mesh->SetCells(VTK_TRIANGLE, cellArray);
       mesh->GetCellData()->AddArray(triangleDistortions);
     }
 
