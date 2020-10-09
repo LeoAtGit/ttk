@@ -233,8 +233,8 @@ ttk::Triangulation *
   } else if(cellTypeStatus == -2) {
     this->printWrn("Cells are not simplices.");
     this->printWrn("Consider using `vtkTetrahedralize` in pre-processing.");
-    delete triangulation;
-    return nullptr;
+    // delete triangulation;
+    // return nullptr;
   }
 
   // Cells
