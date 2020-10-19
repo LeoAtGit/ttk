@@ -11,7 +11,15 @@
 
 #include <Debug.h>
 
-namespace ttk {
+struct Ray {
+  float* dir;
+  float* origin;
+  float distance;
+  float u;
+  float v;
+};
+  
+namespace ttk {  
   class CinemaImagingNative : virtual public Debug {
   public:
     CinemaImagingNative(){
@@ -19,6 +27,20 @@ namespace ttk {
     }
     ~CinemaImagingNative(){};
 
+    void multiplyByScalar(float* out, const float* a, const float& scalar) const;
+    void addVectors(float* out, const float* a, const float* b) const;
+    void subVectors(float* out, const float* a, const float* b) const;
+    void cross(float* out, const float* a, const float* b) const;
+    float dot(const float* a, const float* b) const;
+    
+    template<typename IT>
+    bool MollerTrumbore(
+      Ray &ray,
+      const IT v0,
+      const IT v1,
+      const IT v2,
+      const float* vertexCoords) const;
+    
     template<typename IT>
     int renderImage(
       float* depthBuffer,
@@ -40,7 +62,7 @@ namespace ttk {
   };
 };
 
-template<typename IT>
+template <typename IT>
 int ttk::CinemaImagingNative::renderImage(
   float* depthBuffer,
   unsigned int* primitiveIds,
@@ -63,7 +85,7 @@ int ttk::CinemaImagingNative::renderImage(
   int resY = resolution[1];
 
   this->printMsg(
-      "Rendering Image ("+std::string(orthographicProjection ? "O" : "P")+ "|"+std::to_string(resX)+"x"+std::to_string(resY)+")",
+		 "Rendering Image ("+std::string(orthographicProjection ? "O" : "P")+ "|"+std::to_string(resX)+"x"+std::to_string(resY)+")",
       0,0,this->threadNumber_,
       ttk::debug::LineMode::REPLACE
   );
@@ -117,40 +139,62 @@ int ttk::CinemaImagingNative::renderImage(
   float nan = std::numeric_limits<float>::quiet_NaN();
   size_t pixelIndex = 0;
   size_t bcIndex = 0;
-
+  
   for(int y = 0; y < resY; y++) {
       double v = ((double)y) * pixelHeightWorld;
 
       for(int x = 0; x < resX; x++) {
         double u = ((double)x) * pixelWidthWorld;
 
+	depthBuffer[pixelIndex] = nan;
+	primitiveIds[pixelIndex] = nan;
+	barycentricCoordinates[bcIndex] = nan;
+	barycentricCoordinates[bcIndex+1] = nan;
+	
+	
         // set origin
-        // rayhit.ray.org_x = camPosCorner[0] + u * camRight[0] + v * camUpTrue[0];
-        // rayhit.ray.org_y = camPosCorner[1] + u * camRight[1] + v * camUpTrue[1];
-        // rayhit.ray.org_z = camPosCorner[2] + u * camRight[2] + v * camUpTrue[2];
+        float org_x = camPosCorner[0] + u * camRight[0] + v * camUpTrue[0];
+        float org_y = camPosCorner[1] + u * camRight[1] + v * camUpTrue[1];
+        float org_z = camPosCorner[2] + u * camRight[2] + v * camUpTrue[2];
 
+	float ray_origin[3] = { org_x,  org_y, org_z };
+	
         // set dir
-        // rayhit.ray.dir_x = camDir[0];
-        // rayhit.ray.dir_y = camDir[1];
-        // rayhit.ray.dir_z = camDir[2];
+        float dir_x = camDir[0];
+        float dir_y = camDir[1];
+        float dir_z = camDir[2];
 
-        // compute ray hit:
-        //  * iterate over every triangle
-        bool wasHit = false;
+	float ray_dir[3] = {dir_x, dir_y, dir_z};
+	
+	float nearestTriangle = std::numeric_limits<float>::max();
+	Ray ray = {ray_dir, ray_origin, 0, 0, 0};
 
-        // if hit
-        if(wasHit){
-          // depthBuffer[pixelIndex] = std::max(0.0f,rayhit.ray.tfar);
-          // primitiveIds[pixelIndex] = rayhit.hit.primID;
-          // barycentricCoordinates[bcIndex++] = rayhit.hit.u;
-          // barycentricCoordinates[bcIndex++] = rayhit.hit.v;
-        } else {
-           depthBuffer[pixelIndex] = nan;
-          // primitiveIds[pixelIndex] = CinemaImagingEmbree::INVALID_ID;
-          // barycentricCoordinates[bcIndex++] = nan;
-          // barycentricCoordinates[bcIndex++] = nan;
-        }
+	
+	for(int i = 0; i < nTriangles; i++)
+	{
+	  bcIndex = pixelIndex;
+	  //go through the list of all triangles
+
+	  //ensure all vertices are correct
+	  bool wasHit = false;
+	  IT v0 = connectivityList[i*3+0];
+	  IT v1 = connectivityList[i*3+1];
+	  IT v2 = connectivityList[i*3+2];
+	  v0 *= 3; 
+	  v1 *= 3; 
+	  v2 *= 3; 
+     	  wasHit = MollerTrumbore(ray,v0,v1,v2,vertexCoords);
+    	  if(wasHit && nearestTriangle > ray.distance)
+	    { 		  
+		  depthBuffer[pixelIndex] = ray.distance;
+		  primitiveIds[pixelIndex] = i;
+		  barycentricCoordinates[bcIndex] = ray.u;
+		  barycentricCoordinates[bcIndex+1] = ray.v;
+		  nearestTriangle = ray.distance;
+	    }
+     	}
         pixelIndex++;
+	bcIndex += 2;
       }
   }
 
@@ -161,3 +205,45 @@ int ttk::CinemaImagingNative::renderImage(
 
   return 1;
 };
+
+template <typename IT>
+bool ttk::CinemaImagingNative::MollerTrumbore(  
+      Ray &ray,
+      const IT v0,
+      const IT v1,
+      const IT v2,
+      const float* vertexCoords) const
+{
+
+  constexpr float kEpsilon = 1e-8;
+  
+  float v0v1[3], v0v2[3], pvec[3], tvec[3], qvec[3];
+  
+  subVectors(v0v1,&vertexCoords[v0],&vertexCoords[v1]);
+  subVectors(v0v2,&vertexCoords[v0],&vertexCoords[v2]);
+  
+  cross(pvec,ray.dir,v0v2);
+  float det = dot(v0v1,pvec);
+  if (det > -kEpsilon && det < kEpsilon) return false;
+  
+  float invDet = 1.0f / det;
+
+  subVectors(tvec,&vertexCoords[v0],ray.origin);
+  float u = dot(tvec, pvec) * invDet;
+  if (u < 0.0 || u > 1.0) return false;
+  
+  cross(qvec,tvec,v0v1);
+  float v = dot(ray.dir,qvec) * invDet;
+  if (v < 0.0 || u + v > 1.0) return false;
+
+  float t = dot(v0v2,qvec) * invDet;
+  ray.distance = t;
+
+  ray.u = u;
+  ray.v = v;
+  
+  return true; 
+};
+
+
+
