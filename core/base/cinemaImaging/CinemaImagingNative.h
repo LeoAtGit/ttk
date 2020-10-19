@@ -137,12 +137,16 @@ int ttk::CinemaImagingNative::renderImage(
                               - camUpTrue[2] * camHeightWorldHalf};
 
   float nan = std::numeric_limits<float>::quiet_NaN();
-  size_t pixelIndex = 0;
-  size_t bcIndex = 0;
-  
+
+  #ifdef TTK_ENABLE_OPENMP
+  #pragma omp parallel for num_threads(this->threadNumber_)
+  #endif
   for(int y = 0; y < resY; y++) {
       double v = ((double)y) * pixelHeightWorld;
 
+      size_t pixelIndex = y*resX;
+      size_t bcIndex = 2*pixelIndex;
+      
       for(int x = 0; x < resX; x++) {
         double u = ((double)x) * pixelWidthWorld;
 
@@ -172,7 +176,6 @@ int ttk::CinemaImagingNative::renderImage(
 	
 	for(int i = 0; i < nTriangles; i++)
 	{
-	  bcIndex = pixelIndex;
 	  //go through the list of all triangles
 
 	  //ensure all vertices are correct
