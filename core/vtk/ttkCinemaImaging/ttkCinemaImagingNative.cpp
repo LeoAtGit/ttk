@@ -103,20 +103,18 @@ int ttk::ttkCinemaImagingNative::RenderVTKObject(
         static_cast<float*>(ttkUtils::GetVoidPointer(depthBuffer)),
         static_cast<unsigned int*>(ttkUtils::GetVoidPointer(primitiveIdArray)),
         static_cast<float*>(ttkUtils::GetVoidPointer(barycentricCoordinates)),
-
         inputObject->GetNumberOfPoints(),
         static_cast<float*>(ttkUtils::GetVoidPointer(inputObject->GetPoints())),
         inputObjectCells->GetNumberOfCells(),
         inputObjectConnectivityList,
-
         bvh,
-
         &resolution[i*2],
         camPos,
         &camDir[i*3],
         &camUp[i*3],
         camHeight[i],
-        projectionMode[i]==0
+        projectionMode[i]==0,
+	camAngle[i]
       );
       if(!status)
         return 0;

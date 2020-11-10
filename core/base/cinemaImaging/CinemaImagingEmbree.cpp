@@ -128,7 +128,7 @@ int ttk::CinemaImagingEmbree::renderImage(
   size_t bcIndex = 0;
   float nan = std::numeric_limits<float>::quiet_NaN();
 
-  if(orthographicProjection){
+  if(orthographicProjection){ 
 
     for(int y = 0; y < resY; y++) {
         double v = ((double)y) * pixelHeightWorld;
