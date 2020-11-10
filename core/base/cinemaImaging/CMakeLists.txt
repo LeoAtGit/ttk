@@ -1,10 +1,14 @@
 ttk_add_base_library(cinemaImaging
   SOURCES
     CinemaImagingEmbree.cpp
+    CinemaImagingMath.cpp
     CinemaImagingNative.cpp
   HEADERS
     CinemaImagingEmbree.h
     CinemaImagingNative.h
+    CinemaImagingMath.h
+    BVH.h
+    Ray.h
   DEPENDS
     triangulation
 )
