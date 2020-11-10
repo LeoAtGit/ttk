@@ -5,6 +5,7 @@
 #include <vtkPointSet.h>
 
 #include <vtkPointData.h>
+#include <vtkCellData.h>
 #include <vtkUnsignedIntArray.h>
 #include <vtkFloatArray.h>
 #include <vtkCellArray.h>
@@ -12,6 +13,7 @@
 #include <ttkCinemaImaging.h>
 #include <ttkUtils.h>
 
+#include <BVH.h>
 
 ttk::ttkCinemaImagingNative::ttkCinemaImagingNative(){
     this->setDebugMsgPrefix("CinemaImaging(Native)");
@@ -31,10 +33,10 @@ int ttk::ttkCinemaImagingNative::RenderVTKObject(
   auto inputObjectCells = ttkCinemaImaging::GetCells(inputObject);
 
   // get point and cell data of input object
-//   auto inputObjectPD = inputObject->GetPointData();
-//   size_t nInputObjectPDArrays = inputObjectPD->GetNumberOfArrays();
-//   auto inputObjectCD = inputObject->GetCellData();
-//   size_t nInputObjectCDArrays = inputObjectCD->GetNumberOfArrays();
+  auto inputObjectPD = inputObject->GetPointData();
+  size_t nInputObjectPDArrays = inputObjectPD->GetNumberOfArrays();
+  auto inputObjectCD = inputObject->GetCellData();
+  size_t nInputObjectCDArrays = inputObjectCD->GetNumberOfArrays();
 
   // ---------------------------------------------------------------------------
   // Prepare Field Data for Depth Values
@@ -51,6 +53,21 @@ int ttk::ttkCinemaImagingNative::RenderVTKObject(
   auto camAngle = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("CamAngle")));
   auto resolution = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("Resolution")));
   auto projectionMode = static_cast<double*>(ttkUtils::GetVoidPointer(camParameters->GetArray("ProjectionMode")));
+
+  auto inputObjectConnectivityList = static_cast<vtkIdType*>(
+      ttkUtils::GetVoidPointer(
+        inputObjectCells->GetConnectivityArray()
+      )
+  );
+
+  ttk::Timer test;
+  BVH<vtkIdType> bvh(
+    static_cast<float*>(ttkUtils::GetVoidPointer(inputObject->GetPoints())),
+    inputObjectConnectivityList,
+    inputObjectCells->GetNumberOfCells()
+  );
+
+  this->printMsg("BVH",1,test.getElapsedTime(),1);
 
   for(int i=0; i<nSamplingPositions; i++) {
 
@@ -90,7 +107,9 @@ int ttk::ttkCinemaImagingNative::RenderVTKObject(
         inputObject->GetNumberOfPoints(),
         static_cast<float*>(ttkUtils::GetVoidPointer(inputObject->GetPoints())),
         inputObjectCells->GetNumberOfCells(),
-        static_cast<vtkIdType*>(ttkUtils::GetVoidPointer(inputObjectCells->GetConnectivityArray())),
+        inputObjectConnectivityList,
+
+        bvh,
 
         &resolution[i*2],
         camPos,
@@ -102,63 +121,63 @@ int ttk::ttkCinemaImagingNative::RenderVTKObject(
       if(!status)
         return 0;
 
-    //   // Map Point Data
-    //   for(size_t j=0; j<nInputObjectPDArrays; j++){
-    //     auto inputArray = inputObjectPD->GetArray(j);
-    //     auto outputArray = vtkSmartPointer<vtkDataArray>::Take( inputArray->NewInstance() );
-    //     outputArray->SetName(inputArray->GetName());
-    //     outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());
-    //     outputArray->SetNumberOfTuples( nPixels );
+      // Map Point Data
+      for(size_t j=0; j<nInputObjectPDArrays; j++){
+        auto inputArray = inputObjectPD->GetArray(j);
+        auto outputArray = vtkSmartPointer<vtkDataArray>::Take( inputArray->NewInstance() );
+        outputArray->SetName(inputArray->GetName());
+        outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());
+        outputArray->SetNumberOfTuples( nPixels );
 
-    //     outputImagePD->AddArray(outputArray);
+        outputImagePD->AddArray(outputArray);
 
-    //     switch(outputArray->GetDataType()){
-    //       vtkTemplateMacro(
-    //         status = this->interpolateArray(
-    //           (VTK_TT*) ttkUtils::GetVoidPointer(outputArray),
+        switch(outputArray->GetDataType()){
+          vtkTemplateMacro(
+            status = this->interpolateArray(
+              (VTK_TT*) ttkUtils::GetVoidPointer(outputArray),
 
-    //           (const unsigned int*) ttkUtils::GetVoidPointer(primitiveIdArray),
-    //           (const float*) ttkUtils::GetVoidPointer(barycentricCoordinates),
-    //           inputObjectConnectivityList,
+              (const unsigned int*) ttkUtils::GetVoidPointer(primitiveIdArray),
+              (const float*) ttkUtils::GetVoidPointer(barycentricCoordinates),
+              inputObjectConnectivityList,
 
-    //           (const VTK_TT*) ttkUtils::GetVoidPointer(inputArray),
-    //           nPixels,
-    //           inputArray->GetNumberOfComponents()
-    //         )
-    //       );
-    //     }
+              (const VTK_TT*) ttkUtils::GetVoidPointer(inputArray),
+              nPixels,
+              inputArray->GetNumberOfComponents()
+            )
+          );
+        }
 
-    //     if(!status)
-    //       return 0;
-    //   }
+        if(!status)
+          return 0;
+      }
 
-    //   // Map Cell Data
-    //   for(size_t j=0; j<nInputObjectCDArrays; j++){
-    //     auto inputArray = inputObjectCD->GetArray(j);
-    //     auto outputArray = vtkSmartPointer<vtkDataArray>::Take( inputArray->NewInstance() );
-    //     outputArray->SetName(inputArray->GetName());
-    //     outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());
-    //     outputArray->SetNumberOfTuples( nPixels );
+      // Map Cell Data
+      for(size_t j=0; j<nInputObjectCDArrays; j++){
+        auto inputArray = inputObjectCD->GetArray(j);
+        auto outputArray = vtkSmartPointer<vtkDataArray>::Take( inputArray->NewInstance() );
+        outputArray->SetName(inputArray->GetName());
+        outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());
+        outputArray->SetNumberOfTuples( nPixels );
 
-    //     outputImagePD->AddArray(outputArray);
+        outputImagePD->AddArray(outputArray);
 
-    //     switch(outputArray->GetDataType()){
-    //       vtkTemplateMacro(
-    //         status = this->lookupArray(
-    //           (VTK_TT*) ttkUtils::GetVoidPointer(outputArray),
+        switch(outputArray->GetDataType()){
+          vtkTemplateMacro(
+            status = this->lookupArray(
+              (VTK_TT*) ttkUtils::GetVoidPointer(outputArray),
 
-    //           (const unsigned int*) ttkUtils::GetVoidPointer(primitiveIdArray),
+              (const unsigned int*) ttkUtils::GetVoidPointer(primitiveIdArray),
 
-    //           (const VTK_TT*) ttkUtils::GetVoidPointer(inputArray),
-    //           nPixels,
-    //           inputArray->GetNumberOfComponents()
-    //         )
-    //       );
-    //     }
+              (const VTK_TT*) ttkUtils::GetVoidPointer(inputArray),
+              nPixels,
+              inputArray->GetNumberOfComponents()
+            )
+          );
+        }
 
-    //     if(!status)
-    //       return 0;
-    //   }
+        if(!status)
+          return 0;
+      }
 
       ttkCinemaImaging::AddAllFieldDataArrays(
         inputGrid,

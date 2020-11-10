@@ -10,14 +10,14 @@
 #include <Debug.h>
 #include "Ray.h"
 #include "BVH.h"
-namespace ttk {  
+namespace ttk {
   class CinemaImagingNative : virtual public Debug {
   public:
     CinemaImagingNative(){
         this->setDebugMsgPrefix("CinemaImaging(Native)");
     }
     ~CinemaImagingNative(){};
-     
+
     template<typename IT>
     int renderImage(
       float* depthBuffer,
@@ -29,6 +29,8 @@ namespace ttk {
       const size_t& nTriangles,
       const IT* connectivityList,
 
+      const BVH<IT>& bvh,
+
       const double resolution[2],
       const double camPos[3],
       const double camDirRaw[3],
@@ -36,7 +38,110 @@ namespace ttk {
       const double& camHeight,
       const bool& orthographicProjection
     ) const;
+
+    template<typename DT, typename IT>
+    int interpolateArray(
+      DT* outputArray,
+
+      const unsigned int* primitiveIds,
+      const float* barycentricCoordinates,
+      const IT* connectivityList,
+
+      const DT* inputArray,
+      const size_t& nTuples,
+      const size_t& nComponents=1,
+      const DT& missingValue= std::numeric_limits<DT>::has_quiet_NaN ? std::numeric_limits<DT>::quiet_NaN() : std::numeric_limits<DT>::max()
+    ) const;
+
+    template<typename DT>
+    int lookupArray(
+      DT* outputArray,
+
+      const unsigned int* primitiveIds,
+
+      const DT* inputArray,
+      const size_t& nTuples,
+      const size_t& nComponents=1,
+      const DT& missingValue= std::numeric_limits<DT>::has_quiet_NaN ? std::numeric_limits<DT>::quiet_NaN() : std::numeric_limits<DT>::max()
+    ) const;
+
   };
+
+};
+
+template<typename DT, typename IT>
+int ttk::CinemaImagingNative::interpolateArray(
+  DT* outputArray,
+
+  const unsigned int* primitiveIds,
+  const float* barycentricCoordinates,
+  const IT* connectivityList,
+
+  const DT* inputArray,
+  const size_t& nTuples,
+  const size_t& nComponents,
+  const DT& missingValue
+) const {
+
+  if(nComponents!=1){
+    this->printErr("Current implementation only supports interpolation of scalars.");
+    return 0;
+  }
+
+  #ifdef TTK_ENABLE_OPENMP
+  #pragma omp parallel for num_threads(this->threadNumber_)
+  #endif
+  for(size_t i=0; i<nTuples; i++){
+    const unsigned int& cellId = primitiveIds[i];
+    if(cellId==-1){
+      outputArray[i] = missingValue;
+      continue;
+    }
+
+    const size_t cellIndex = cellId*3;
+    const IT& v0 = connectivityList[cellIndex+0];
+    const IT& v1 = connectivityList[cellIndex+1];
+    const IT& v2 = connectivityList[cellIndex+2];
+
+    const size_t bcIndex = i*2;
+    const float& u = barycentricCoordinates[bcIndex+0];
+    const float& v = barycentricCoordinates[bcIndex+1];
+    const float w = 1 - u - v;
+
+    outputArray[i] = w*inputArray[v0] + u*inputArray[v1] + v*inputArray[v2];
+  }
+
+  return 1;
+};
+
+template<typename DT>
+int ttk::CinemaImagingNative::lookupArray(
+  DT* outputArray,
+
+  const unsigned int* primitiveIds,
+
+  const DT* inputArray,
+  const size_t& nTuples,
+  const size_t& nComponents,
+  const DT& missingValue
+) const {
+
+  for(size_t i=0; i<nTuples; i++){
+    size_t outputOffset = i*nComponents;
+    const unsigned int& cellId = primitiveIds[i];
+
+    if(cellId==-1){
+      for(size_t j=0; j<nComponents; j++)
+        outputArray[ outputOffset++ ] = missingValue;
+      continue;
+    } else {
+      size_t inputOffset = cellId*nComponents;
+      for(size_t j=0; j<nComponents; j++)
+        outputArray[ outputOffset++ ] = inputArray[ inputOffset++ ];
+    }
+  }
+
+  return 1;
 };
 
 template <typename IT>
@@ -49,6 +154,8 @@ int ttk::CinemaImagingNative::renderImage(
   const float* vertexCoords,
   const size_t& nTriangles,
   const IT* connectivityList,
+
+  const BVH<IT>& bvh,
 
   const double resolution[2],
   const double camPos[3],
@@ -114,7 +221,7 @@ int ttk::CinemaImagingNative::renderImage(
                               - camUpTrue[2] * camHeightWorldHalf};
 
   float nan = std::numeric_limits<float>::quiet_NaN();
-  BVH<IT> bvh(vertexCoords, connectivityList, nTriangles);
+
   //bvh.testTree();
   #ifdef TTK_ENABLE_OPENMP
   #pragma omp parallel for num_threads(this->threadNumber_)
@@ -124,23 +231,23 @@ int ttk::CinemaImagingNative::renderImage(
 
       size_t pixelIndex = y*resX;
       size_t bcIndex = 2*pixelIndex;
-      
+
       for(int x = 0; x < resX; x++) {
         double u = ((double)x) * pixelWidthWorld;
 
 	depthBuffer[pixelIndex] = nan;
-	primitiveIds[pixelIndex] = nan;
+	primitiveIds[pixelIndex] = -1;
 	barycentricCoordinates[bcIndex] = nan;
 	barycentricCoordinates[bcIndex+1] = nan;
-	
-	
+
+
         // set origin
         float org_x = camPosCorner[0] + u * camRight[0] + v * camUpTrue[0];
         float org_y = camPosCorner[1] + u * camRight[1] + v * camUpTrue[1];
         float org_z = camPosCorner[2] + u * camRight[2] + v * camUpTrue[2];
 
 	float ray_origin[3] = { org_x,  org_y, org_z };
-	
+
         // set dir
         float dir_x = camDir[0];
         float dir_y = camDir[1];

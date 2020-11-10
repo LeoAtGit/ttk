@@ -273,7 +273,7 @@ namespace ttk {
                    const IT *connectivityList,
                    const float *vertexCoords,
                    int *triangleIndex,
-                   float *distance) {
+                   float *distance) const {
       bool wasHit = false;
       float nearestTriangle = std::numeric_limits<float>::max();
       std::stack<Node *> stack;
@@ -284,7 +284,7 @@ namespace ttk {
       stack.push(node);
       while(stack.size() != 0) {
         node = stack.top();
-        stack.pop(); 
+        stack.pop();
         if(wasNodeHit(r, node)) {
 
           if(node->numTriangles > 0) {
@@ -321,7 +321,7 @@ namespace ttk {
       return wasHit;
     }
 
-    bool wasNodeHit(const Ray &r, Node *n) {
+    bool wasNodeHit(const Ray &r, Node *n) const {
       float tmin = (n->m_minX - r.m_origin[0]) / r.m_direction[0];
       float tmax = (n->m_maxX - r.m_origin[0]) / r.m_direction[0];
 
