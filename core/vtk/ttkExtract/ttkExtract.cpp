@@ -256,43 +256,43 @@ int ttkExtract::ExtractRows(vtkDataObject *output,
   return 1;
 }
 
-template <typename dataType>
+template <typename DT>
 struct ComperatorLessOrEqual {
-  static bool Test(const dataType &d0, const dataType &d1) {
+  static bool Test(const DT &d0, const DT &d1) {
     return d0 <= d1;
   }
 };
-template <typename dataType>
+template <typename DT>
 struct ComperatorLess {
-  static bool Test(const dataType &d0, const dataType &d1) {
+  static bool Test(const DT &d0, const DT &d1) {
     return d0 < d1;
   }
 };
-template <typename dataType>
+template <typename DT>
 struct ComperatorGreaterOrEqual {
-  static bool Test(const dataType &d0, const dataType &d1) {
+  static bool Test(const DT &d0, const DT &d1) {
     return d0 >= d1;
   }
 };
-template <typename dataType>
+template <typename DT>
 struct ComperatorGreater {
-  static bool Test(const dataType &d0, const dataType &d1) {
+  static bool Test(const DT &d0, const DT &d1) {
     return d0 > d1;
   }
 };
-template <typename dataType>
+template <typename DT>
 struct ComperatorEqual {
-  static bool Test(const dataType &d0, const dataType &d1) {
+  static bool Test(const DT &d0, const DT &d1) {
     return d0 == d1;
   }
 };
 
-template <typename dataType, typename ComperatorType>
+template <typename DT, typename ComperatorType>
 int testPointDataArray(std::vector<int> &oIndex_to_mIndex_map,
 
                        const size_t &nPoints,
-                       const dataType *inputPointDataArray,
-                       const std::vector<dataType> pivotValues,
+                       const DT *inputPointDataArray,
+                       const std::vector<DT> pivotValues,
                        const size_t &threadNumber) {
   const size_t nPivotValues = pivotValues.size();
 #ifdef TTK_ENABLE_OPENMP
@@ -300,7 +300,7 @@ int testPointDataArray(std::vector<int> &oIndex_to_mIndex_map,
 #endif // TTK_ENABLE_OPENMP
   for(size_t i = 0; i < nPoints; i++) {
     bool hasToBeMarked = false;
-    const dataType &v = inputPointDataArray[i];
+    const DT &v = inputPointDataArray[i];
     for(size_t j = 0; j < nPivotValues; j++)
       if(ComperatorType::Test(v, pivotValues[j]))
         hasToBeMarked = true;
@@ -311,13 +311,13 @@ int testPointDataArray(std::vector<int> &oIndex_to_mIndex_map,
   return 1;
 }
 
-template <typename dataType, typename ComperatorType>
+template <typename DT, typename ComperatorType>
 int testCellDataArray(std::vector<int> &oIndex_to_mIndex_map,
 
                       const size_t &nCells,
                       const vtkIdType *inConnectivityList,
-                      const dataType *inputCellDataArray,
-                      const std::vector<dataType> pivotValues,
+                      const DT *inputCellDataArray,
+                      const std::vector<DT> pivotValues,
                       const size_t &threadNumber) {
   const size_t nPivotValues = pivotValues.size();
 
@@ -325,7 +325,7 @@ int testCellDataArray(std::vector<int> &oIndex_to_mIndex_map,
 #pragma omp parallel for num_threads(threadNumber)
 #endif // TTK_ENABLE_OPENMP
   for(size_t i = 0; i < nCells; i++) {
-    const dataType &v = inputCellDataArray[i];
+    const DT &v = inputCellDataArray[i];
 
     bool hasToBeMarked = false;
     for(size_t j = 0; j < nPivotValues; j++)
@@ -342,75 +342,75 @@ int testCellDataArray(std::vector<int> &oIndex_to_mIndex_map,
   return 1;
 }
 
-template <typename dataType>
+template <typename DT>
 int markVerticesBasedOnPointData(std::vector<int> &oIndex_to_mIndex_map,
 
                                  const std::vector<double> pivotValues,
                                  const size_t &nPoints,
-                                 const dataType *inputPointDataArray,
+                                 const DT *inputPointDataArray,
                                  const size_t &validationMode,
                                  const size_t &threadNumber) {
   const size_t nPivotValues = pivotValues.size();
-  std::vector<dataType> pivotValuesDT(nPivotValues);
+  std::vector<DT> pivotValuesDT(nPivotValues);
   for(size_t i = 0; i < nPivotValues; i++)
-    pivotValuesDT[i] = (dataType)pivotValues[i];
+    pivotValuesDT[i] = (DT)pivotValues[i];
 
   if(validationMode == 0)
-    return testPointDataArray<dataType, ComperatorLess<dataType>>(
+    return testPointDataArray<DT, ComperatorLess<DT>>(
       oIndex_to_mIndex_map, nPoints, inputPointDataArray, pivotValuesDT,
       threadNumber);
   else if(validationMode == 1)
-    return testPointDataArray<dataType, ComperatorLessOrEqual<dataType>>(
+    return testPointDataArray<DT, ComperatorLessOrEqual<DT>>(
       oIndex_to_mIndex_map, nPoints, inputPointDataArray, pivotValuesDT,
       threadNumber);
   else if(validationMode == 2)
-    return testPointDataArray<dataType, ComperatorEqual<dataType>>(
+    return testPointDataArray<DT, ComperatorEqual<DT>>(
       oIndex_to_mIndex_map, nPoints, inputPointDataArray, pivotValuesDT,
       threadNumber);
   else if(validationMode == 3)
-    return testPointDataArray<dataType, ComperatorGreaterOrEqual<dataType>>(
+    return testPointDataArray<DT, ComperatorGreaterOrEqual<DT>>(
       oIndex_to_mIndex_map, nPoints, inputPointDataArray, pivotValuesDT,
       threadNumber);
   else if(validationMode == 4)
-    return testPointDataArray<dataType, ComperatorGreater<dataType>>(
+    return testPointDataArray<DT, ComperatorGreater<DT>>(
       oIndex_to_mIndex_map, nPoints, inputPointDataArray, pivotValuesDT,
       threadNumber);
 
   return 0;
 }
 
-template <typename dataType>
+template <typename DT>
 int markVerticesBasedOnCellData(std::vector<int> &oIndex_to_mIndex_map,
 
                                 const std::vector<double> pivotValues,
                                 const size_t &nCells,
                                 const vtkIdType *inConnectivityList,
-                                const dataType *inputCellDataArray,
+                                const DT *inputCellDataArray,
                                 const size_t &validationMode,
                                 const size_t &threadNumber) {
   const size_t nPivotValues = pivotValues.size();
-  std::vector<dataType> pivotValuesDT(nPivotValues);
+  std::vector<DT> pivotValuesDT(nPivotValues);
   for(size_t i = 0; i < nPivotValues; i++)
-    pivotValuesDT[i] = (dataType)pivotValues[i];
+    pivotValuesDT[i] = (DT)pivotValues[i];
 
   if(validationMode == 0)
-    return testCellDataArray<dataType, ComperatorLess<dataType>>(
+    return testCellDataArray<DT, ComperatorLess<DT>>(
       oIndex_to_mIndex_map, nCells, inConnectivityList, inputCellDataArray,
       pivotValuesDT, threadNumber);
   else if(validationMode == 1)
-    return testCellDataArray<dataType, ComperatorLessOrEqual<dataType>>(
+    return testCellDataArray<DT, ComperatorLessOrEqual<DT>>(
       oIndex_to_mIndex_map, nCells, inConnectivityList, inputCellDataArray,
       pivotValuesDT, threadNumber);
   else if(validationMode == 2)
-    return testCellDataArray<dataType, ComperatorEqual<dataType>>(
+    return testCellDataArray<DT, ComperatorEqual<DT>>(
       oIndex_to_mIndex_map, nCells, inConnectivityList, inputCellDataArray,
       pivotValuesDT, threadNumber);
   else if(validationMode == 3)
-    return testCellDataArray<dataType, ComperatorGreaterOrEqual<dataType>>(
+    return testCellDataArray<DT, ComperatorGreaterOrEqual<DT>>(
       oIndex_to_mIndex_map, nCells, inConnectivityList, inputCellDataArray,
       pivotValuesDT, threadNumber);
   else if(validationMode == 4)
-    return testCellDataArray<dataType, ComperatorGreater<dataType>>(
+    return testCellDataArray<DT, ComperatorGreater<DT>>(
       oIndex_to_mIndex_map, nCells, inConnectivityList, inputCellDataArray,
       pivotValuesDT, threadNumber);
 
@@ -806,17 +806,17 @@ int ttkExtract::ExtractGeometry(vtkDataObject *output,
   return 1;
 }
 
-template <class dataType>
-int createUniqueValueArray(vtkDataArray *uniqueValueArray,
-                           vtkDataArray *valueArray) {
-  std::set<dataType> uniqueValues;
+template <class DT>
+int createUniqueValueArray(vtkAbstractArray *uniqueValueArray,
+                           vtkAbstractArray *valueArray) {
+  std::set<DT> uniqueValues;
 
   if(uniqueValueArray->GetDataType() != valueArray->GetDataType())
     return 0;
 
   size_t nValues
     = valueArray->GetNumberOfTuples() * valueArray->GetNumberOfComponents();
-  auto valueArrayData = (dataType *)valueArray->GetVoidPointer(0);
+  auto valueArrayData = (DT *)valueArray->GetVoidPointer(0);
   for(size_t i = 0; i < nValues; i++)
     uniqueValues.insert(valueArrayData[i]);
 
@@ -825,7 +825,7 @@ int createUniqueValueArray(vtkDataArray *uniqueValueArray,
   uniqueValueArray->SetNumberOfComponents(1);
   uniqueValueArray->SetNumberOfTuples(nUniqueValues);
 
-  auto uniqueValueArrayData = (dataType *)uniqueValueArray->GetVoidPointer(0);
+  auto uniqueValueArrayData = (DT *)uniqueValueArray->GetVoidPointer(0);
   auto it = uniqueValues.begin();
   for(size_t i = 0; i < nUniqueValues; i++) {
     uniqueValueArrayData[i] = *it;
@@ -840,7 +840,7 @@ int ttkExtract::ExtractArrayValues(vtkDataObject *output,
                                    const std::vector<double> &indices) {
   size_t nValues = indices.size();
 
-  auto inputArray = this->GetInputArrayToProcess(0, input);
+  auto inputArray = this->GetInputAbstractArrayToProcess(0, input);
   if(!inputArray) {
     this->printErr("Unable to retrieve input array.");
     return 0;
@@ -855,7 +855,7 @@ int ttkExtract::ExtractArrayValues(vtkDataObject *output,
                    ttk::debug::LineMode::REPLACE);
 
     auto uniqueValueArray
-      = vtkSmartPointer<vtkDataArray>::Take(inputArray->NewInstance());
+      = vtkSmartPointer<vtkAbstractArray>::Take(inputArray->NewInstance());
     uniqueValueArray->SetName(
       ("Unique" + std::string(inputArrayName.data())).data());
 
@@ -883,7 +883,7 @@ int ttkExtract::ExtractArrayValues(vtkDataObject *output,
                    0, ttk::debug::LineMode::REPLACE);
 
     auto outputArray
-      = vtkSmartPointer<vtkDataArray>::Take(inputArray->NewInstance());
+      = vtkSmartPointer<vtkAbstractArray>::Take(inputArray->NewInstance());
     outputArray->SetName(
       ("Extracted" + std::string(inputArray->GetName())).data());
     outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());

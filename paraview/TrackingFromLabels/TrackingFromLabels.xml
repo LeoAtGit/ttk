@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ServerManagerConfiguration>
+      <ProxyGroup name="filters">
+        <SourceProxy name="ttkTrackingFromLabels" class="ttkTrackingFromLabels" label="TTK TrackingFromLabels">
+          <Documentation long_help="TrackingFromLabels Long" short_help="TrackingFromLabels Short">
+          TODO
+          </Documentation>
+
+          <!-- Inputs -->
+          <InputProperty name="Nodes" port_index="0" command="SetInputConnection">
+              <ProxyGroupDomain name="groups">
+                  <Group name="sources" />
+                  <Group name="filters" />
+              </ProxyGroupDomain>
+              <DataTypeDomain name="input_type">
+                  <DataType value="vtkPolyData" />
+              </DataTypeDomain>
+              <Documentation>TODO.</Documentation>
+          </InputProperty>
+          <InputProperty name="Segmentation" port_index="1" command="SetInputConnection">
+              <ProxyGroupDomain name="groups">
+                  <Group name="sources" />
+                  <Group name="filters" />
+              </ProxyGroupDomain>
+              <DataTypeDomain name="input_type">
+                  <DataType value="vtkDataSet" />
+              </DataTypeDomain>
+              <Documentation>TODO.</Documentation>
+          </InputProperty>
+
+          <StringVectorProperty name="LabelArray" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5">
+              <ArrayListDomain attribute_type="Scalars" name="array_list">
+                  <RequiredProperties>
+                      <Property function="Input" name="Segmentation" />
+                  </RequiredProperties>
+              </ArrayListDomain>
+              <Documentation>Feature Labels (labels smaller 0 are ignored).</Documentation>
+          </StringVectorProperty>
+
+          <PropertyGroup panel_widget="Line" label="Input Options">
+              <Property name="LabelArray" />
+          </PropertyGroup>
+
+          ${DEBUG_WIDGETS}
+
+          <Hints>
+            <ShowInMenu category="TTK - Time-Varying Scalar Data" />
+          </Hints>
+        </SourceProxy>
+    </ProxyGroup>
+</ServerManagerConfiguration>

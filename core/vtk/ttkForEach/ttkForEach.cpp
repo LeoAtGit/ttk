@@ -75,7 +75,7 @@ int ttkForEach::RequestData(vtkInformation *request,
     }
     this->IterationNumber = ((vtkTable *)input)->GetNumberOfRows();
   } else if(mode == 3) {
-    auto inputArray = this->GetInputArrayToProcess(0, inputVector);
+    auto inputArray = this->GetInputAbstractArrayToProcess(0, input);
     if(!inputArray) {
       this->printErr("Unable to retrieve input array.");
       return 0;
