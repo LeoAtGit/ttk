@@ -116,8 +116,6 @@ int ttkTrackingFromLabels::Finalize(vtkPolyData *trackingGraph) {
           nCells++;
     }
 
-    std::vector<float> averageDeltaPerTimestep(nTimesteps, 0);
-
     auto connectivityArray = vtkSmartPointer<vtkIdTypeArray>::New();
     connectivityArray->SetNumberOfTuples(nCells * 2);
     auto connectivityArrayData
@@ -128,42 +126,14 @@ int ttkTrackingFromLabels::Finalize(vtkPolyData *trackingGraph) {
       const size_t nPNodes = this->Nodes[t]->GetNumberOfPoints();
       const size_t nCNodes = this->Nodes[t + 1]->GetNumberOfPoints();
 
-      // for(size_t i=0; i<nCNodes; i++){
-      //   for(size_t j=0; j<nPNodes; j++){
-      //     if(matrix[i*nPNodes + j]>0){
-      //       connectivityArrayData[q++] = offsets[t] + j;
-      //       connectivityArrayData[q++] = offsets[t+1] + i;
-      //     }
-      //   }
-      // }
-
-      auto length = [](double *a, double *b) {
-        double delta[3] = {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
-        return std::sqrt(delta[0] * delta[0] + delta[1] * delta[1]
-                         + delta[2] * delta[2]);
-      };
-
-      auto pNodes = this->Nodes[t];
-      auto cNodes = this->Nodes[t + 1];
-      double nnn = 0;
       for(size_t i = 0; i < nCNodes; i++) {
         for(size_t j = 0; j < nPNodes; j++) {
           if(matrix[i * nPNodes + j] > 0) {
             connectivityArrayData[q++] = offsets[t] + j;
             connectivityArrayData[q++] = offsets[t + 1] + i;
-
-            double pCord[3];
-            double cCord[3];
-            pNodes->GetPoint(j, pCord);
-            cNodes->GetPoint(i, cCord);
-
-            averageDeltaPerTimestep[t] += length(pCord, cCord);
-            nnn++;
           }
         }
       }
-      averageDeltaPerTimestep[t] /= nnn;
-      std::cout << t << ": " << averageDeltaPerTimestep[t] << std::endl;
     }
 
     auto offsetArray = vtkSmartPointer<vtkIdTypeArray>::New();

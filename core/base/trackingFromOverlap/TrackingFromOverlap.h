@@ -27,7 +27,7 @@
 #include <unordered_map>
 
 using topologyType = unsigned char;
-using idType = long long int;
+using idType = int;
 
 using labelTypeVariant = boost::variant<double,
                                         float,

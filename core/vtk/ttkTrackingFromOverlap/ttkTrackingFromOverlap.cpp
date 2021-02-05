@@ -5,13 +5,13 @@
 #include <vtkUnstructuredGrid.h>
 
 #include <vtkCellData.h>
-#include <vtkCharArray.h>
+#include <vtkSignedCharArray.h>
 #include <vtkDoubleArray.h>
 #include <vtkFloatArray.h>
 #include <vtkIdTypeArray.h>
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
-#include <vtkLongLongArray.h>
+#include <vtkIntArray.h>
 #include <vtkPointData.h>
 
 #include <ttkMacros.h>
@@ -82,21 +82,21 @@ int finalize(vector<vector<Nodes>> &levelTimeNodesMap,
     points->SetNumberOfPoints(nNodes);
     auto pointCoords = (float *)ttkUtils::GetVoidPointer(points);
 
-    auto sequence = vtkSmartPointer<vtkLongLongArray>::New();
+    auto sequence = vtkSmartPointer<vtkIntArray>::New();
     prepArray(sequence, "SequenceIndex", 1, nNodes);
-    auto sequenceData = (long long *)ttkUtils::GetVoidPointer(sequence);
+    auto sequenceData = (int *)ttkUtils::GetVoidPointer(sequence);
 
-    auto level = vtkSmartPointer<vtkLongLongArray>::New();
+    auto level = vtkSmartPointer<vtkIntArray>::New();
     prepArray(level, "LevelIndex", 1, nNodes);
-    auto levelData = (long long *)ttkUtils::GetVoidPointer(level);
+    auto levelData = (int *)ttkUtils::GetVoidPointer(level);
 
     auto size = vtkSmartPointer<vtkFloatArray>::New();
     prepArray(size, "Size", 1, nNodes);
     auto sizeData = (float *)ttkUtils::GetVoidPointer(size);
 
-    auto branch = vtkSmartPointer<vtkLongLongArray>::New();
+    auto branch = vtkSmartPointer<vtkIntArray>::New();
     prepArray(branch, "BranchId", 1, nNodes);
-    auto branchData = (long long *)ttkUtils::GetVoidPointer(branch);
+    auto branchData = (int *)ttkUtils::GetVoidPointer(branch);
 
     auto label = vtkSmartPointer<vtkDataArray>::Take(
       vtkDataArray::CreateDataArray(labelTypeId));
@@ -171,13 +171,13 @@ int finalize(vector<vector<Nodes>> &levelTimeNodesMap,
     prepArray(overlap, "Overlap", 1, nEdgesT + nEdgesN);
     auto overlapData = (float *)ttkUtils::GetVoidPointer(overlap);
 
-    auto branch = vtkSmartPointer<vtkLongLongArray>::New();
+    auto branch = vtkSmartPointer<vtkIntArray>::New();
     prepArray(branch, "BranchId", 1, nEdgesT + nEdgesN);
-    auto branchData = (long long *)ttkUtils::GetVoidPointer(branch);
+    auto branchData = (int *)ttkUtils::GetVoidPointer(branch);
 
-    auto type = vtkSmartPointer<vtkCharArray>::New();
+    auto type = vtkSmartPointer<vtkSignedCharArray>::New();
     prepArray(type, "Type", 1, nEdgesT + nEdgesN);
-    auto typeData = (char *)ttkUtils::GetVoidPointer(type);
+    auto typeData = (signed char *)ttkUtils::GetVoidPointer(type);
 
     size_t q0 = 0, q1 = 0;
 

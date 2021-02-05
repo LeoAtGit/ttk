@@ -10,6 +10,78 @@
 #include <vtkSmartPointer.h>
 #include <vtkUnstructuredGrid.h>
 
+#include <ttkUtils.h>
+
+#define ttkTypeMacroErrorCase(idx, type)                          \
+  default: {                                                      \
+    this->printErr("Unsupported " #idx "-th Template Data Type: " \
+                   + std::to_string(type));                       \
+  } break;
+
+#define ttkTypeMacroCase(enum, type, number, call) \
+  case enum: {                                     \
+    typedef type T##number;                        \
+    call;                                          \
+  } break;
+
+#define ttkTypeMacroR(target, call)                                 \
+  switch(target) {                                                  \
+    ttkTypeMacroCase(VTK_FLOAT, float, 0, call) ttkTypeMacroCase(   \
+      VTK_DOUBLE, double, 0, call) ttkTypeMacroErrorCase(0, target) \
+  }
+
+#define ttkTypeMacroA(target, call)                                        \
+  switch(target) {                                                         \
+    ttkTypeMacroCase(VTK_FLOAT, float, 0, call);                           \
+    ttkTypeMacroCase(VTK_DOUBLE, double, 0, call);                         \
+    ttkTypeMacroCase(VTK_INT, int, 0, call);                               \
+    ttkTypeMacroCase(VTK_UNSIGNED_INT, unsigned int, 0, call);             \
+    ttkTypeMacroCase(VTK_CHAR, char, 0, call);                             \
+    ttkTypeMacroCase(VTK_SIGNED_CHAR, signed char, 0, call);               \
+    ttkTypeMacroCase(VTK_UNSIGNED_CHAR, unsigned char, 0, call);           \
+    ttkTypeMacroCase(VTK_LONG, long, 0, call);                             \
+    ttkTypeMacroCase(VTK_LONG_LONG, long long, 0, call);                   \
+    ttkTypeMacroCase(VTK_UNSIGNED_LONG, unsigned long, 0, call);           \
+    ttkTypeMacroCase(VTK_UNSIGNED_LONG_LONG, unsigned long long, 0, call); \
+    ttkTypeMacroCase(VTK_ID_TYPE, vtkIdType, 0, call);                     \
+    ttkTypeMacroErrorCase(0, target);                                      \
+  }
+
+#define ttkTypeMacroRR(target0, target1, call)                             \
+  switch(target1) {                                                        \
+    ttkTypeMacroCase(VTK_FLOAT, float, 1, ttkTypeMacroR(target0, call));   \
+    ttkTypeMacroCase(VTK_DOUBLE, double, 1, ttkTypeMacroR(target0, call)); \
+    ttkTypeMacroErrorCase(1, target1);                                     \
+  }
+
+#define ttkTypeMacroRRR(target0, target1, target2, call)              \
+  switch(target2) {                                                   \
+    ttkTypeMacroCase(                                                 \
+      VTK_FLOAT, float, 2, ttkTypeMacroRR(target0, target1, call));   \
+    ttkTypeMacroCase(                                                 \
+      VTK_DOUBLE, double, 2, ttkTypeMacroRR(target0, target1, call)); \
+    ttkTypeMacroErrorCase(2, target2);                                \
+  }
+
+#define ttkTypeMacroRRI(target0, target1, target2, call)                       \
+  switch(target2) {                                                            \
+    ttkTypeMacroCase(VTK_INT, int, 2, ttkTypeMacroRR(target0, target1, call)); \
+    ttkTypeMacroCase(                                                          \
+      VTK_LONG_LONG, long long, 2, ttkTypeMacroRR(target0, target1, call));    \
+    ttkTypeMacroCase(                                                          \
+      VTK_ID_TYPE, vtkIdType, 2, ttkTypeMacroRR(target0, target1, call));      \
+    ttkTypeMacroErrorCase(2, target2);                                         \
+  }
+
+#define ttkTypeMacroAI(target0, target1, call)                                 \
+  switch(target1) {                                                            \
+    ttkTypeMacroCase(VTK_INT, int, 1, ttkTypeMacroA(target0, call));           \
+    ttkTypeMacroCase(                                                          \
+      VTK_LONG_LONG, long long, 1, ttkTypeMacroA(target0, call));              \
+    ttkTypeMacroCase(VTK_ID_TYPE, vtkIdType, 1, ttkTypeMacroA(target0, call)); \
+    ttkTypeMacroErrorCase(1, target1);                                         \
+  }
+
 vtkStandardNewMacro(ttkPlanarGraphLayout);
 
 ttkPlanarGraphLayout::ttkPlanarGraphLayout() {
@@ -44,9 +116,8 @@ int ttkPlanarGraphLayout::RequestData(vtkInformation *request,
   auto input = vtkUnstructuredGrid::GetData(inputVector[0]);
   auto output = vtkUnstructuredGrid::GetData(outputVector);
 
-  if(input == nullptr || output == nullptr) {
-    return -1;
-  }
+  if(!input || !output)
+    return 0;
 
   // Copy input to output
   output->ShallowCopy(input);
@@ -62,20 +133,20 @@ int ttkPlanarGraphLayout::RequestData(vtkInformation *request,
   }
 
   auto sizeArray = this->GetInputArrayToProcess(1, inputVector);
-  if(this->GetUseSizes() && !sizeArray) {
-    this->printErr("Unable to retrieve size array.");
+  if(this->GetUseSizes() && (!sizeArray || sizeArray->GetDataType()!=VTK_FLOAT)) {
+    this->printErr("Unable to retrieve size array of type float.");
     return 0;
   }
 
   auto branchArray = this->GetInputArrayToProcess(2, inputVector);
-  if(this->GetUseBranches() && !branchArray) {
-    this->printErr("Unable to retrieve branch array.");
+  if(this->GetUseBranches() && (!branchArray || branchArray->GetDataType()!=VTK_INT)) {
+    this->printErr("Unable to retrieve branch array of type int.");
     return 0;
   }
 
   auto levelArray = this->GetInputArrayToProcess(3, inputVector);
-  if(this->GetUseLevels() && !levelArray) {
-    this->printErr("Unable to retrieve level array.");
+  if(this->GetUseLevels() && (!levelArray || levelArray->GetDataType()!=VTK_INT)) {
+    this->printErr("Unable to retrieve level array of type int.");
     return 0;
   }
 
@@ -85,57 +156,25 @@ int ttkPlanarGraphLayout::RequestData(vtkInformation *request,
   outputArray->SetNumberOfComponents(2); // (x,y) position
   outputArray->SetNumberOfValues(nPoints * 2);
 
-  auto dataType
-    = this->GetUseSequences() ? sequenceArray->GetDataType() : VTK_CHAR;
-  auto idType = this->GetUseBranches() ? branchArray->GetDataType()
-                : this->GetUseLevels() ? levelArray->GetDataType()
-                                       : VTK_CHAR;
-  //   auto levelType
-  //     = this->GetUseLevels()
-  //         ? levels->GetDataType()
-  //         : this->GetUseBranches() ? branches->GetDataType() : VTK_CHAR;
-
-  //   if(branchType != levelType) {
-  //     dMsg(cout,
-  //          "[ttkPlanarGraphLayout] ERROR: Branch and Level array must have
-  //          the " "same type.\n", fatalMsg);
-  //     return 0;
-  //   }
-
   int status = 1;
 
-  switch(vtkTemplate2PackMacro(idType, dataType)) {
-    ttkTemplate2IdMacro(
-      (status = this->execute<VTK_T1, VTK_T2>(
-         // Output
-         (float *)outputArray->GetVoidPointer(0),
-         // Input
-         output->GetCells()->GetData()->GetPointer(0), nPoints, nEdges,
-         !this->GetUseSequences() ? nullptr
-                                  : (VTK_T2 *)sequenceArray->GetVoidPointer(0),
-         !this->GetUseSizes() ? nullptr : (float *)sizeArray->GetVoidPointer(0),
-         !this->GetUseBranches() ? nullptr
-                                 : (VTK_T1 *)branchArray->GetVoidPointer(0),
-         !this->GetUseLevels() ? nullptr
-                               : (VTK_T1 *)levelArray->GetVoidPointer(0))));
-  }
+  auto inputConnectivityList = input->GetCells()->GetConnectivityArray();
 
-  //   // Compute layout with base code
-  //   switch(vtkTemplate2PackMacro(branchType, sequenceType)) {
-  //     vtkTemplate2Macro(
-  //       (status = planarGraphLayout.execute<vtkIdType, VTK_T1, VTK_T2>(
-  //          // Input
-  //          !this->GetUseSequences() ? nullptr
-  //                                   : (VTK_T2 *)sequences->GetVoidPointer(0),
-  //          !this->GetUseSizes() ? nullptr : (float
-  //          *)sizes->GetVoidPointer(0), !this->GetUseBranches() ? nullptr
-  //                                  : (VTK_T1 *)branches->GetVoidPointer(0),
-  //          !this->GetUseLevels() ? nullptr : (VTK_T1
-  //          *)levels->GetVoidPointer(0), output->GetCells()->GetPointer(),
-  //          nPoints, nEdges,
-  //          // Output
-  //          (float *)outputField->GetVoidPointer(0))));
-  //   }
+  ttkTypeMacroAI(
+    this->GetUseSequences() ? sequenceArray->GetDataType() : VTK_INT,
+    inputConnectivityList->GetDataType(),
+    (status = this->execute<T1,T0>(
+    // Output
+    static_cast<float *>(ttkUtils::GetVoidPointer(outputArray)),
+
+    // Input
+    static_cast<T1*>(ttkUtils::GetVoidPointer(inputConnectivityList)),
+    nPoints, nEdges,
+    static_cast<T0*>(this->GetUseSequences() ? ttkUtils::GetVoidPointer(sequenceArray) : nullptr),
+    static_cast<float*>(this->GetUseSizes() ? ttkUtils::GetVoidPointer(sizeArray) : nullptr),
+    static_cast<int*>(this->GetUseBranches() ? ttkUtils::GetVoidPointer(branchArray) : nullptr),
+    static_cast<int*>(this->GetUseLevels() ? ttkUtils::GetVoidPointer(levelArray) : nullptr)
+  )));
   if(status != 1)
     return 0;
 

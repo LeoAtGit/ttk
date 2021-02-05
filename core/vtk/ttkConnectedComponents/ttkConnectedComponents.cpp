@@ -7,6 +7,8 @@
 #include <vtkPolyData.h>
 #include <vtkSmartPointer.h>
 
+#include <vtkFloatArray.h>
+
 #include <ttkMacros.h>
 #include <ttkUtils.h>
 
@@ -100,11 +102,11 @@ int ttkConnectedComponents::RequestData(vtkInformation *request,
 
     // points
     {
-      auto sizeArray = vtkSmartPointer<vtkIntArray>::New();
+      auto sizeArray = vtkSmartPointer<vtkFloatArray>::New();
       sizeArray->SetName("Size");
       sizeArray->SetNumberOfTuples(nComponents);
       auto sizeArrayData
-        = static_cast<int *>(ttkUtils::GetVoidPointer(sizeArray));
+        = static_cast<float *>(ttkUtils::GetVoidPointer(sizeArray));
 
       auto points = vtkSmartPointer<vtkPoints>::New();
       points->SetNumberOfPoints(nComponents);

@@ -26,7 +26,7 @@ namespace ttk {
   public:
     struct Component {
       float center[3]{0, 0, 0};
-      size_t size{0};
+      float size{0};
     };
 
     ConnectedComponents(){};
@@ -55,7 +55,7 @@ namespace ttk {
 
       TID cIndex;
       TID nIndex;
-      size_t size = 0;
+      float size = 0;
       float x, y, z;
       float center[3] = {0, 0, 0};
 
