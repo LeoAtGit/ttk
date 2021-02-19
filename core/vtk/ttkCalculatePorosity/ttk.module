@@ -1,0 +1,9 @@
+NAME
+  ttkCalculatePorosity
+SOURCES
+  ttkCalculatePorosity.cpp
+HEADERS
+  ttkCalculatePorosity.h
+DEPENDS
+  calculatePorosity
+  ttkAlgorithm

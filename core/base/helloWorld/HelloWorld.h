@@ -96,7 +96,6 @@ namespace ttk {
         for(size_t i = 0; i < nVertices; i++) {
           // initialize average
           outputData[i] = inputData[i];
-
           // add neighbor values to average
           size_t nNeighbors = triangulation->getVertexNeighborNumber(i);
           ttk::SimplexId neighborId;
