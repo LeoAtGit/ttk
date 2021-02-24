@@ -186,7 +186,7 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
                          (float *)ttkUtils::GetVoidPointer(outputArray),
                          (VTK_TT *)ttkUtils::GetVoidPointer(inputArray),
                          (TTK_TT *)triangulation->getData(),
-			 this->Distance, this->Threshold, this->Margin)));
+			 this->Distance, this->Threshold, this->Margin, this->MaxThreshold)));
 
   // On error cancel filter execution
   if(status != 1)

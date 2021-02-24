@@ -68,7 +68,8 @@ namespace ttk {
                         const triangulationType *triangulation,
 			const float& distance,
 			const float& threshold,
-			const float& margin) const {
+			const float& margin,
+			const float& maxThreshold) const {
 
       
       
@@ -119,7 +120,12 @@ namespace ttk {
 	     
 	      ttk::SimplexId currentVertex = candidates.back();
 	      candidates.pop_back();
-	      
+
+	      //ignore anything that might be a light artifact
+	      if(inputData[currentVertex] > maxThreshold) {
+		outputData[currentVertex] = -1;
+		continue;
+	      }
 	      //check if in the list and within distance (std::find != means found)
 	      if(distances.find(currentVertex) != distances.end()) continue;
 
@@ -151,11 +157,12 @@ namespace ttk {
 	     
 	    
 	    for(const auto& pair: distances) {
+
 	      if(inputData[pair.first] < threshold) {
 		outputData[i]++;
-	      } /*else if(inputData[pair.first] < marginThreshold) {
+	      } else if(inputData[pair.first] < marginThreshold) {
 		outputData[i] = outputData[i] + (marginThreshold - inputData[pair.first]) / (fractionalThreshold);
-		}*/
+		}
 	    }
 	}	       
         // print the progress of the current subprocedure with elapsed time

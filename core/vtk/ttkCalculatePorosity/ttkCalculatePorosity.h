@@ -83,6 +83,7 @@ private:
   double Distance{1};  
   double Threshold{1};
   double Margin{1};
+  double MaxThreshold{1};
  public:
   /**
    * TODO 6: Automatically generate getters and setters of filter
@@ -94,6 +95,8 @@ private:
   vtkGetMacro(Distance,  double);
   vtkSetMacro(Threshold, double);
   vtkGetMacro(Threshold, double);
+  vtkSetMacro(MaxThreshold, double);
+  vtkGetMacro(MaxThreshold, double);  
   vtkSetMacro(Margin,    double);
   vtkGetMacro(Margin,    double);
   

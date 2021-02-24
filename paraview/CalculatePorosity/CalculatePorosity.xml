@@ -48,6 +48,10 @@
 	    <DoubleVectorProperty name="Threshold" label="Threshold" command="SetThreshold" number_of_elements="1" default_values="125.0">
                 <Documentation>Sets the threshold for values that are considered pores.</Documentation>
             </DoubleVectorProperty>
+
+	    <DoubleVectorProperty name="MaxThreshold" label="MaxThreshold" command="SetMaxThreshold" number_of_elements="1" default_values="225.0">
+                <Documentation>Ignores any regions above this number.</Documentation>
+            </DoubleVectorProperty>
 	    
 	    <DoubleVectorProperty name="Margin" label="Margin" command="SetMargin" number_of_elements="1" default_values="0.1">
               <Documentation>Sets the margin for what points can be fractionally be added to the count; these points may be below the threshold,
@@ -62,6 +66,7 @@
 		  <Property name="Distance" />
 		  <Property name="Threshold" />
 		  <Property name="Margin" />
+		  <Property name="MaxThreshold" />
                 </PropertyGroup>
 
             <!-- OUTPUT PARAMETER WIDGETS -->
