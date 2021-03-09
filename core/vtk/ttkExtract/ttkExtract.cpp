@@ -31,31 +31,22 @@ ttkExtract::ttkExtract() {
 }
 ttkExtract::~ttkExtract(){};
 
-int ttkExtract::GetVtkDataTypeName(std::string &dataTypeName,
-                                   const int outputType) const {
+std::string ttkExtract::GetVtkDataTypeName(const int outputType) const {
   switch(outputType) {
     case -1: // in case of auto return vtkMultiBlockDataSet
-    case VTK_MULTIBLOCK_DATA_SET: {
-      dataTypeName = "vtkMultiBlockDataSet";
-      break;
-    }
-    case VTK_UNSTRUCTURED_GRID: {
-      dataTypeName = "vtkUnstructuredGrid";
-      break;
-    }
-    case VTK_IMAGE_DATA: {
-      dataTypeName = "vtkImageData";
-      break;
-    }
-    case VTK_TABLE: {
-      dataTypeName = "vtkTable";
-      break;
-    }
+    case VTK_MULTIBLOCK_DATA_SET:
+      return "vtkMultiBlockDataSet";
+    case VTK_UNSTRUCTURED_GRID:
+      return "vtkUnstructuredGrid";
+    case VTK_POLY_DATA:
+      return "vtkPolyData";
+    case VTK_IMAGE_DATA:
+      return "vtkImageData";
+    case VTK_TABLE:
+      return "vtkTable";
     default:
-      return 0;
+      return "";
   }
-
-  return 1;
 }
 
 int ttkExtract::FillInputPortInformation(int port, vtkInformation *info) {
@@ -73,12 +64,12 @@ int ttkExtract::FillOutputPortInformation(int port, vtkInformation *info) {
       info->Remove(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT());
 
     if(this->OutputType != -1) {
-      std::string outputDataTypeName = "";
-      if(!this->GetVtkDataTypeName(outputDataTypeName, this->OutputType)) {
+      std::string dataTypeName = this->GetVtkDataTypeName(this->OutputType);
+      if(dataTypeName.length() < 1) {
         this->printErr("Unsupported output type");
         return 0;
       }
-      info->Set(vtkDataObject::DATA_TYPE_NAME(), outputDataTypeName.data());
+      info->Set(vtkDataObject::DATA_TYPE_NAME(), dataTypeName.data());
     } else
       info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
   } else
@@ -90,22 +81,13 @@ int ttkExtract::FillOutputPortInformation(int port, vtkInformation *info) {
 // RequestInformation
 // =============================================================================
 int ttkExtract::RequestInformation(vtkInformation *,
-                                   vtkInformationVector **,
+                                   vtkInformationVector **inputVector,
                                    vtkInformationVector *outputVector) {
+
   if(this->ExtractionMode == 0 && this->GetOutputType() == VTK_IMAGE_DATA) {
-    vtkInformation *outInfo = outputVector->GetInformationObject(0);
-
-    // Bounds
-    auto imageBounds = this->GetImageBounds();
-    outInfo->Set(vtkStreamingDemandDrivenPipeline::BOUNDS(), imageBounds, 6);
-
-    // Extent
-    int wholeExtent[6]
-      = {(int)imageBounds[0], (int)(imageBounds[1] - imageBounds[0]),
-         (int)imageBounds[2], (int)(imageBounds[3] - imageBounds[2]),
-         (int)imageBounds[4], (int)(imageBounds[5] - imageBounds[4])};
+    auto outInfo = outputVector->GetInformationObject(0);
     outInfo->Set(
-      vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), wholeExtent, 6);
+      vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), this->ImageExtent, 6);
   }
 
   return 1;
@@ -122,17 +104,25 @@ int doubleVectorToString(std::string &str, const std::vector<double> &vec) {
 
 int ttkExtract::ExtractBlocks(vtkDataObject *output,
                               vtkDataObject *input,
-                              const std::vector<double> &indices) const {
+                              const std::vector<double> &indices,
+                              const bool &extractTuples) const {
   // print state
   std::string indicesString = "";
   doubleVectorToString(indicesString, indices);
   {
-    std::string outputDataTypeName = "";
-    this->GetVtkDataTypeName(outputDataTypeName, this->OutputType);
+    std::string outputDataTypeName = this->GetVtkDataTypeName(this->OutputType);
+    std::string extentString = "";
+    if(this->OutputType == VTK_IMAGE_DATA) {
+      extentString = "[" + std::to_string(this->ImageExtent[0]);
+      for(int i = 1; i < 6; i++)
+        extentString += "," + std::to_string(this->ImageExtent[i]);
+      extentString += "]";
+    }
 
     this->printMsg(ttk::debug::Separator::L1);
-    this->printMsg({{"Extraction Mode", "Block"},
-                    {"Output Type", outputDataTypeName},
+    this->printMsg({{"Extraction Mode",
+                     "Block" + std::string(extractTuples ? " Tuples" : "")},
+                    {"Output Type", outputDataTypeName + extentString},
                     {"Indicies", "[" + indicesString + "]"}});
     this->printMsg(ttk::debug::Separator::L2);
   }
@@ -146,21 +136,59 @@ int ttkExtract::ExtractBlocks(vtkDataObject *output,
     return 0;
   }
 
+  if(this->OutputType != -1 && extractTuples) {
+    this->printErr("Block Tuple mode requires auto output.");
+    return 0;
+  }
+
   if(this->OutputType == -1) {
     // extract multiple blocks (vtkMultiBlockDataSet input/output only)
     auto outputAsMB = vtkMultiBlockDataSet::SafeDownCast(output);
 
-    for(size_t i = 0; i < indices.size(); i++) {
-      size_t blockIndex = (size_t)indices[i];
-      if(blockIndex < inputAsMB->GetNumberOfBlocks()) {
+    if(extractTuples) {
+      int nComponents = inputAsMB->GetNumberOfBlocks();
+
+      for(size_t i = 0; i < indices.size(); i++) {
+        auto tuple = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+        outputAsMB->SetBlock(i, tuple);
+
+        size_t tupleIndex = (size_t)indices[i];
+        for(int c = 0; c < nComponents; c++) {
+          auto blockAsMB
+            = vtkMultiBlockDataSet::SafeDownCast(inputAsMB->GetBlock(c));
+          if(!blockAsMB) {
+            this->printErr("Block Tuple Mode requires a vtkMultiBlockDataSet "
+                           "that contains vtkMultiBlockDataSets as input.");
+            return 0;
+          }
+          if(tupleIndex < 0 || tupleIndex >= blockAsMB->GetNumberOfBlocks()) {
+            this->printErr(
+              "Index out of range (" + std::to_string(tupleIndex) + "/"
+              + std::to_string(blockAsMB->GetNumberOfBlocks()) + ").");
+            return 0;
+          }
+
+          auto block = blockAsMB->GetBlock(tupleIndex);
+          auto copy
+            = vtkSmartPointer<vtkDataObject>::Take(block->NewInstance());
+          copy->ShallowCopy(block);
+          tuple->SetBlock(c, copy);
+        }
+      }
+    } else {
+      for(size_t i = 0; i < indices.size(); i++) {
+        size_t blockIndex = (size_t)indices[i];
+        if(blockIndex < 0 || blockIndex >= inputAsMB->GetNumberOfBlocks()) {
+          this->printErr("Index out of range (" + std::to_string(blockIndex)
+                         + "/" + std::to_string(inputAsMB->GetNumberOfBlocks())
+                         + ").");
+          return 0;
+        }
+
         auto block = inputAsMB->GetBlock(blockIndex);
         auto copy = vtkSmartPointer<vtkDataObject>::Take(block->NewInstance());
         copy->ShallowCopy(block);
         outputAsMB->SetBlock(i, copy);
-      } else {
-        this->printErr("Index out of range (" + std::to_string(blockIndex) + "/"
-                       + std::to_string(inputAsMB->GetNumberOfBlocks()) + ").");
-        return 0;
       }
     }
   } else {
@@ -1015,8 +1043,7 @@ int ttkExtract::RequestData(vtkInformation *request,
   auto inputAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
   auto outputAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
   size_t nBlocks;
-  if(mode > 1 && input->IsA("vtkMultiBlockDataSet")) {
-
+  if(mode != 0 && mode != 5 && input->IsA("vtkMultiBlockDataSet")) {
     inputAsMB->ShallowCopy(input);
     nBlocks = inputAsMB->GetNumberOfBlocks();
 
@@ -1034,7 +1061,7 @@ int ttkExtract::RequestData(vtkInformation *request,
   }
 
   if(mode == 0) {
-    if(!this->ExtractBlocks(output, input, values))
+    if(!this->ExtractBlocks(output, input, values, false))
       return 0;
   } else if(mode == 1) {
     if(!this->ExtractRows(output, input, values))
@@ -1054,6 +1081,9 @@ int ttkExtract::RequestData(vtkInformation *request,
       if(!this->ExtractArray(
            outputAsMB->GetBlock(b), inputAsMB->GetBlock(b), values))
         return 0;
+  } else if(mode == 5) {
+    if(!this->ExtractBlocks(output, input, values, true))
+      return 0;
   } else {
     this->printErr("Unsupported Extraction Mode: " + std::to_string(mode));
     return 0;

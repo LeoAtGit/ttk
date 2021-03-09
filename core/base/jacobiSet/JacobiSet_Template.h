@@ -212,7 +212,7 @@ int ttk::JacobiSet::executeLegacy(
       }
 
       // update the progress bar of the wrapping code -- to adapt
-      if(debugLevel_ > advancedInfoMsg) {
+      if(debugLevel_ > static_cast<int>(debug::Priority::DETAIL)) {
 #ifdef TTK_ENABLE_OPENMP
 #pragma omp critical
 #endif
@@ -492,8 +492,8 @@ char ttk::JacobiSet::getCriticalType(const SimplexId &edgeId,
               }
 
               if((lowerId0 != -1) && (lowerId1 != -1)) {
-                (*seeds)[lowerId0]
-                  = makeUnion((*seeds)[lowerId0], (*seeds)[lowerId1]);
+                (*seeds)[lowerId0] = UnionFind::makeUnion(
+                  (*seeds)[lowerId0], (*seeds)[lowerId1]);
                 (*seeds)[lowerId1] = (*seeds)[lowerId0];
               }
             }
