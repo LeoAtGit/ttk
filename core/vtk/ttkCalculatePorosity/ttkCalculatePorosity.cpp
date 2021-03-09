@@ -92,9 +92,9 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
   // Get input object from input vector
   // Note: has to be a vtkDataSet as required by FillInputPortInformation
   vtkDataSet *inputDataSet = vtkDataSet::GetData(inputVector[0]);
+  
   if(!inputDataSet)
     return 0;
-
   
   
   // Get input array that will be processed
@@ -143,7 +143,9 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
   //       During the RequestData execution one can then retrieve an actual
   //       array with the method "GetInputArrayToProcess".
   vtkDataArray *inputArray = this->GetInputArrayToProcess(0, inputVector);
-  if(!inputArray) {
+  vtkDataArray *gradientInput = this->GetInputArrayToProcess(1, inputVector);
+  
+  if(!inputArray || !gradientInput) {
     this->printErr("Unable to retrieve input array.");
     return 0;
   }
@@ -162,6 +164,7 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
   // If all checks pass then log which array is going to be processed.
   this->printMsg("Starting computation...");
   this->printMsg("  Scalar Array: " + std::string(inputArray->GetName()));
+  this->printMsg("  Gradient Array: " + std::string(gradientInput->GetName()));
   // Create an output array that has the same data type as the input array
   // Note: vtkSmartPointers are well documented
   //       (https://vtk.org/Wiki/VTK/Tutorials/SmartPointers)
@@ -185,8 +188,9 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
                       (status = this->computePorosity<VTK_TT, TTK_TT>(
                          (float *)ttkUtils::GetVoidPointer(outputArray),
                          (VTK_TT *)ttkUtils::GetVoidPointer(inputArray),
+			 (float *)ttkUtils::GetVoidPointer(gradientInput),
                          (TTK_TT *)triangulation->getData(),
-			 this->Distance, this->Threshold, this->Margin, this->MaxThreshold)));
+			 this->Distance, this->Threshold, this->Margin, this->MaxThreshold, this->GradientThreshold)));
 
   // On error cancel filter execution
   if(status != 1)

@@ -65,20 +65,17 @@ namespace ttk {
               class triangulationType = ttk::AbstractTriangulation>
     int computePorosity(float *outputData,
                         const dataType *inputData,
+			const float *gradientData,
                         const triangulationType *triangulation,
 			const float& distance,
 			const float& threshold,
 			const float& margin,
-			const float& maxThreshold) const {
-
-      
-      
+			const float& maxThreshold,
+			const float& gradientThreshold) const {
       // start global timer
       ttk::Timer globalTimer;
-      
       // print horizontal separator
-      this->printMsg(ttk::debug::Separator::L1); // L1 is the '=' separator
-
+      this->printMsg(ttk::debug::Separator::L1); // L1 is the '=' separator	             
       // print input parameters in table format
       this->printMsg({
         {"#Threads", std::to_string(this->threadNumber_)},
@@ -129,11 +126,14 @@ namespace ttk {
 	      //check if in the list and within distance (std::find != means found)
 	      if(distances.find(currentVertex) != distances.end()) continue;
 
+	      if(gradientData[currentVertex] > gradientThreshold) continue;
+	      
 	      float uX,uY,uZ;
 	      triangulation->getVertexPoint(currentVertex,uX,uY,uZ);
-
+	      
 	      float curr_distance = (vX - uX) * (vX - uX) + (vY - uY) * (vY - uY) + (vZ - uZ) * (vZ - uZ);
 
+	      
 	      //save a sqrt by squaring distance
 	      if(curr_distance > sqrDistance) continue;
 	      
@@ -154,7 +154,7 @@ namespace ttk {
 	    //do the threshold check here
 	    //marginThreshold is (1 + margin) * threshold - basically the larger threshold
 	    //fractionalThreshold is threshold * margin that is the maximum distance allowed to be counted as a fraction
-	     
+	    
 	    
 	    for(const auto& pair: distances) {
 
@@ -162,7 +162,7 @@ namespace ttk {
 		outputData[i]++;
 	      } else if(inputData[pair.first] < marginThreshold) {
 		outputData[i] = outputData[i] + (marginThreshold - inputData[pair.first]) / (fractionalThreshold);
-		}
+	      }
 	    }
 	}	       
         // print the progress of the current subprocedure with elapsed time

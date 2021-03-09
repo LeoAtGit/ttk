@@ -14,7 +14,7 @@
            </Documentation>
 
             <!-- INPUT -->
-               <InputProperty name="Input" command="SetInputConnection">
+               <InputProperty name="Input" port_index="0" command="SetInputConnection">
                     <ProxyGroupDomain name="groups">
                         <Group name="sources" />
                         <Group name="filters" />
@@ -25,13 +25,15 @@
                     <InputArrayDomain name="input_array" attribute_type="point"
                               number_of_components="1" />
                     <Documentation>A vtkDataSet that has at least one point data scalar array that can be used to compute averages.</Documentation>		    
-                </InputProperty>
+	       </InputProperty>
 
+	       
             <!-- INPUT PARAMETER WIDGETS -->
 
                 <!-- This is the VTK way of selecting arrays for processing by calling the SetInputArrayToProcess method -->
                 <!-- (see ttkCalculatePorosity.cpp for details) -->
-                <StringVectorProperty name="InputArray" label="Input Array" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5">
+                <StringVectorProperty name="InputArray" label="Input Array" command="SetInputArrayToProcess"
+				      element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
                     <ArrayListDomain attribute_type="Scalars" name="array_list">
                       <RequiredProperties>
                             <Property function="Input" name="Input" />
@@ -40,6 +42,15 @@
                     <Documentation>The scalar array that will be used to compute averages.</Documentation>
                 </StringVectorProperty>
 
+                <StringVectorProperty name="GradientMagnitude" command="SetInputArrayToProcess"
+				      element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
+                    <ArrayListDomain attribute_type="Scalars" name="array_list">
+                      <RequiredProperties>
+                            <Property function="Input" name="Input" />
+                        </RequiredProperties>
+                    </ArrayListDomain>
+                    <Documentation>The scalar array that will be used to compute averages.</Documentation>
+                </StringVectorProperty>
 		
 	    <DoubleVectorProperty name="Distance" label="Distance" command="SetDistance" number_of_elements="1" default_values="10.0">
                 <Documentation>Sets the maximum distance for a region.</Documentation>
@@ -58,15 +69,23 @@
 	      but that does not necessarily exclude them from being non-porous regions.
 	      </Documentation>
             </DoubleVectorProperty>
+
+	    <DoubleVectorProperty name="GradientThreshold" label="Gradient Threshold" command="SetGradientThreshold" number_of_elements="1" default_values="25.0">
+              <Documentation>Sets the margin for what points can be fractionally be added to the count; these points may be below the threshold,
+	      but that does not necessarily exclude them from being non-porous regions.
+	      </Documentation>
+            </DoubleVectorProperty>
 	    
 	    
                 <!-- Create a UI group that contains all input parameter widgets (here only one) -->
                 <PropertyGroup panel_widget="Line" label="Input Options">
                   <Property name="InputArray" />
+		  <Property name="GradientMagnitude" />
 		  <Property name="Distance" />
 		  <Property name="Threshold" />
 		  <Property name="Margin" />
 		  <Property name="MaxThreshold" />
+		  <Property name="GradientThreshold" />
                 </PropertyGroup>
 
             <!-- OUTPUT PARAMETER WIDGETS -->

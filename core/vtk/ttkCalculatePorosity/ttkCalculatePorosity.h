@@ -84,6 +84,7 @@ private:
   double Threshold{1};
   double Margin{1};
   double MaxThreshold{1};
+  double GradientThreshold{1};
  public:
   /**
    * TODO 6: Automatically generate getters and setters of filter
@@ -99,6 +100,8 @@ private:
   vtkGetMacro(MaxThreshold, double);  
   vtkSetMacro(Margin,    double);
   vtkGetMacro(Margin,    double);
+  vtkSetMacro(GradientThreshold,    double);
+  vtkGetMacro(GradientThreshold,    double);
   
   
   /**
