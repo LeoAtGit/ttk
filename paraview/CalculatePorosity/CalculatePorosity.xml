@@ -26,7 +26,20 @@
                               number_of_components="1" />
                     <Documentation>A vtkDataSet that has at least one point data scalar array that can be used to compute averages.</Documentation>		    
 	       </InputProperty>
-
+	       
+               <InputProperty name="Input2" port_index="1" command="SetInputConnection">
+                    <ProxyGroupDomain name="groups">
+                        <Group name="sources" />
+                        <Group name="filters" />
+                    </ProxyGroupDomain>
+                    <DataTypeDomain name="input_type">
+                        <DataType value="vtkDataSet" />
+                    </DataTypeDomain>
+                    <InputArrayDomain name="input_array" attribute_type="point"
+                              number_of_components="1" />
+                    <Documentation>A vtkDataSet that has at least one point data scalar array that can be used to compute averages.</Documentation>		    
+	       </InputProperty>
+	       
 	       
             <!-- INPUT PARAMETER WIDGETS -->
 
@@ -47,6 +60,16 @@
                     <ArrayListDomain attribute_type="Scalars" name="array_list">
                       <RequiredProperties>
                             <Property function="Input" name="Input" />
+                        </RequiredProperties>
+                    </ArrayListDomain>
+                    <Documentation>The scalar array that will be used to compute averages.</Documentation>
+                </StringVectorProperty>
+
+		<StringVectorProperty name="Divergence" command="SetInputArrayToProcess"
+				      element_types="0 0 0 0 2" number_of_elements="5" default_values="2">
+                    <ArrayListDomain attribute_type="Scalars" name="array_list">
+                      <RequiredProperties>
+                            <Property function="Input" name="Input2" />
                         </RequiredProperties>
                     </ArrayListDomain>
                     <Documentation>The scalar array that will be used to compute averages.</Documentation>
@@ -81,6 +104,7 @@
                 <PropertyGroup panel_widget="Line" label="Input Options">
                   <Property name="InputArray" />
 		  <Property name="GradientMagnitude" />
+		  <Property name="Divergence" />
 		  <Property name="Distance" />
 		  <Property name="Threshold" />
 		  <Property name="Margin" />

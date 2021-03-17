@@ -66,6 +66,7 @@ namespace ttk {
     int computePorosity(float *outputData,
                         const dataType *inputData,
 			const float *gradientData,
+			const float *divergence,
                         const triangulationType *triangulation,
 			const float& distance,
 			const float& threshold,
@@ -159,9 +160,9 @@ namespace ttk {
 	    for(const auto& pair: distances) {
 
 	      if(inputData[pair.first] < threshold) {
-		outputData[i]++;
+		outputData[i] += ((1 - (pair.second / sqrDistance)) * inputData[pair.first]) * divergence[pair.first];
 	      } else if(inputData[pair.first] < marginThreshold) {
-		outputData[i] = outputData[i] + (marginThreshold - inputData[pair.first]) / (fractionalThreshold);
+		outputData[i] += (marginThreshold - inputData[pair.first]) / (fractionalThreshold)  * ((1-(pair.second / sqrDistance))) * divergence[pair.first];
 	      }
 	    }
 	}	       

@@ -27,7 +27,7 @@ vtkStandardNewMacro(ttkCalculatePorosity);
  * to be freed when the filter is destroyed.
  */
 ttkCalculatePorosity::ttkCalculatePorosity() {
-  this->SetNumberOfInputPorts(1);
+  this->SetNumberOfInputPorts(2);
   this->SetNumberOfOutputPorts(1);
 }
 
@@ -42,7 +42,7 @@ ttkCalculatePorosity::~ttkCalculatePorosity() {
  * the port information.
  */
 int ttkCalculatePorosity::FillInputPortInformation(int port, vtkInformation *info) {
-  if(port == 0) {
+  if(port == 0 || port == 1) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
     return 1;
   }
@@ -144,8 +144,9 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
   //       array with the method "GetInputArrayToProcess".
   vtkDataArray *inputArray = this->GetInputArrayToProcess(0, inputVector);
   vtkDataArray *gradientInput = this->GetInputArrayToProcess(1, inputVector);
+  vtkDataArray *divergence = this->GetInputArrayToProcess(2, inputVector);
   
-  if(!inputArray || !gradientInput) {
+  if(!inputArray || !gradientInput || !divergence) {
     this->printErr("Unable to retrieve input array.");
     return 0;
   }
@@ -186,9 +187,10 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
   int status = 0; // this integer checks if the base code returns an error
   ttkVtkTemplateMacro(inputArray->GetDataType(), triangulation->getType(),
                       (status = this->computePorosity<VTK_TT, TTK_TT>(
-                         (float *)ttkUtils::GetVoidPointer(outputArray),
+                         (float *) ttkUtils::GetVoidPointer(outputArray),
                          (VTK_TT *)ttkUtils::GetVoidPointer(inputArray),
-			 (float *)ttkUtils::GetVoidPointer(gradientInput),
+			 (float *) ttkUtils::GetVoidPointer(gradientInput),
+			 (float *) ttkUtils::GetVoidPointer(divergence),
                          (TTK_TT *)triangulation->getData(),
 			 this->Distance, this->Threshold, this->Margin, this->MaxThreshold, this->GradientThreshold)));
 
