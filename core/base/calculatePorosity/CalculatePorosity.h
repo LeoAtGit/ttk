@@ -23,6 +23,7 @@
 #include <Triangulation.h>
 #include <unordered_map>
 #include <set>
+#include <valarray>
 
 namespace ttk {
 
@@ -99,13 +100,33 @@ namespace ttk {
 	const float sqrDistance = distance * distance;
 	const float marginThreshold = (1.0f + margin) * threshold;
 	const float fractionalThreshold = margin * threshold;
-	
+
+	std::vector<std::valarray<bool>> mask;
+
+	//init masks
+	for(int i = 0; i < this->threadNumber_; i++) {
+	  mask.push_back(std::valarray<bool> (nVertices));
+	}
+
 	#ifdef TTK_ENABLE_OPENMP
         #pragma omp parallel for num_threads(this->threadNumber_)
         #endif
         for(size_t i = 0; i < nVertices; i++) {
-	    outputData[i] = 0;
+
+	    bool safe = false;
+
+	    //check if other threads haven't marked the vertex
+	    for(int j = 0; j < this->threadNumber_; j++) {
+	      if(!mask[j][i]) {
+		safe = true;
+		//mark it so that this thread claims ownership
+		mask[omp_get_thread_num()][i] = true;
+	      }
+	    }
+
+	    if(!safe) continue;
 	    
+	    outputData[i] = 0;    
 	    std::vector<ttk::SimplexId> candidates;
 	    std::unordered_map<ttk::SimplexId,float> distances;
 	    
@@ -133,13 +154,12 @@ namespace ttk {
 	      triangulation->getVertexPoint(currentVertex,uX,uY,uZ);
 	      
 	      float curr_distance = (vX - uX) * (vX - uX) + (vY - uY) * (vY - uY) + (vZ - uZ) * (vZ - uZ);
-
 	      
 	      //save a sqrt by squaring distance
 	      if(curr_distance > sqrDistance) continue;
 	      
 	      distances.insert(std::pair<ttk::SimplexId,float>(currentVertex, curr_distance));
-
+	      
 	      size_t nNeighbors = triangulation->getVertexNeighborNumber(currentVertex);
               ttk::SimplexId neighborId;
 	      
@@ -155,8 +175,7 @@ namespace ttk {
 	    //do the threshold check here
 	    //marginThreshold is (1 + margin) * threshold - basically the larger threshold
 	    //fractionalThreshold is threshold * margin that is the maximum distance allowed to be counted as a fraction
-	    
-	    
+	    	    
 	    for(const auto& pair: distances) {
 
 	      if(inputData[pair.first] < threshold) {
