@@ -46,6 +46,23 @@ using ttkSimplexIdTypeArray = vtkIntArray;
   }                                                       \
   vtkSetEnumMacro(name, enumType);
 
+#define ttkTypeMacroCaseT(                         \
+  triangulationType, triangulationClass, call) \
+  case triangulationType: {                              \
+    typedef triangulationClass TT;                   \
+    (call);\
+  }; break;
+
+#define ttkTypeMacroT(triangulationType, call)            \
+  switch(triangulationType) {                                             \
+    ttkTypeMacroCaseT(ttk::Triangulation::Type::EXPLICIT, \
+                            ttk::ExplicitTriangulation, call);            \
+    ttkTypeMacroCaseT(ttk::Triangulation::Type::IMPLICIT, \
+                            ttk::ImplicitTriangulation, call);            \
+    ttkTypeMacroCaseT(ttk::Triangulation::Type::PERIODIC, \
+                            ttk::PeriodicImplicitTriangulation, call);    \
+  }
+
 #define ttkVtkTemplateMacroCase(                         \
   dataType, triangulationType, triangulationClass, call) \
   case triangulationType: {                              \

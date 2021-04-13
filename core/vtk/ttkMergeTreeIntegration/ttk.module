@@ -1,0 +1,9 @@
+NAME
+  ttkMergeTreeIntegration
+SOURCES
+  ttkMergeTreeIntegration.cpp
+HEADERS
+  ttkMergeTreeIntegration.h
+DEPENDS
+  ttkAlgorithm
+  MergeTreeIntegration
