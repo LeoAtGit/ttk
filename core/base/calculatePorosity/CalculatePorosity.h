@@ -107,11 +107,12 @@ namespace ttk {
 	for(int i = 0; i < this->threadNumber_; i++) {
 	  mask.push_back(std::valarray<bool> (nVertices));
 	}
-
+	
+	
 	#ifdef TTK_ENABLE_OPENMP
         #pragma omp parallel for num_threads(this->threadNumber_)
         #endif
-        for(size_t i = 0; i < nVertices; i++) {
+	for(size_t i = 0; i < nVertices; i++) {
 
 	    bool safe = false;
 
