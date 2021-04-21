@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="ttkTrackingGraph" class="ttkTrackingGraph" label="TTK TrackingGraph">
+      <Documentation long_help="TrackingGraph Long" short_help="TrackingGraph Short">
+        TODO
+      </Documentation>
+
+      <InputProperty name="Nodes" port_index="0" command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources" />
+          <Group name="filters" />
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkMultiBlockDataSet" />
+        </DataTypeDomain>
+        <Documentation>TODO.</Documentation>
+      </InputProperty>
+
+      <InputProperty name="Correlations" port_index="1" command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources" />
+          <Group name="filters" />
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkMultiBlockDataSet" />
+        </DataTypeDomain>
+        <Documentation>TODO.</Documentation>
+      </InputProperty>
+
+      <StringVectorProperty name="Matrix" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5">
+        <ArrayListDomain name="array_list" input_domain_name="input_arrays">
+          <RequiredProperties>
+            <Property function="Input" name="Correlations" />
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>TODO.</Documentation>
+      </StringVectorProperty>
+
+      ${DEBUG_WIDGETS}
+
+      <Hints>
+        <ShowInMenu category="TTK - Misc" />
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>

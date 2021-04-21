@@ -1,0 +1,9 @@
+NAME
+  ttkTrackingFromGradient
+SOURCES
+  ttkTrackingFromGradient.cpp
+HEADERS
+  ttkTrackingFromGradient.h
+DEPENDS
+  trackingFromGradient
+  ttkAlgorithm

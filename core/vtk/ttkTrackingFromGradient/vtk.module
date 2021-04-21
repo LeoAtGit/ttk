@@ -1,4 +1,4 @@
 NAME
-  ttkTrackingFromOverlap
+  ttkTrackingFromGradient
 DEPENDS
   ttkAlgorithm
