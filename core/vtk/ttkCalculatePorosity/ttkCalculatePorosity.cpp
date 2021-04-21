@@ -3,12 +3,13 @@
 #include <vtkInformation.h>
 
 #include <vtkDataArray.h>
-#include <vtkDataSet.h>
+#include <vtkImageData.h>
 #include <vtkPointData.h>
 #include <vtkSmartPointer.h>
 #include <vtkFloatArray.h>
 #include <ttkMacros.h>
 #include <ttkUtils.h>
+
 
 // A VTK macro that enables the instantiation of this class via ::New()
 // You do not have to modify this
@@ -91,8 +92,8 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
 
   // Get input object from input vector
   // Note: has to be a vtkDataSet as required by FillInputPortInformation
-  vtkDataSet *inputDataSet = vtkDataSet::GetData(inputVector[0]);
-  
+  vtkImageData* inputDataSet = vtkImageData::GetData(inputVector[0]);
+     
   if(!inputDataSet)
     return 0;
   
@@ -176,10 +177,17 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
 
   // Get ttk::triangulation of the input vtkDataSet (will create one if one does
   // not exist already).
+
+  int dim[3];
+
+  inputDataSet->GetDimensions(dim);
+
   ttk::Triangulation *triangulation
     = ttkAlgorithm::GetTriangulation(inputDataSet);
   if(!triangulation)
     return 0;
+
+
   
   // Precondition the triangulation (e.g., enable fetching of vertex neighbors)
   this->preconditionTriangulation(triangulation); // implemented in base class
@@ -192,7 +200,7 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
 			 (float *) ttkUtils::GetVoidPointer(gradientInput),
 			 (float *) ttkUtils::GetVoidPointer(divergence),
                          (TTK_TT *)triangulation->getData(),
-			 this->Distance, this->Threshold, this->Margin, this->MaxThreshold, this->GradientThreshold)));
+			 this->Distance, this->Threshold, this->Margin, this->MaxThreshold, this->GradientThreshold, dim)));
 
   // On error cancel filter execution
   if(status != 1)

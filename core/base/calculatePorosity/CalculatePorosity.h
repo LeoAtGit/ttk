@@ -21,8 +21,8 @@
 // ttk common includes
 #include <Debug.h>
 #include <Triangulation.h>
-#include <unordered_map>
 #include <set>
+#include <unordered_map>
 #include <valarray>
 
 namespace ttk {
@@ -66,18 +66,19 @@ namespace ttk {
               class triangulationType = ttk::AbstractTriangulation>
     int computePorosity(float *outputData,
                         const dataType *inputData,
-			const float *gradientData,
-			const float *divergence,
+                        const float *gradientData,
+                        const float *divergence,
                         const triangulationType *triangulation,
-			const float& distance,
-			const float& threshold,
-			const float& margin,
-			const float& maxThreshold,
-			const float& gradientThreshold) const {
+                        const float &distance,
+                        const float &threshold,
+                        const float &margin,
+                        const float &maxThreshold,
+                        const float &gradientThreshold,
+			const int* dim) const {
       // start global timer
       ttk::Timer globalTimer;
       // print horizontal separator
-      this->printMsg(ttk::debug::Separator::L1); // L1 is the '=' separator	             
+      this->printMsg(ttk::debug::Separator::L1); // L1 is the '=' separator
       // print input parameters in table format
       this->printMsg({
         {"#Threads", std::to_string(this->threadNumber_)},
@@ -96,106 +97,78 @@ namespace ttk {
                        this->threadNumber_, ttk::debug::LineMode::REPLACE);
 
         size_t nVertices = triangulation->getNumberOfVertices();
-        
-	const float sqrDistance = distance * distance;
-	const float marginThreshold = (1.0f + margin) * threshold;
-	const float fractionalThreshold = margin * threshold;
 
-	std::vector<std::valarray<bool>> mask;
+        const float sqrDistance = distance * distance;
+        const float marginThreshold = (1.0f + margin) * threshold;
+        const float fractionalThreshold = margin * threshold;
 
-	//init masks
-	for(int i = 0; i < this->threadNumber_; i++) {
-	  mask.push_back(std::valarray<bool> (nVertices));
-	}
-	
-	
-	#ifdef TTK_ENABLE_OPENMP
-        #pragma omp parallel for num_threads(this->threadNumber_)
-        #endif
-	for(size_t i = 0; i < nVertices; i++) {
 
-	    bool safe = false;
+        // init masks
+	std::vector<std::tuple<int,int,int,float>> neighbor_mask;
 
-	    //check if other threads haven't marked the vertex
-	    for(int j = 0; j < this->threadNumber_; j++) {
-	      if(!mask[j][i]) {
-		safe = true;
-		//mark it so that this thread claims ownership
-		mask[omp_get_thread_num()][i] = true;
-	      }
-	    }
-
-	    if(!safe) continue;
-	    
-	    outputData[i] = 0;    
-	    std::vector<ttk::SimplexId> candidates;
-	    std::unordered_map<ttk::SimplexId,float> distances;
-	    
-	    float vX,vY,vZ; //coords of center vertex
-	    triangulation->getVertexPoint(i,vX,vY,vZ);
-	    
-	    candidates.push_back(i);
-
-	    while(!candidates.empty()) {
+	for(int i = -int(distance); i < int(distance); i++) {
+	  for(int j = -int(distance); j < int(distance); j++) {
+            for(int k = -int(distance); k < int(distance); k++) {
+	     int d = i * i + j * j + k * k;
 	     
-	      ttk::SimplexId currentVertex = candidates.back();
-	      candidates.pop_back();
-
-	      //ignore anything that might be a light artifact
-	      if(inputData[currentVertex] > maxThreshold) {
-		outputData[currentVertex] = -1;
+	     neighbor_mask.push_back(std::tuple<int,int,int,float>(i,j,k,1 - (d / sqrDistance)));
+            }
+          }
+	}
+	int dimX = dim[0];
+	int dimY = dim[1];
+	int dimZ = dim[2];
+      
+#ifdef TTK_ENABLE_OPENMP
+#pragma omp parallel for num_threads(this->threadNumber_)
+#endif
+        for(int i = 0; i < dimX; i++) {
+	  for(int j = 0; j < dimY; j++) {
+            for(int k = 0; k < dimZ; k++) {
+	      int idx = k * dimX * dimY + j * dimX + i;
+	      float result = 0.0f;
+	      
+	      outputData[idx] = 0;
+     
+	      if(inputData[idx] > maxThreshold) {
+		outputData[idx] = -1;
 		continue;
 	      }
-	      //check if in the list and within distance (std::find != means found)
-	      if(distances.find(currentVertex) != distances.end()) continue;
+	      
+	      if(gradientData[idx] > gradientThreshold)
+		continue;          
+	      
+	      for(auto& it : neighbor_mask) {
+		int x = i + std::get<0>(it);
+		int y = j + std::get<1>(it);
+		int z = k + std::get<2>(it);
 
-	      if(gradientData[currentVertex] > gradientThreshold) continue;
-	      
-	      float uX,uY,uZ;
-	      triangulation->getVertexPoint(currentVertex,uX,uY,uZ);
-	      
-	      float curr_distance = (vX - uX) * (vX - uX) + (vY - uY) * (vY - uY) + (vZ - uZ) * (vZ - uZ);
-	      
-	      //save a sqrt by squaring distance
-	      if(curr_distance > sqrDistance) continue;
-	      
-	      distances.insert(std::pair<ttk::SimplexId,float>(currentVertex, curr_distance));
-	      
-	      size_t nNeighbors = triangulation->getVertexNeighborNumber(currentVertex);
-              ttk::SimplexId neighborId;
-	      
-              for(size_t j = 0; j < nNeighbors; j++) {
-                triangulation->getVertexNeighbor(currentVertex, j, neighborId);
-		
-		if(distances.find(neighborId) == distances.end()) {
-		  candidates.push_back(neighborId);
-		}
-	      }
-	  }
+		if(x < 0 || x >= dimX || y < 0 || y >= dimY || z < 0 || z >= dimZ) continue;
+		int idxN = z * dimX * dimY + y * dimX + x;
 
-	    //do the threshold check here
-	    //marginThreshold is (1 + margin) * threshold - basically the larger threshold
-	    //fractionalThreshold is threshold * margin that is the maximum distance allowed to be counted as a fraction
-	    	    
-	    for(const auto& pair: distances) {
-
-	      if(inputData[pair.first] < threshold) {
-		outputData[i] += ((1 - (pair.second / sqrDistance)) * inputData[pair.first]) * divergence[pair.first];
-	      } else if(inputData[pair.first] < marginThreshold) {
-		outputData[i] += (marginThreshold - inputData[pair.first]) / (fractionalThreshold)  * ((1-(pair.second / sqrDistance))) * divergence[pair.first];
-	      }
-	    }
-	}	       
-        // print the progress of the current subprocedure with elapsed time
-        this->printMsg("Computing Porosity",
-                       1, // progress
-                       localTimer.getElapsedTime(), this->threadNumber_);
+		// do the threshold check here
+		// marginThreshold is (1 + margin) * threshold - basically the larger
+		// threshold fractionalThreshold is threshold * margin that is the
+		// maximum distance allowed to be counted as a fraction
+		if(inputData[idxN] < threshold) {
+		  outputData[idx] += abs(inputData[idxN] * std::get<3>(it) * divergence[idxN]);
+		} else if(inputData[idxN] < marginThreshold) {
+		  outputData[idx] += abs(((marginThreshold - inputData[idxN]) / (fractionalThreshold)) * std::get<3>(it) * divergence[idxN]);
+		}	
+	      }               
+            }
+          }
+	}
+          // print the progress of the current subprocedure with elapsed time
+          this->printMsg("Computing Porosity",
+                         1, // progress
+                         localTimer.getElapsedTime(), this->threadNumber_);
       }
-
+    
       // ---------------------------------------------------------------------
       // print global performance
       // ---------------------------------------------------------------------
-      
+
       {
         this->printMsg(ttk::debug::Separator::L2); // horizontal '-' separator
         this->printMsg(
@@ -207,5 +180,4 @@ namespace ttk {
       return 1; // return success
     }
   }; // CalculatePorosity class
-
 } // namespace ttk
