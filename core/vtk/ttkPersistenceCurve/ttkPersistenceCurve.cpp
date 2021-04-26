@@ -2,14 +2,17 @@
 #include <ttkPersistenceCurve.h>
 #include <ttkUtils.h>
 
+#include <vtkIdTypeArray.h>
+#include <vtkIntArray.h>
+
 using namespace std;
 using namespace ttk;
 
 using namespace ftm;
 
-vtkStandardNewMacro(ttkPersistenceCurve)
+vtkStandardNewMacro(ttkPersistenceCurve);
 
-  ttkPersistenceCurve::ttkPersistenceCurve() {
+ttkPersistenceCurve::ttkPersistenceCurve() {
   this->SetNumberOfInputPorts(1);
   this->SetNumberOfOutputPorts(4);
 }
@@ -95,13 +98,7 @@ int ttkPersistenceCurve::getPersistenceCurve(
 
     switch(treeType) {
       case ttk::ftm::TreeType::Join:
-        outputCurve->ShallowCopy(persistenceCurve);
-        break;
-
       case ttk::ftm::TreeType::Split:
-        outputCurve->ShallowCopy(persistenceCurve);
-        break;
-
       case ttk::ftm::TreeType::Join_Split:
       case ttk::ftm::TreeType::Contour:
         outputCurve->ShallowCopy(persistenceCurve);
