@@ -1,6 +1,4 @@
-ttk_add_base_library(calculatePorosity
-  SOURCES
-    CalculatePorosity.cpp
+ttk_add_base_template_library(calculatePorosity
   HEADERS
     CalculatePorosity.h
   DEPENDS

@@ -16,32 +16,31 @@
 vtkStandardNewMacro(ttkCalculatePorosity);
 
 /**
- * TODO 7: Implement the filter constructor and destructor in the cpp file.
- *
- * The constructor has to specify the number of input and output ports
- * with the functions SetNumberOfInputPorts and SetNumberOfOutputPorts,
- * respectively. It should also set default values for all filter
- * parameters.
- *
- * The destructor is usually empty unless you want to manage memory
- * explicitly, by for example allocating memory on the heap that needs
- * to be freed when the filter is destroyed.
- */
+* TODO 7: Implement the filter constructor and destructor in the cpp file.
+*
+* The constructor has to specify the number of input and output ports
+* with the functions SetNumberOfInputPorts and SetNumberOfOutputPorts,
+* respectively. It should also set default values for all filter
+* parameters.
+*
+* The destructor is usually empty unless you want to manage memory
+* explicitly, by for example allocating memory on the heap that needs
+* to be freed when the filter is destroyed.
+*/
 ttkCalculatePorosity::ttkCalculatePorosity() {
   this->SetNumberOfInputPorts(2);
   this->SetNumberOfOutputPorts(1);
 }
 
-ttkCalculatePorosity::~ttkCalculatePorosity() {
-}
+ttkCalculatePorosity::~ttkCalculatePorosity() {}
 
 /**
- * TODO 8: Specify the required input data type of each input port
- *
- * This method specifies the required input object data types of the
- * filter by adding the vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE() key to
- * the port information.
- */
+* TODO 8: Specify the required input data type of each input port
+*
+* This method specifies the required input object data types of the
+* filter by adding the vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE() key to
+* the port information.
+*/
 int ttkCalculatePorosity::FillInputPortInformation(int port, vtkInformation *info) {
   if(port == 0 || port == 1) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
@@ -51,20 +50,20 @@ int ttkCalculatePorosity::FillInputPortInformation(int port, vtkInformation *inf
 }
 
 /**
- * TODO 9: Specify the data object type of each output port
- *
- * This method specifies in the port information object the data type of the
- * corresponding output objects. It is possible to either explicitly
- * specify a type by adding a vtkDataObject::DATA_TYPE_NAME() key:
- *
- *      info->Set( vtkDataObject::DATA_TYPE_NAME(), "vtkUnstructuredGrid" );
- *
- * or to pass a type of an input port to an output port by adding the
- * ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT() key (see below).
- *
- * Note: prior to the execution of the RequestData method the pipeline will
- * initialize empty output data objects based on this information.
- */
+* TODO 9: Specify the data object type of each output port
+*
+* This method specifies in the port information object the data type of the
+* corresponding output objects. It is possible to either explicitly
+* specify a type by adding a vtkDataObject::DATA_TYPE_NAME() key:
+*
+*      info->Set( vtkDataObject::DATA_TYPE_NAME(), "vtkUnstructuredGrid" );
+*
+* or to pass a type of an input port to an output port by adding the
+* ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT() key (see below).
+*
+* Note: prior to the execution of the RequestData method the pipeline will
+* initialize empty output data objects based on this information.
+*/
 int ttkCalculatePorosity::FillOutputPortInformation(int port, vtkInformation *info) {
   if(port == 0) {
     info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
@@ -74,30 +73,30 @@ int ttkCalculatePorosity::FillOutputPortInformation(int port, vtkInformation *in
 }
 
 /**
- * TODO 10: Pass VTK data to the base code and convert base code output to VTK
- *
- * This method is called during the pipeline execution to update the
- * already initialized output data objects based on the given input
- * data objects and filter parameters.
- *
- * Note:
- *     1) The passed input data objects are validated based on the information
- *        provided by the FillInputPortInformation method.
- *     2) The output objects are already initialized based on the information
- *        provided by the FillOutputPortInformation method.
- */
+* TODO 10: Pass VTK data to the base code and convert base code output to VTK
+*
+* This method is called during the pipeline execution to update the
+* already initialized output data objects based on the given input
+* data objects and filter parameters.
+*
+* Note:
+*     1) The passed input data objects are validated based on the information
+*        provided by the FillInputPortInformation method.
+*     2) The output objects are already initialized based on the information
+*        provided by the FillOutputPortInformation method.
+*/
 int ttkCalculatePorosity::RequestData(vtkInformation *request,
-                               vtkInformationVector **inputVector,
-                               vtkInformationVector *outputVector) {
+  vtkInformationVector **inputVector,
+  vtkInformationVector *outputVector) {
 
   // Get input object from input vector
   // Note: has to be a vtkDataSet as required by FillInputPortInformation
   vtkImageData* inputDataSet = vtkImageData::GetData(inputVector[0]);
-     
+
   if(!inputDataSet)
-    return 0;
-  
-  
+  return 0;
+
+
   // Get input array that will be processed
   //
   // Note: VTK provides abstract functionality to handle array selections, but
@@ -146,7 +145,7 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
   vtkDataArray *inputArray = this->GetInputArrayToProcess(0, inputVector);
   vtkDataArray *gradientInput = this->GetInputArrayToProcess(1, inputVector);
   vtkDataArray *divergence = this->GetInputArrayToProcess(2, inputVector);
-  
+
   if(!inputArray || !gradientInput || !divergence) {
     this->printErr("Unable to retrieve input array.");
     return 0;
@@ -162,7 +161,7 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
     this->printErr("Input array needs to be a scalar array.");
     return 0;
   }
-  
+
   // If all checks pass then log which array is going to be processed.
   this->printMsg("Starting computation...");
   this->printMsg("  Scalar Array: " + std::string(inputArray->GetName()));
@@ -170,41 +169,37 @@ int ttkCalculatePorosity::RequestData(vtkInformation *request,
   // Create an output array that has the same data type as the input array
   // Note: vtkSmartPointers are well documented
   //       (https://vtk.org/Wiki/VTK/Tutorials/SmartPointers)
-  auto outputArray = vtkSmartPointer<vtkFloatArray>::New();
+  auto outputArray = vtkSmartPointer < vtkFloatArray > ::New();
   outputArray->SetName("InversePyramidProbability"); // set array name
   outputArray->SetNumberOfComponents(1); // only one component per tuple
   outputArray->SetNumberOfTuples(inputArray->GetNumberOfTuples());
 
-  // Get ttk::triangulation of the input vtkDataSet (will create one if one does
-  // not exist already).
-
   int dim[3];
-
   inputDataSet->GetDimensions(dim);
 
-  ttk::Triangulation *triangulation
-    = ttkAlgorithm::GetTriangulation(inputDataSet);
-  if(!triangulation)
-    return 0;
+  // ttk::Triangulation *triangulation
+  //   = ttkAlgorithm::GetTriangulation(inputDataSet);
+  // if(!triangulation)
+  //   return 0;
+  // // Precondition the triangulation (e.g., enable fetching of vertex neighbors)
+  // this->preconditionTriangulation(triangulation); // implemented in base class
 
-
-  
-  // Precondition the triangulation (e.g., enable fetching of vertex neighbors)
-  this->preconditionTriangulation(triangulation); // implemented in base class
   // Templatize over the different input array data types and call the base code
   int status = 0; // this integer checks if the base code returns an error
-  ttkVtkTemplateMacro(inputArray->GetDataType(), triangulation->getType(),
-                      (status = this->computePorosity<VTK_TT, TTK_TT>(
-                         (float *) ttkUtils::GetVoidPointer(outputArray),
-                         (VTK_TT *)ttkUtils::GetVoidPointer(inputArray),
-			 (float *) ttkUtils::GetVoidPointer(gradientInput),
-			 (float *) ttkUtils::GetVoidPointer(divergence),
-                         (TTK_TT *)triangulation->getData(),
-			 this->Distance, this->Threshold, this->Margin, this->MaxThreshold, this->GradientThreshold, dim)));
-
+  switch(inputArray->GetDataType()) {
+    vtkTemplateMacro(
+      status = this->computePorosity<VTK_TT>(
+        ttkUtils::GetPointer<float>(outputArray),
+        inputDataSet->GetNumberOfPoints(),
+        ttkUtils::GetPointer<VTK_TT>(inputArray),
+        ttkUtils::GetPointer<float>(gradientInput),
+        ttkUtils::GetPointer<float>(divergence),
+        this->Distance, this->Threshold, this->Margin, this->MaxThreshold, this->GradientThreshold, dim)
+    );
+  }
   // On error cancel filter execution
   if(status != 1)
-    return 0;
+  return 0;
 
   // Get output vtkDataSet (which was already instantiated based on the
   // information provided by FillOutputPortInformation)
