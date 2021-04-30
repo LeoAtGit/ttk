@@ -23,7 +23,7 @@
 #include <Triangulation.h>
 #include <set>
 #include <unordered_map>
-#include <valarray>
+#include <cmath>
 
 namespace ttk {
 
@@ -95,10 +95,25 @@ namespace ttk {
           0, // elapsed time so far
           this->threadNumber_, ttk::debug::LineMode::REPLACE);
 
-        const float sqrDistance = distance * distance;
+	int dimCount = 0;
+	for(int i = 0; i < 3; i++) {
+	  if(dim[i] > 1) {
+	    dimCount++;
+	  }
+	}
+
+	float sqrDistance = (dimCount == 0) ? 1.0f : 0.0f;
+	
+	for(int i = 0; i < dimCount; i++) {
+	  sqrDistance += distance * distance;
+	}
+	
         const float marginThreshold = (1.0f + margin) * threshold;
         const float fractionalThreshold = margin * threshold;
 
+	int dimX = dim[0];
+        int dimY = dim[1];
+        int dimZ = dim[2];
 
         // init masks
         std::vector < std::tuple < int,
@@ -109,15 +124,14 @@ namespace ttk {
         for(int i = -int(distance); i < int(distance); i++) {
           for(int j = -int(distance); j < int(distance); j++) {
             for(int k = -int(distance); k < int(distance); k++) {
-              int d = i * i + j * j + k * k;
-
-              neighbor_mask.push_back(std::tuple < int, int, int, float > (i, j, k, 1 - (d / sqrDistance)));
+	      float d = i * i + j * j + k * k;
+	      //if(d > 0.0f) { 
+		neighbor_mask.push_back(std::tuple < int, int, int, float > (i, j, k, 1.0f - (d / sqrDistance)));
+		//}
             }
           }
         }
-        int dimX = dim[0];
-        int dimY = dim[1];
-        int dimZ = dim[2];
+
 
         #ifdef TTK_ENABLE_OPENMP
         #pragma omp parallel for num_threads(this->threadNumber_)
@@ -126,7 +140,6 @@ namespace ttk {
           for(int j = 0; j < dimY; j++) {
             for(int k = 0; k < dimZ; k++) {
               int idx = k * dimX * dimY + j * dimX + i;
-              float result = 0.0f;
 
               outputData[idx] = 0;
 
@@ -135,8 +148,8 @@ namespace ttk {
                 continue;
               }
 
-              if(gradientData[idx] > gradientThreshold)
-              continue;
+              //if(gradientData[idx] > gradientThreshold)
+	      //continue;
 
               for(auto& it: neighbor_mask) {
                 int x = i + std::get < 0 > (it);
@@ -151,9 +164,9 @@ namespace ttk {
                 // threshold fractionalThreshold is threshold * margin that is the
                 // maximum distance allowed to be counted as a fraction
                 if(inputData[idxN] < threshold) {
-                  outputData[idx] += abs(inputData[idxN] * std::get < 3 > (it) * divergence[idxN]);
+                  outputData[idx] += inputData[idxN] * std::get < 3 > (it);// * divergence[idxN];
                 } else if(inputData[idxN] < marginThreshold) {
-                  outputData[idx] += abs(((marginThreshold - inputData[idxN]) / (fractionalThreshold)) * std::get < 3 > (it) * divergence[idxN]);
+                  outputData[idx] += ((marginThreshold - inputData[idxN]) / (fractionalThreshold)) * std::get <3> (it);// * divergence[idxN];
                 }
               }
             }
