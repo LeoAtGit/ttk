@@ -1,0 +1,9 @@
+NAME
+  ttkCorrespondenceByDistance
+SOURCES
+  ttkCorrespondenceByDistance.cpp
+HEADERS
+  ttkCorrespondenceByDistance.h
+DEPENDS
+  correspondenceByDistance
+  ttkCorrespondenceAlgorithm
