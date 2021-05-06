@@ -44,47 +44,79 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
   auto inputImage = vtkImageData::GetData(inputVector[0]);
   auto outputImage = vtkImageData::GetData(outputVector);
 
-  auto sssao = vtkSmartPointer<ttkCinemaDarkroomSSSAO>::New();
-  auto ibs = vtkSmartPointer<ttkCinemaDarkroomIBS>::New();  
-  auto dof = vtkSmartPointer<ttkCinemaDarkroomSSDoF>::New();
-  auto fxaa = vtkSmartPointer<ttkCinemaDarkroomFXAA>::New();
-  
-  sssao->SetInputData(inputImage);
-  //input array, port number, input connection, point / cell / field data, name of the array
-  sssao->SetInputArrayToProcess(0,0,0,0,"Depth");
+  vtkSmartPointer<ttkAlgorithm> lastUsed;
 
-  sssao->SetSamples(this->Samples);
-  sssao->SetRadius(this->Radius);
-  sssao->SetDiffArea(this->DiffArea);
+  if(this->UseSSSAO) {
+    auto sssao = vtkSmartPointer<ttkCinemaDarkroomSSSAO>::New();
+    sssao->SetInputData(inputImage);
+    //input array, port number, input connection, point / cell / field data, name of the array
+    sssao->SetInputArrayToProcess(0,0,0,0,"Depth");
+
+    sssao->SetSamples(this->Samples);
+    sssao->SetRadius(this->Radius);
+    sssao->SetDiffArea(this->DiffArea);
+    sssao->Update();
+
+    lastUsed = sssao;
     
-  ibs->SetInputConnection(0, sssao->GetOutputPort());
+    if(UseIBS) {  
+      auto ibs = vtkSmartPointer<ttkCinemaDarkroomIBS>::New();  
+      ibs->SetInputConnection(0, sssao->GetOutputPort());
 
-  ibs->SetInputArrayToProcess(0,0,0,0,"Diffuse");
-  ibs->SetInputArrayToProcess(1,0,0,0,"Depth");
-  ibs->SetInputArrayToProcess(2,0,0,0,"SSSAO");
+      ibs->SetInputArrayToProcess(0,0,0,0,"Diffuse");
+      ibs->SetInputArrayToProcess(1,0,0,0,"Depth");
+      ibs->SetInputArrayToProcess(2,0,0,0,"SSSAO");
 
-  ibs->SetStrength(this->Strength);
-  ibs->SetLuminance(this->Luminance);
-  ibs->SetAmbient(this->Ambient);  
+      ibs->SetStrength(this->Strength);
+      ibs->SetLuminance(this->Luminance);
+      ibs->SetAmbient(this->Ambient);
+      ibs->Update();
 
-  dof->SetInputConnection(0, ibs->GetOutputPort(0));
+      lastUsed = ibs;
+    }
+  }
 
-  dof->SetInputArrayToProcess(0,0,0,0,"Diffuse");
-  dof->SetInputArrayToProcess(1,0,0,0,"Depth");
+  if(UseDoF) {
+    auto dof = vtkSmartPointer<ttkCinemaDarkroomSSDoF>::New();
 
-  dof->SetRadius(this->DepthRadius);
-  dof->SetAperture(this->Aperture);
-  dof->SetFocalDepth(this->FocalDepth);
-  dof->SetMaxBlur(this->MaxBlur);
+    if(lastUsed == nullptr) {
+      dof->SetInputData(inputImage);
+    } else {
+      dof->SetInputConnection(0, lastUsed->GetOutputPort(0));
+    }
+
+    dof->SetInputArrayToProcess(0,0,0,0,"Diffuse");
+    dof->SetInputArrayToProcess(1,0,0,0,"Depth");
+
+    dof->SetRadius(this->DepthRadius);
+    dof->SetAperture(this->Aperture);
+    dof->SetFocalDepth(this->FocalDepth);
+    dof->SetMaxBlur(this->MaxBlur);
+
+    lastUsed = dof;
+  }
+
+  if(UseFXAA) {
+    auto fxaa = vtkSmartPointer<ttkCinemaDarkroomFXAA>::New();
+
+    if(lastUsed == nullptr) {
+      fxaa->SetInputData(inputImage);
+    } else {
+      fxaa->SetInputConnection(0, lastUsed->GetOutputPort(0));
+    }
+
+    fxaa->SetInputArrayToProcess(0,0,0,0,"Diffuse");
   
+    fxaa->Update();
 
-  fxaa->SetInputConnection(0, dof->GetOutputPort(0));
-
-  fxaa->SetInputArrayToProcess(0,0,0,0,"Diffuse");
-  
-  fxaa->Update();
-
-  outputImage->ShallowCopy(fxaa->GetOutputDataObject(0));
+    lastUsed = fxaa;
+  }
+  if(lastUsed != nullptr) {
+    outputImage->ShallowCopy(lastUsed->GetOutputDataObject(0));
+  } else {
+    std::cout << "Please select at least one filter to use." << std::endl;
+    return -1;
+  }
   
   return 1;
 }
