@@ -1,5 +1,6 @@
 #include <ttkCorrespondenceByDistance.h>
 
+#include <vtkObjectFactory.h>
 #include <vtkInformation.h>
 
 #include <vtkImageData.h>
