@@ -1,0 +1,9 @@
+NAME
+  ttkCorrespondenceByMTS
+SOURCES
+  ttkCorrespondenceByMTS.cpp
+HEADERS
+  ttkCorrespondenceByMTS.h
+DEPENDS
+  correspondenceByMTS
+  ttkCorrespondenceAlgorithm
