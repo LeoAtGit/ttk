@@ -26,8 +26,8 @@ int ttkCorrespondenceByPersistencePairs::Correlate(vtkImageData *correspondences
                                        vtkDataObject* inputDataObjects1
 ){
   // unpack input
-  auto p0 = vtkPointSet::SafeDownCast(inputDataObjects0);
-  auto p1 = vtkPointSet::SafeDownCast(inputDataObjects1);
+  auto p0 = vtkPointSet::SafeDownCast(inputDataObjects0); // set of persist. pairs from previous timestep
+  auto p1 = vtkPointSet::SafeDownCast(inputDataObjects1); // PPs from current timestep
   if(!p0 || !p1)
     return !this->printErr("Input data objects need to be vtkPointSets.");
 
@@ -35,17 +35,24 @@ int ttkCorrespondenceByPersistencePairs::Correlate(vtkImageData *correspondences
   auto coords0 = p0->GetPoints()->GetData();
   auto coords1 = p1->GetPoints()->GetData();
 
+  // get birth & death scalars
+  auto birth0 = this->GetInputArrayToProcess(0, p0);
+  auto birth1 = this->GetInputArrayToProcess(0, p1);
+  auto death0 = this->GetInputArrayToProcess(1, p0);
+  auto death1 = this->GetInputArrayToProcess(1, p1);
+
   if(coords0->GetDataType() != coords1->GetDataType())
     return !this->printErr("Input vtkPointSet need to have same precision.");
 
-  const int nPoints0 = coords0->GetNumberOfTuples();
-  const int nPoints1 = coords1->GetNumberOfTuples();
+  const int nPairs0 = coords0->GetNumberOfTuples() / 2;
+  const int nPairs1 = coords1->GetNumberOfTuples() / 2;
 
   // initialize correspondence matrix i.e., distance matrix
-  correspondences->SetDimensions(nPoints0, nPoints1, 1);
-  correspondences->AllocateScalars(coords0->GetDataType(), 1);
+  correspondences->SetDimensions(nPairs0, nPairs1, 1);
+  correspondences->AllocateScalars(VTK_DOUBLE, 1); // matching output = double
+
   auto correspondencesArray = correspondences->GetPointData()->GetArray(0);
-  correspondencesArray->SetName("Distance");
+  correspondencesArray->SetName("LiftedWassersteinDistance");
 
   // compute distance matrix
   int status = 0;
@@ -53,8 +60,8 @@ int ttkCorrespondenceByPersistencePairs::Correlate(vtkImageData *correspondences
     vtkTemplateMacro(status = this->computeDistanceMatrix<VTK_TT>(
                        ttkUtils::GetPointer<VTK_TT>(correspondencesArray),
                        ttkUtils::GetPointer<const VTK_TT>(coords0),
-                       ttkUtils::GetPointer<const VTK_TT>(coords1), nPoints0,
-                       nPoints1));
+                       ttkUtils::GetPointer<const VTK_TT>(coords1), nPairs0,
+                       nPairs1));
   }
   if(!status)
     return 0;
