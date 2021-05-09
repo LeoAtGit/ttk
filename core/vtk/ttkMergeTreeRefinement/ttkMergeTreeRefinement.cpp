@@ -183,6 +183,11 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
   auto o_mtParentEdge2Data
     = static_cast<int *>(prepArray(o_mtParentEdge2, n_o_mtEdges, 1, "Parent"));
 
+  auto o_mtNodeId = vtkSmartPointer<vtkIntArray>::New();
+  auto o_mtNodeIdData = static_cast<int *>(prepArray(o_mtNodeId, n_o_mtPoints, 1, "NodeId"));
+  for(size_t i=0; i<n_o_mtPoints; i++)
+    o_mtNodeIdData[i] = i;
+
   auto nextId = vtkSmartPointer<vtkIntArray>::New();
   auto nextIdData
     = static_cast<int *>(prepArray(nextId, n_o_mtPoints, 1, "NextId"));
@@ -371,6 +376,7 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
       o_MergeTreePD->AddArray(outPointArrays[a]);
     o_MergeTreePD->AddArray(nextId);
     o_MergeTreePD->AddArray(size);
+    o_MergeTreePD->AddArray(o_mtNodeId);
 
     auto o_MergeTreeCD = o_MergeTree->GetCellData();
     for(size_t a = 0; a < outCellArrays.size(); a++)

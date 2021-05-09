@@ -71,14 +71,14 @@ int ttkCorrespondenceByMTS::Correlate(vtkImageData *correspondences,
   switch(scalars0->GetDataType()) {
     vtkTemplateMacro(
       (status = this->computeSegmentationOverlap<int, VTK_TT>(
-         ttkUtils::GetPointer<int>(correspondencesArray),
+        ttkUtils::GetPointer<int>(correspondencesArray),
 
-         ttkUtils::GetPointer<const int>(seg0),
-         ttkUtils::GetPointer<const int>(seg1), seg0->GetNumberOfTuples(),
-         ttkUtils::GetPointer<const int>(next0),
-         ttkUtils::GetPointer<const int>(next1),
-         ttkUtils::GetPointer<const VTK_TT>(scalars0),
-         ttkUtils::GetPointer<const VTK_TT>(scalars1), nEdges0, nEdges1)));
+        ttkUtils::GetPointer<const int>(seg0),
+        ttkUtils::GetPointer<const int>(seg1), seg0->GetNumberOfTuples(),
+        ttkUtils::GetPointer<const int>(next0),
+        ttkUtils::GetPointer<const int>(next1),
+        ttkUtils::GetPointer<const VTK_TT>(scalars0),
+        ttkUtils::GetPointer<const VTK_TT>(scalars1), nEdges0, nEdges1)));
   }
   if(!status)
     return 0;
@@ -86,13 +86,13 @@ int ttkCorrespondenceByMTS::Correlate(vtkImageData *correspondences,
   // add index label maps
   int a=0;
   auto fd = correspondences->GetFieldData();
-  for(auto& it : std::vector<int>({nEdges0,nEdges1})){
-    auto array = vtkSmartPointer<vtkIntArray>::New();
+  for(auto& it : std::vector<vtkDataSet*>({m0,m1})){
+    auto labels = this->GetInputArrayToProcess(1, it);
+    if(!labels)
+      return !this->printErr("Unable to retrieve labels.");
+    auto array = vtkSmartPointer<vtkDataArray>::Take( labels->NewInstance() );
+    array->ShallowCopy(labels);
     array->SetName(("IndexLabelMap"+std::to_string(a++)).data());
-    array->SetNumberOfTuples(it);
-    auto arrayData = ttkUtils::GetPointer<int>(array);
-    for(int i=0; i<it; i++)
-      arrayData[i] = i;
     fd->AddArray(array);
   }
 

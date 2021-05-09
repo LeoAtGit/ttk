@@ -16,29 +16,41 @@ namespace ttk {
     // propagation data
     std::vector<IT> criticalPoints;
     boost::heap::fibonacci_heap<std::pair<IT, IT>> queue;
+    bool interrupted{false};
 
     inline Propagation *find() {
-      if(this->parent == this)
+      Propagation *p;
+      #pragma omp atomic read
+      p = this->parent;
+
+      if(p == this)
         return this;
       else {
-        auto tmp = this->parent->find();
+        p = p->find();
 #pragma omp atomic write
-        this->parent = tmp;
+        this->parent = p;
         return this->parent;
       }
     }
 
-    static inline Propagation<IT> *unify(Propagation<IT> *uf0,
-                                         Propagation<IT> *uf1,
+    static inline Propagation<IT> *unify(Propagation<IT> *p0,
+                                         Propagation<IT> *p1,
                                          const IT *orderArray,
                                          const bool mergeHeaps = true) {
-      Propagation<IT> *master = uf0->find();
-      Propagation<IT> *slave = uf1->find();
+
+      if(!p1)
+        return p0;
+
+      auto master = p0->find();
+      auto slave = p1->find();
+
+      if(master==slave)
+        return master;
 
       // determine master and slave based on rank
       if(orderArray[master->criticalPoints[0]]
          < orderArray[slave->criticalPoints[0]]) {
-        Propagation<IT> *temp = master;
+        auto temp = master;
         master = slave;
         slave = temp;
       }

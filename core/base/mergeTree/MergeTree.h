@@ -216,17 +216,24 @@ namespace ttk {
       auto *currentPropagation = &propagation;
 
       // frequently used propagation members
-      IT &extremumIndex = currentPropagation->criticalPoints[0];
+      IT segmentationId = currentPropagation->branchId;
       auto *queue = &currentPropagation->queue;
 
       // add extremumIndex to queue
-      queue->emplace(orderArray[extremumIndex], extremumIndex);
-
-      IT queueMaskLabel = extremumIndex;
-      queueMask[extremumIndex] = queueMaskLabel;
-      IT segmentationId = currentPropagation->branchId;
+      {
+        const auto& extremumIndex = currentPropagation->criticalPoints[0];
+        queue->emplace(
+          orderArray[extremumIndex],
+          extremumIndex
+        );
+        queueMask[extremumIndex] = segmentationId;
+      }
 
       IT counter = 0;
+
+      // room for twenty neighbors
+      std::vector<IT> neighbors;
+      neighbors.reserve(40);
 
       // grow region until prop reaches a saddle and then decide if prop should
       // continue
@@ -236,21 +243,24 @@ namespace ttk {
         queue->pop();
 
         // continue if this thread has already seen this vertex
-        if(propagationMask[v] != nullptr)
+        if(propagationMask[v])
           continue;
 
-        const IT &orderV = orderArray[v];
+        // get neighbors
+        const IT nNeighbors = triangulation->getVertexNeighborNumber(v);
+        neighbors.resize(nNeighbors,0);
+
+        for(IT n = 0; n < nNeighbors; n++)
+          triangulation->getVertexNeighbor(v, n, neighbors[n]);
 
         // add neighbors to queue AND check if v is a saddle
         bool isSaddle = false;
-        const IT nNeighbors = triangulation->getVertexNeighborNumber(v);
-
         IT numberOfLargerNeighbors = 0;
         IT numberOfLargerNeighborsThisThreadVisited = 0;
-        for(IT n = 0; n < nNeighbors; n++) {
-          IT u;
-          triangulation->getVertexNeighbor(v, n, u);
+        const IT &orderV = orderArray[v];
 
+        for(IT n = 0; n < nNeighbors; n++) {
+          const IT &u = neighbors[n];
           const IT &orderU = orderArray[u];
 
           // if larger neighbor
@@ -258,19 +268,17 @@ namespace ttk {
             numberOfLargerNeighbors++;
 
             auto uPropagation = propagationMask[u];
-            if(uPropagation == nullptr
-               || currentPropagation != uPropagation->find())
+            if(!uPropagation || currentPropagation != uPropagation->find())
               isSaddle = true;
             else
               numberOfLargerNeighborsThisThreadVisited++;
-          } else if(queueMask[u] != queueMaskLabel) {
+          } else if(queueMask[u] != segmentationId) {
             queue->emplace(orderU, u);
-            queueMask[u] = queueMaskLabel;
+            queueMask[u] = segmentationId;
           }
         }
 
-        // if v is a saddle we have to check if the current thread is the last
-        // visitor
+        // if v is a saddle check if current thread is the last visitor
         if(isSaddle) {
 
           currentPropagation->criticalPoints.push_back(v);
@@ -289,20 +297,15 @@ namespace ttk {
 
           // merge propagations
           for(IT n = 0; n < nNeighbors; n++) {
-            IT u;
-            triangulation->getVertexNeighbor(v, n, u);
-
-            auto uPropagation = propagationMask[u];
-            if(uPropagation != nullptr
-               && uPropagation->find() != currentPropagation) {
-              currentPropagation = Propagation<IT>::unify(
-                currentPropagation, uPropagation, orderArray);
-            }
+            currentPropagation = Propagation<IT>::unify(
+              currentPropagation,
+              propagationMask[neighbors[n]],
+              orderArray
+            );
           }
 
           queue = &currentPropagation->queue;
           segmentationId = currentPropagation->branchId;
-          queueMaskLabel = currentPropagation->criticalPoints[0];
         }
 
         // mark vertex as visited and continue
@@ -317,12 +320,16 @@ namespace ttk {
 #pragma omp atomic read
           nActivePropagations_ = nActivePropagations;
 
-          if(nActivePropagations_ == 1)
+          if(nActivePropagations_ == 1){
+            currentPropagation->interrupted = true;
             return 1;
+          }
         }
       }
 
-      currentPropagation->criticalPoints.push_back(v);
+      // add global minimum (if not already added as saddle)
+      if(currentPropagation->criticalPoints.back()!=v)
+        currentPropagation->criticalPoints.push_back(v);
 
       return 1;
     }
@@ -382,37 +389,23 @@ namespace ttk {
 
       const IT nVertices = triangulation->getNumberOfVertices();
 
-      // reconsstruct sorted vertices
+      // reconstruct sorted vertices
+      #pragma omp parallel for num_threads(this->threadNumber_)
       for(IT v = 0; v < nVertices; v++)
         mask[orderArray[v]] = v;
 
-      // find largest propagation
+      // find last unterminated propagation
       Propagation<IT> *currentPropagation = nullptr;
       IT segmentationId = -1;
       IT trunkIndex = nVertices - 1;
-      for(; trunkIndex >= 0; trunkIndex--) {
-        const IT &v = mask[trunkIndex];
 
-        if(propagationMask[v] != nullptr)
-          continue;
-
-        IT nNeighbors = triangulation->getVertexNeighborNumber(v);
-        for(IT n = 0; n < nNeighbors; n++) {
-          IT u;
-          triangulation->getVertexNeighbor(v, n, u);
-
-          if(propagationMask[u] != nullptr) {
-            auto temp = propagationMask[u]->find();
-            if(!currentPropagation
-               || orderArray[currentPropagation->criticalPoints[0]]
-                    < orderArray[temp->criticalPoints[0]]) {
-              currentPropagation = temp;
-              segmentationId = currentPropagation->branchId;
-            }
-          }
+      const IT nPropagations = propagations.size();
+      for(IT p = 0; p < nPropagations; p++) {
+        if(propagations[p].interrupted){
+          currentPropagation = &propagations[p];
+          segmentationId = currentPropagation->branchId;
+          break;
         }
-
-        break;
       }
 
       if(currentPropagation == nullptr) {
@@ -433,21 +426,19 @@ namespace ttk {
         if(segmentationIds[v] < -1) {
 
           currentPropagation->criticalPoints.push_back(v);
-          const IT nNeighbors = triangulation->getVertexNeighborNumber(v);
 
           // merge propagations
+          const IT nNeighbors = triangulation->getVertexNeighborNumber(v);
           for(IT n = 0; n < nNeighbors; n++) {
             IT u;
             triangulation->getVertexNeighbor(v, n, u);
 
-            auto uPropagation = propagationMask[u];
-            if(uPropagation != nullptr
-               && uPropagation->find() != currentPropagation) {
-              currentPropagation = Propagation<IT>::unify(
-                currentPropagation, uPropagation, orderArray,
-                false // not necessary to merge heaps
-              );
-            }
+            currentPropagation = Propagation<IT>::unify(
+              currentPropagation,
+              propagationMask[u],
+              orderArray,
+              false // not necessary to merge queues
+            );
           }
 
           segmentationId = currentPropagation->branchId;
@@ -457,8 +448,9 @@ namespace ttk {
         segmentationIds[v] = segmentationId;
       }
 
-      // add global minimum
-      currentPropagation->criticalPoints.push_back(mask[0]);
+      // add global minimum (if not already added as saddle)
+      if(currentPropagation->criticalPoints.back()!=mask[0])
+        currentPropagation->criticalPoints.push_back(mask[0]);
 
       std::stringstream vFraction;
       vFraction << std::fixed << std::setprecision(2)
