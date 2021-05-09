@@ -91,14 +91,9 @@ int ttk::CinemaImagingEmbree::renderImage(
                       camDir[0] * (-camRight[1]) - camDir[1] * (-camRight[0])};
   normalize(camUpTrue, camUpTrue);
 
-  struct RTCRayHit rayhit;
-  rayhit.ray.dir_x = -1;
-  rayhit.ray.dir_y = -1;
-  rayhit.ray.dir_z = -1;
-
   size_t pixelIndex = 0;
   size_t bcIndex = 0;
-  float nan = std::numeric_limits<float>::quiet_NaN();
+  const float nan = std::numeric_limits<float>::quiet_NaN();
 
   if(orthographicProjection) {
 
@@ -130,6 +125,8 @@ int ttk::CinemaImagingEmbree::renderImage(
 
       for(int x = 0; x < resX; x++) {
         double u = ((double)x) * pixelWidthWorld;
+
+        struct RTCRayHit rayhit;
 
         // set origin
         rayhit.ray.org_x = camPosCorner[0] + u * camRight[0] + v * camUpTrue[0];
@@ -175,6 +172,8 @@ int ttk::CinemaImagingEmbree::renderImage(
 
       for(int x = 0; x < resX; x++) {
         double u = (x - resX * 0.5) * factor;
+
+        struct RTCRayHit rayhit;
 
         // set origin
         rayhit.ray.org_x = camPos[0];

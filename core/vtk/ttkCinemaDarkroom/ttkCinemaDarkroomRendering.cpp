@@ -1,8 +1,12 @@
 #include <ttkCinemaDarkroomRendering.h>
 
-#include <vtkImageData.h>
 #include <vtkInformation.h>
 #include <vtkObjectFactory.h>
+
+#include <vtkImageData.h>
+#include <vtkMultiBlockDataSet.h>
+#include <vtkDataArray.h>
+#include <vtkPointData.h>
 
 #include <ttkCinemaDarkroomColorMapping.h>
 #include <ttkCinemaDarkroomSSSAO.h>
@@ -23,7 +27,8 @@ ttkCinemaDarkroomRendering::~ttkCinemaDarkroomRendering() {
 
 int ttkCinemaDarkroomRendering::FillInputPortInformation(int port, vtkInformation *info) {
   if(port == 0) {
-    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkImageData");
+    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
+    info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkMultiBlockDataSet");
     return 1;
   }
   return 0;
@@ -41,82 +46,107 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
                                       vtkInformationVector **inputVector,
                                       vtkInformationVector *outputVector) {
 
-  auto inputImage = vtkImageData::GetData(inputVector[0]);
-  auto outputImage = vtkImageData::GetData(outputVector);
+  auto input = vtkDataObject::GetData(inputVector[0]);
+  auto inputAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+  auto outputAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+  if(input->IsA("vtkMultiBlockDataSet"))
+    inputAsMB->ShallowCopy(input);
+  else
+    inputAsMB->SetBlock(0,input);
 
-  vtkSmartPointer<ttkAlgorithm> lastUsed;
+  ttk::Timer timer;
+  std::string msg = "CM";
+  if(this->UseSSSAO) msg += " -> SSSAO";
+  if(this->UseIBS) msg += " -> IBS";
+  if(this->UseDoF) msg += " -> SSDoF";
+  if(this->UseFXAA) msg += " -> FXAA";
+  this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
+
+  // check for invalid combinations
+  if(this->UseIBS && !this->UseSSSAO)
+    return !this->printErr("IBS requires SSSAO.");
+
+  // build pipeline
+  auto cm = vtkSmartPointer<ttkCinemaDarkroomColorMapping>::New();
+  auto sssao = vtkSmartPointer<ttkCinemaDarkroomSSSAO>::New();
+  auto ibs = vtkSmartPointer<ttkCinemaDarkroomIBS>::New();
+  auto dof = vtkSmartPointer<ttkCinemaDarkroomSSDoF>::New();
+  auto fxaa = vtkSmartPointer<ttkCinemaDarkroomFXAA>::New();
+  ttkAlgorithm* lastUsed;
+  std::string lastResult = "";
+
+  // always perform color mapping
+  {
+    cm->SetInputArrayToProcess(0,this->GetInputArrayInformation(0));
+    cm->SetColorMap(1);
+    lastUsed = cm;
+    lastResult = "Diffuse";
+  }
 
   if(this->UseSSSAO) {
-    auto sssao = vtkSmartPointer<ttkCinemaDarkroomSSSAO>::New();
-    sssao->SetInputData(inputImage);
-    //input array, port number, input connection, point / cell / field data, name of the array
+    sssao->SetInputConnection(0, lastUsed->GetOutputPort(0));
     sssao->SetInputArrayToProcess(0,0,0,0,"Depth");
-
     sssao->SetSamples(this->Samples);
     sssao->SetRadius(this->Radius);
     sssao->SetDiffArea(this->DiffArea);
-    sssao->Update();
-
     lastUsed = sssao;
-    
-    if(UseIBS) {  
-      auto ibs = vtkSmartPointer<ttkCinemaDarkroomIBS>::New();  
-      ibs->SetInputConnection(0, sssao->GetOutputPort());
-
-      ibs->SetInputArrayToProcess(0,0,0,0,"Diffuse");
-      ibs->SetInputArrayToProcess(1,0,0,0,"Depth");
-      ibs->SetInputArrayToProcess(2,0,0,0,"SSSAO");
-
-      ibs->SetStrength(this->Strength);
-      ibs->SetLuminance(this->Luminance);
-      ibs->SetAmbient(this->Ambient);
-      ibs->Update();
-
-      lastUsed = ibs;
-    }
   }
 
-  if(UseDoF) {
-    auto dof = vtkSmartPointer<ttkCinemaDarkroomSSDoF>::New();
+  if(this->UseIBS) {
+    ibs->SetInputConnection(0, lastUsed->GetOutputPort(0));
+    ibs->SetInputArrayToProcess(0,0,0,0,lastResult.data());
+    ibs->SetInputArrayToProcess(1,0,0,0,"Depth");
+    ibs->SetInputArrayToProcess(2,0,0,0,"SSSAO");
+    ibs->SetStrength(this->Strength);
+    ibs->SetLuminance(this->Luminance);
+    ibs->SetAmbient(this->Ambient);
+    lastUsed = ibs;
+    lastResult = "IBS";
+  }
 
-    if(lastUsed == nullptr) {
-      dof->SetInputData(inputImage);
-    } else {
-      dof->SetInputConnection(0, lastUsed->GetOutputPort(0));
-    }
-
-    dof->SetInputArrayToProcess(0,0,0,0,"Diffuse");
+  if(this->UseDoF) {
+    dof->SetInputConnection(0, lastUsed->GetOutputPort(0));
+    dof->SetInputArrayToProcess(0,0,0,0,lastResult.data());
     dof->SetInputArrayToProcess(1,0,0,0,"Depth");
-
     dof->SetRadius(this->DepthRadius);
     dof->SetAperture(this->Aperture);
     dof->SetFocalDepth(this->FocalDepth);
     dof->SetMaxBlur(this->MaxBlur);
-
     lastUsed = dof;
+    lastResult = "SSDoF";
   }
 
-  if(UseFXAA) {
-    auto fxaa = vtkSmartPointer<ttkCinemaDarkroomFXAA>::New();
-
-    if(lastUsed == nullptr) {
-      fxaa->SetInputData(inputImage);
-    } else {
-      fxaa->SetInputConnection(0, lastUsed->GetOutputPort(0));
-    }
-
-    fxaa->SetInputArrayToProcess(0,0,0,0,"Diffuse");
-  
-    fxaa->Update();
-
+  if(this->UseFXAA) {
+    fxaa->SetInputConnection(0, lastUsed->GetOutputPort(0));
+    fxaa->SetInputArrayToProcess(0,0,0,0,lastResult.data());
     lastUsed = fxaa;
+    lastResult = "FXAA";
   }
-  if(lastUsed != nullptr) {
-    outputImage->ShallowCopy(lastUsed->GetOutputDataObject(0));
-  } else {
-    std::cout << "Please select at least one filter to use." << std::endl;
-    return -1;
+
+  const size_t nInputImages = inputAsMB->GetNumberOfBlocks();
+  for(size_t i=0; i<nInputImages; i++){
+    auto inputImage = vtkDataSet::SafeDownCast( inputAsMB->GetBlock(i) );
+    cm->SetInputDataObject( inputImage );
+    lastUsed->Update();
+
+    auto outputImage = vtkImageData::SafeDownCast(lastUsed->GetOutputDataObject(0));
+    auto array = outputImage->GetPointData()->GetArray(lastResult.data());
+    array->SetName("Rendering");
+
+    auto outputImageCopy = vtkSmartPointer<vtkImageData>::New();
+    outputImageCopy->ShallowCopy(inputImage);
+    outputImageCopy->GetPointData()->AddArray(array);
+
+    outputAsMB->SetBlock(i, outputImageCopy);
   }
-  
+
+  auto output = vtkDataObject::GetData(outputVector);
+  if(input->IsA("vtkMultiBlockDataSet"))
+    output->ShallowCopy(outputAsMB);
+  else
+    output->ShallowCopy(outputAsMB->GetBlock(0));
+
+  this->printMsg(msg,1,timer.getElapsedTime(),1);
+
   return 1;
 }

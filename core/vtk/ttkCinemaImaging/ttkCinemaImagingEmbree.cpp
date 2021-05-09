@@ -126,7 +126,7 @@ int ttk::ttkCinemaImagingEmbree::RenderVTKObject(
       inputObject, this, primitiveIdArrayData, barycentricCoordinatesData,
       inputObjectConnectivityList);
     if(!status)
-      return 0;
+      return !this->printErr("Unable to Map Point and Cell Data.");
 
     ttkCinemaImaging::AddAllFieldDataArrays(inputGrid, outputImage, i);
 

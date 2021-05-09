@@ -12,6 +12,7 @@
 
 #include <ttkUtils.h>
 #include <vtkDoubleArray.h>
+#include <vtkFloatArray.h>
 
 #include <ttkCinemaImagingEmbree.h>
 #include <ttkCinemaImagingNative.h>
@@ -187,11 +188,14 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
       this->printErr("Unsupported input object type.");
       return 0;
     }
-    this->RequestDataSingle(outputImages,
+    int status = this->RequestDataSingle(outputImages,
 
                             inputPointSet, aInputGrid, defaultFocalPoint,
                             defaultNearFar, defaultHeight, defaultAngle);
+    if(!status)
+      return 0;
     outputAsMB->SetBlock(b, outputImages);
+
   }
 
   if(inputObject->IsA("vtkMultiBlockDataSet"))
@@ -200,6 +204,14 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
     outputCollection->ShallowCopy(outputAsMB->GetBlock(0));
 
   return 1;
+}
+
+template <typename RT>
+int renderDispatch(int debugLevel, int threadNumber, vtkMultiBlockDataSet* outputImages, vtkPointSet* inputObject, vtkPointSet* inputGrid){
+  RT renderer;
+  renderer.setDebugLevel(debugLevel);
+  renderer.setThreadNumber(threadNumber);
+  return renderer.RenderVTKObject(outputImages, inputObject, inputGrid);
 }
 
 int ttkCinemaImaging::RequestDataSingle(
@@ -233,20 +245,11 @@ int ttkCinemaImaging::RequestDataSingle(
 
   int status = 0;
   if(this->Backend == 0) {
-    ttk::ttkCinemaImagingVTK renderer;
-    renderer.setDebugLevel(this->debugLevel_);
-    renderer.setThreadNumber(this->threadNumber_);
-    status = renderer.RenderVTKObject(outputImages, inputObject, inputGrid);
+    return renderDispatch<ttk::ttkCinemaImagingVTK>(this->debugLevel_, this->threadNumber_, outputImages, inputObject, inputGrid);
   } else if(this->Backend == 1) {
-    ttk::ttkCinemaImagingEmbree renderer;
-    renderer.setDebugLevel(this->debugLevel_);
-    renderer.setThreadNumber(this->threadNumber_);
-    status = renderer.RenderVTKObject(outputImages, inputObject, inputGrid);
+    return renderDispatch<ttk::ttkCinemaImagingEmbree>(this->debugLevel_, this->threadNumber_, outputImages, inputObject, inputGrid);
   } else {
-    ttk::ttkCinemaImagingNative renderer;
-    renderer.setDebugLevel(this->debugLevel_);
-    renderer.setThreadNumber(this->threadNumber_);
-    status = renderer.RenderVTKObject(outputImages, inputObject, inputGrid);
+    return renderDispatch<ttk::ttkCinemaImagingNative>(this->debugLevel_, this->threadNumber_, outputImages, inputObject, inputGrid);
   }
 
   if(!status)
@@ -412,23 +415,22 @@ int ttkCinemaImaging::MapPointAndCellData(
   // Map Point Data
   for(size_t j = 0; j < nInputObjectPDArrays; j++) {
     auto inputArray = inputObjectPD->GetArray(j);
-    auto outputArray
-      = vtkSmartPointer<vtkDataArray>::Take(inputArray->NewInstance());
+    auto outputArray =  vtkSmartPointer<vtkFloatArray>::New();
     outputArray->SetName(inputArray->GetName());
     outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());
     outputArray->SetNumberOfTuples(nPixels);
 
     outputImagePD->AddArray(outputArray);
 
-    switch(outputArray->GetDataType()) {
+    switch(inputArray->GetDataType()) {
       vtkTemplateMacro(status = renderer->interpolateArray(
-                         (VTK_TT *)ttkUtils::GetVoidPointer(outputArray),
+                        ttkUtils::GetPointer<float>(outputArray),
 
-                         primitiveIdArray, barycentricCoordinates,
-                         inputObjectConnectivityList,
+                        primitiveIdArray, barycentricCoordinates,
+                        inputObjectConnectivityList,
 
-                         (const VTK_TT *)ttkUtils::GetVoidPointer(inputArray),
-                         nPixels, inputArray->GetNumberOfComponents()));
+                        ttkUtils::GetPointer<const VTK_TT>(inputArray),
+                        nPixels, inputArray->GetNumberOfComponents()));
     }
 
     if(!status)
@@ -438,20 +440,19 @@ int ttkCinemaImaging::MapPointAndCellData(
   // Map Cell Data
   for(size_t j = 0; j < nInputObjectCDArrays; j++) {
     auto inputArray = inputObjectCD->GetArray(j);
-    auto outputArray
-      = vtkSmartPointer<vtkDataArray>::Take(inputArray->NewInstance());
+    auto outputArray =  vtkSmartPointer<vtkFloatArray>::New();
     outputArray->SetName(inputArray->GetName());
     outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());
     outputArray->SetNumberOfTuples(nPixels);
 
     outputImagePD->AddArray(outputArray);
 
-    switch(outputArray->GetDataType()) {
+    switch(inputArray->GetDataType()) {
       vtkTemplateMacro(status = renderer->lookupArray(
-                         (VTK_TT *)ttkUtils::GetVoidPointer(outputArray),
+                         ttkUtils::GetPointer<float>(outputArray),
 
                          primitiveIdArray,
-                         (const VTK_TT *)ttkUtils::GetVoidPointer(inputArray),
+                         ttkUtils::GetPointer<const VTK_TT>(inputArray),
                          nPixels, inputArray->GetNumberOfComponents()));
     }
 

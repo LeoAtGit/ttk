@@ -11,91 +11,88 @@ namespace ttk {
     static const unsigned int INVALID_ID{
       std::numeric_limits<unsigned int>::max()};
     template <typename DT, typename IT>
-    int interpolateArray(DT *outputArray,
+    int interpolateArray(float *outputArray,
 
                          const unsigned int *primitiveIds,
                          const float *barycentricCoordinates,
                          const IT *connectivityList,
 
                          const DT *inputArray,
-                         const size_t &nTuples,
-                         const size_t &nComponents = 1,
-                         const DT &missingValue
-                         = std::numeric_limits<DT>::has_quiet_NaN
-                             ? std::numeric_limits<DT>::quiet_NaN()
-                             : std::numeric_limits<DT>::max()) const;
+                         const size_t &nPixels,
+                         const size_t &nComponents = 1
+                         ) const;
 
     template <typename DT>
-    int lookupArray(DT *outputArray,
+    int lookupArray(float *outputArray,
 
                     const unsigned int *primitiveIds,
 
                     const DT *inputArray,
-                    const size_t &nTuples,
-                    const size_t &nComponents = 1,
-                    const DT &missingValue
-                    = std::numeric_limits<DT>::has_quiet_NaN
-                        ? std::numeric_limits<DT>::quiet_NaN()
-                        : std::numeric_limits<DT>::max()) const;
+                    const size_t &nPixels,
+                    const size_t &nComponents = 1
+                    ) const;
   };
 } // namespace ttk
 
 template <typename DT, typename IT>
-int ttk::CinemaImaging::interpolateArray(DT *outputArray,
+int ttk::CinemaImaging::interpolateArray(float *outputArray,
 
                                          const unsigned int *primitiveIds,
                                          const float *barycentricCoordinates,
                                          const IT *connectivityList,
 
                                          const DT *inputArray,
-                                         const size_t &nTuples,
-                                         const size_t &nComponents,
-                                         const DT &missingValue) const {
+                                         const size_t &nPixels,
+                                         const size_t &nComponents) const {
 
-  if(nComponents != 1)
-    return 0;
+
+  const auto missingValue = std::numeric_limits<float>::quiet_NaN();
 
 #ifdef TTK_ENABLE_OPENMP
 #pragma omp parallel for num_threads(this->threadNumber_)
 #endif
-  for(size_t i = 0; i < nTuples; i++) {
+  for(size_t i = 0; i < nPixels; i++) {
     const unsigned int &cellId = primitiveIds[i];
+    const auto offset = i*nComponents;
     if(cellId == CinemaImaging::INVALID_ID) {
-      outputArray[i] = missingValue;
+      for(size_t c=0; c<nComponents; c++)
+        outputArray[offset+c] = missingValue;
       continue;
     }
 
     const size_t cellIndex = cellId * 3;
-    const IT &v0 = connectivityList[cellIndex + 0];
-    const IT &v1 = connectivityList[cellIndex + 1];
-    const IT &v2 = connectivityList[cellIndex + 2];
+    const auto o0 = nComponents*connectivityList[cellIndex + 0];
+    const auto o1 = nComponents*connectivityList[cellIndex + 1];
+    const auto o2 = nComponents*connectivityList[cellIndex + 2];
 
     const size_t bcIndex = i * 2;
-    const float &u = barycentricCoordinates[bcIndex + 0];
-    const float &v = barycentricCoordinates[bcIndex + 1];
+    const float& u = barycentricCoordinates[bcIndex + 0];
+    const float& v = barycentricCoordinates[bcIndex + 1];
     const float w = 1 - u - v;
 
-    outputArray[i]
-      = w * inputArray[v0] + u * inputArray[v1] + v * inputArray[v2];
+    for(size_t c=0; c<nComponents; c++)
+      outputArray[offset+c] = w * static_cast<float>(inputArray[o0+c]) + u * static_cast<float>(inputArray[o1+c]) + v * static_cast<float>(inputArray[o2+c]);
   }
 
   return 1;
 };
 
 template <typename DT>
-int ttk::CinemaImaging::lookupArray(DT *outputArray,
+int ttk::CinemaImaging::lookupArray(float *outputArray,
 
                                     const unsigned int *primitiveIds,
 
                                     const DT *inputArray,
-                                    const size_t &nTuples,
-                                    const size_t &nComponents,
-                                    const DT &missingValue) const {
+                                    const size_t &nPixels,
+                                    const size_t &nComponents
+) const {
+
+  const auto missingValue = std::numeric_limits<float>::quiet_NaN();
 
 #ifdef TTK_ENABLE_OPENMP
 #pragma omp parallel for num_threads(this->threadNumber_)
 #endif
-  for(size_t i = 0; i < nTuples; i++) {
+  for(size_t i = 0; i < nPixels; i++) {
     size_t outputOffset = i * nComponents;
     const unsigned int &cellId = primitiveIds[i];
 
