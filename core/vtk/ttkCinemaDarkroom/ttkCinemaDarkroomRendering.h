@@ -25,20 +25,21 @@
 class TTKCINEMADARKROOM_EXPORT ttkCinemaDarkroomRendering
   : public ttkAlgorithm {
 private:
+  // CM
+  std::string ManualColorMap{""};
+
   //SSSAO
-  bool UseSSSAO{true};
   int Samples{1};
   double Radius{0.05};
   double DiffArea{0.5};
-  
+
   //IBS
-  bool UseIBS{true};
   double Strength{1.0};
   double Luminance{1.0};
   double Ambient{0.2};
 
   //DoF
-  bool UseDoF{true};
+  bool UseSSDoF{false};
   double DepthRadius{0.05};
   double Aperture{1};
   double FocalDepth{1};
@@ -46,21 +47,21 @@ private:
 
   //FXAA
   bool UseFXAA{true};
-  
+
 public:
+  // CM
+  vtkSetMacro(ManualColorMap, const std::string &);
+  vtkGetMacro(ManualColorMap, std::string);
+
   //SSSAO
-  vtkSetMacro(UseSSSAO, int);
-  vtkGetMacro(UseSSSAO, int);
   vtkSetMacro(Samples, int);
   vtkGetMacro(Samples, int);
   vtkSetMacro(Radius, double);
   vtkGetMacro(Radius, double);
   vtkSetMacro(DiffArea, double);
   vtkGetMacro(DiffArea, double);
-  
+
   //IBS
-  vtkSetMacro(UseIBS, int);
-  vtkGetMacro(UseIBS, int);  
   vtkSetMacro(Strength, double);
   vtkGetMacro(Strength, double);
   vtkSetMacro(Luminance, double);
@@ -69,8 +70,8 @@ public:
   vtkGetMacro(Ambient, double);
 
   //DoF
-  vtkSetMacro(UseDoF, int);
-  vtkGetMacro(UseDoF,int);  
+  vtkSetMacro(UseSSDoF, int);
+  vtkGetMacro(UseSSDoF,int);
   vtkSetMacro(DepthRadius, double);
   vtkGetMacro(DepthRadius, double);
   vtkSetMacro(Aperture, double);
@@ -82,8 +83,8 @@ public:
 
   //FXAA
   vtkSetMacro(UseFXAA, int);
-  vtkGetMacro(UseFXAA, int); 
-  
+  vtkGetMacro(UseFXAA, int);
+
   static ttkCinemaDarkroomRendering *New();
   vtkTypeMacro(ttkCinemaDarkroomRendering, ttkAlgorithm);
 

@@ -105,7 +105,7 @@ public:
 
   static int ComputeDirFromFocalPoint(vtkPointSet *inputGrid);
 
-  static int EnsureGridData(vtkPointData *fd,
+  static int EnforceGridData(vtkPointData *fd,
                             const std::string &name,
                             int nTuples,
                             const std::vector<double> &Values);

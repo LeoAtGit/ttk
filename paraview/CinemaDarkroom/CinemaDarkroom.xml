@@ -126,18 +126,12 @@
         <Documentation>The array that contains the scalar values that going to be mapped to color.</Documentation>
       </StringVectorProperty>
 
-      <IntVectorProperty name="ColorMap" command="SetColorMap" number_of_elements="1" default_values="-1">
+      <IntVectorProperty name="ColorMap" command="SetColorMap" number_of_elements="1" default_values="-3">
         <EnumerationDomain name="enum">
+          <Entry value="-3" text="ParaView" />
           <Entry value="-2" text="Manual" />
           <Entry value="-1" text="Single" />
-          <Entry value="0" text="R2B_EX" />
-          <Entry value="1" text="Accent" />
-          <Entry value="2" text="Blues" />
-          <Entry value="3" text="BrBG" />
-          <Entry value="4" text="BuGn" />
-          <Entry value="5" text="BuPu" />
-          <Entry value="6" text="Dark2" />
-          <Entry value="7" text="GnBu" /><Entry value="8" text="Greens" /><Entry value="9" text="Greys" /><Entry value="10" text="OrRd" /><Entry value="11" text="Oranges" /><Entry value="12" text="PRGn" /><Entry value="13" text="Paired" /><Entry value="14" text="Pastel1" /><Entry value="15" text="Pastel2" /><Entry value="16" text="PiYG" /><Entry value="17" text="PuBu" /><Entry value="18" text="PuBuGn" /><Entry value="19" text="PuOr" /><Entry value="20" text="PuRd" /><Entry value="21" text="Purples" /><Entry value="22" text="RdBu" /><Entry value="23" text="RdGy" /><Entry value="24" text="RdPu" /><Entry value="25" text="RdYlBu" /><Entry value="26" text="RdYlGn" /><Entry value="27" text="Reds" /><Entry value="28" text="Set1" /><Entry value="29" text="Set2" /><Entry value="30" text="Set3" /><Entry value="31" text="Spectral" /><Entry value="32" text="YlGn" /><Entry value="33" text="YlGnBu" /><Entry value="34" text="YlOrBr" /><Entry value="35" text="YlOrRd" /><Entry value="36" text="autumn" /><Entry value="37" text="binary" /><Entry value="38" text="bone" /><Entry value="39" text="cool" /><Entry value="40" text="copper" /><Entry value="41" text="flag" /><Entry value="42" text="gist_earth" /><Entry value="43" text="gist_gray" /><Entry value="44" text="gist_heat" /><Entry value="45" text="gist_ncar" /><Entry value="46" text="gist_rainbow" /><Entry value="47" text="gist_stern" /><Entry value="48" text="gist_yarg" /><Entry value="49" text="gray" /><Entry value="50" text="hot" />
+          <Entry value="0" text="R2B_EX" /><Entry value="1" text="Accent" /><Entry value="2" text="Blues" /><Entry value="3" text="BrBG" /><Entry value="4" text="BuGn" /><Entry value="5" text="BuPu" /><Entry value="6" text="Dark2" /><Entry value="7" text="GnBu" /><Entry value="8" text="Greens" /><Entry value="9" text="Greys" /><Entry value="10" text="OrRd" /><Entry value="11" text="Oranges" /><Entry value="12" text="PRGn" /><Entry value="13" text="Paired" /><Entry value="14" text="Pastel1" /><Entry value="15" text="Pastel2" /><Entry value="16" text="PiYG" /><Entry value="17" text="PuBu" /><Entry value="18" text="PuBuGn" /><Entry value="19" text="PuOr" /><Entry value="20" text="PuRd" /><Entry value="21" text="Purples" /><Entry value="22" text="RdBu" /><Entry value="23" text="RdGy" /><Entry value="24" text="RdPu" /><Entry value="25" text="RdYlBu" /><Entry value="26" text="RdYlGn" /><Entry value="27" text="Reds" /><Entry value="28" text="Set1" /><Entry value="29" text="Set2" /><Entry value="30" text="Set3" /><Entry value="31" text="Spectral" /><Entry value="32" text="YlGn" /><Entry value="33" text="YlGnBu" /><Entry value="34" text="YlOrBr" /><Entry value="35" text="YlOrRd" /><Entry value="36" text="autumn" /><Entry value="37" text="binary" /><Entry value="38" text="bone" /><Entry value="39" text="cool" /><Entry value="40" text="copper" /><Entry value="41" text="flag" /><Entry value="42" text="gist_earth" /><Entry value="43" text="gist_gray" /><Entry value="44" text="gist_heat" /><Entry value="45" text="gist_ncar" /><Entry value="46" text="gist_rainbow" /><Entry value="47" text="gist_stern" /><Entry value="48" text="gist_yarg" /><Entry value="49" text="gray" /><Entry value="50" text="hot" />
         </EnumerationDomain>
         <Documentation>This option controls if the filter uses a single color, a manually defined color map, or any predefined color map for the mapping.</Documentation>
       </IntVectorProperty>
@@ -721,68 +715,42 @@
         <Documentation>The array that contains scalar values.</Documentation>
       </StringVectorProperty>
 
-      <!-- SSSAO Parameters -->
-      <IntVectorProperty name="UseSSSAO" command="SetUseSSSAO" number_of_elements="1" default_values="1">
-        <BooleanDomain name="bool" />
-        <Documentation>Enables Scalable Screen Space Ambient Occlusion.</Documentation>
-      </IntVectorProperty>
+      <StringVectorProperty name="ManualColorMap" command="SetManualColorMap" number_of_elements="1" default_values="0,0,0,0,1,1,1,1">
+        <Documentation>The manually defined color map in the from of a list of quadruples with normalized float values between 0 and 1: x0,r0,g0,b0, x1,r1,g1,b1, ...</Documentation>
+      </StringVectorProperty>
 
       <IntVectorProperty name="Samples" command="SetSamples" number_of_elements="1" default_values="32">
         <IntRangeDomain name="range" min="1" max="1000" />
         <Documentation>Number of depth samples.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSSAO" value="1" />
-        </Hints>
       </IntVectorProperty>
 
       <DoubleVectorProperty name="Radius" command="SetRadius" number_of_elements="1" default_values="0.05">
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>The radius used for depth sampling defined as a fraction of the image height.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSSAO" value="1" />
-        </Hints>
       </DoubleVectorProperty>
 
       <DoubleVectorProperty name="DiffArea" command="SetDiffArea" number_of_elements="1" default_values="0.5">
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>Factor that controls self-shadowing.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSSAO" value="1" />
-        </Hints>
       </DoubleVectorProperty>
-
-      <!-- IBS Parameters -->
-      <IntVectorProperty name="UseIBS" command="SetUseIBS" number_of_elements="1" default_values="1">
-        <BooleanDomain name="bool" />
-        <Documentation>Enables/Disables Image Based Shading.</Documentation>
-      </IntVectorProperty>
 
       <DoubleVectorProperty name="Strength" command="SetStrength" number_of_elements="1" default_values="1">
         <DoubleRangeDomain name="range" min="0" max="10000" />
         <Documentation>Strength of the silhouette effect.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseIBS" value="1" />
-        </Hints>
       </DoubleVectorProperty>
 
       <DoubleVectorProperty name="Luminance" command="SetLuminance" number_of_elements="1" default_values="1">
         <DoubleRangeDomain name="range" min="0" max="2" />
         <Documentation>Luminance factor.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseIBS" value="1" />
-        </Hints>
       </DoubleVectorProperty>
 
       <DoubleVectorProperty name="Ambient" command="SetAmbient" number_of_elements="1" default_values="0.2">
         <DoubleRangeDomain name="range" min="0" max="2" />
         <Documentation>Ambient light factor.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseIBS" value="1" />
-        </Hints>
       </DoubleVectorProperty>
 
       <!-- DoF Parameters -->
-      <IntVectorProperty name="UseDoF" command="SetUseDoF" number_of_elements="1" default_values="1">
+      <IntVectorProperty name="UseSSDoF" label="Use SSDoF" command="SetUseSSDoF" number_of_elements="1" default_values="0">
         <BooleanDomain name="bool" />
         <Documentation>Enables/Disables Screen Space Depth-of-Field.</Documentation>
       </IntVectorProperty>
@@ -791,7 +759,7 @@
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>The radius used for depth samplings defined as a fraction of the image height.</Documentation>
         <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseDoF" value="1" />
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />
         </Hints>
       </DoubleVectorProperty>
 
@@ -799,7 +767,7 @@
         <DoubleRangeDomain name="range" min="0" max="4" />
         <Documentation>Size of the aperture.</Documentation>
         <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseDoF" value="1" />
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />
         </Hints>
       </DoubleVectorProperty>
 
@@ -807,7 +775,7 @@
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>Depth value that is completely in focus.</Documentation>
         <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseDoF" value="1" />
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />
         </Hints>
       </DoubleVectorProperty>
 
@@ -815,7 +783,7 @@
         <DoubleRangeDomain name="range" min="0" max="2" />
         <Documentation>Maximum depth blur.</Documentation>
         <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseDoF" value="1" />
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />
         </Hints>
       </DoubleVectorProperty>
 
@@ -829,22 +797,17 @@
         <Property name="Scalar" />
       </PropertyGroup>
 
-      <PropertyGroup panel_widget="Line" label="SSSAO Parameters">
-        <Property name="UseSSSAO" />
+      <PropertyGroup panel_widget="Line" label="SSSAO + IBS Parameters">
         <Property name="Samples" />
         <Property name="Radius" />
         <Property name="DiffArea" />
-      </PropertyGroup>
-
-      <PropertyGroup panel_widget="Line" label="IBS Parameters">
-        <Property name="UseIBS" />
         <Property name="Strength" />
         <Property name="Luminance" />
         <Property name="Ambient" />
       </PropertyGroup>
 
       <PropertyGroup panel_widget="Line" label="DoF Parameters">
-        <Property name="UseDoF" />
+        <Property name="UseSSDoF" />
         <Property name="DepthRadius" />
         <Property name="Aperture" />
         <Property name="FocalDepth" />

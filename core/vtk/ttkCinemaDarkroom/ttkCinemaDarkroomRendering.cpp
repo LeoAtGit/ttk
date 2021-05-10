@@ -55,16 +55,10 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
     inputAsMB->SetBlock(0,input);
 
   ttk::Timer timer;
-  std::string msg = "CM";
-  if(this->UseSSSAO) msg += " -> SSSAO";
-  if(this->UseIBS) msg += " -> IBS";
-  if(this->UseDoF) msg += " -> SSDoF";
+  std::string msg = "CM -> SSSAO -> IBS";
+  if(this->UseSSDoF) msg += " -> SSDoF";
   if(this->UseFXAA) msg += " -> FXAA";
   this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
-
-  // check for invalid combinations
-  if(this->UseIBS && !this->UseSSSAO)
-    return !this->printErr("IBS requires SSSAO.");
 
   // build pipeline
   auto cm = vtkSmartPointer<ttkCinemaDarkroomColorMapping>::New();
@@ -78,23 +72,20 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
   // always perform color mapping
   {
     cm->SetInputArrayToProcess(0,this->GetInputArrayInformation(0));
-    cm->SetColorMap(1);
+    cm->SyncColorMapWithParaView();
+    cm->SetManualColorMap(this->ManualColorMap);
+    cm->SetColorMap(-2);
     lastUsed = cm;
-    lastResult = "Diffuse";
-  }
 
-  if(this->UseSSSAO) {
     sssao->SetInputConnection(0, lastUsed->GetOutputPort(0));
     sssao->SetInputArrayToProcess(0,0,0,0,"Depth");
     sssao->SetSamples(this->Samples);
     sssao->SetRadius(this->Radius);
     sssao->SetDiffArea(this->DiffArea);
     lastUsed = sssao;
-  }
 
-  if(this->UseIBS) {
     ibs->SetInputConnection(0, lastUsed->GetOutputPort(0));
-    ibs->SetInputArrayToProcess(0,0,0,0,lastResult.data());
+    ibs->SetInputArrayToProcess(0,0,0,0,"Diffuse");
     ibs->SetInputArrayToProcess(1,0,0,0,"Depth");
     ibs->SetInputArrayToProcess(2,0,0,0,"SSSAO");
     ibs->SetStrength(this->Strength);
@@ -104,7 +95,7 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
     lastResult = "IBS";
   }
 
-  if(this->UseDoF) {
+  if(this->UseSSDoF) {
     dof->SetInputConnection(0, lastUsed->GetOutputPort(0));
     dof->SetInputArrayToProcess(0,0,0,0,lastResult.data());
     dof->SetInputArrayToProcess(1,0,0,0,"Depth");

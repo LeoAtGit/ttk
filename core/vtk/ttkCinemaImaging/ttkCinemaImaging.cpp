@@ -61,10 +61,11 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
   auto inputObject = vtkDataObject::GetData(inputVector[0]);
   auto inputGrid = vtkPointSet::GetData(inputVector[1]);
   auto outputCollection = vtkMultiBlockDataSet::GetData(outputVector);
-  if(!inputObject || !inputGrid) {
-    this->printErr("Unsupported input object types.");
-    return 0;
-  }
+  if(!inputObject || !inputGrid)
+    return !this->printErr("Unsupported input object types.");
+
+  if(inputGrid->GetNumberOfPoints()<1)
+    return this->printWrn("Sampling Grid is Empty.");
 
   auto inputObjectAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
   if(inputObject->IsA("vtkMultiBlockDataSet"))
@@ -92,6 +93,8 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
     const double d[3]{objectBounds[1] - objectBounds[0],
                       objectBounds[3] - objectBounds[2],
                       objectBounds[5] - objectBounds[4]};
+    for(int i=0; i<6; i++)
+      std::cout<<objectBounds[i]<<std::endl;
     const double objectDiameter = norm(d);
 
     const double c[3]{objectBounds[0] + 0.5 * d[0],
@@ -105,18 +108,17 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
     }
 
     if(this->AutoNearFar) {
-      double gridBounds[6];
-      inputGrid->GetBounds(gridBounds);
-
+      double firstPoint[3];
+      inputGrid->GetPoint(0,firstPoint);
       const double l[3]{
-        gridBounds[0] - c[0],
-        gridBounds[2] - c[1],
-        gridBounds[4] - c[2],
+        c[0] - firstPoint[0],
+        c[1] - firstPoint[1],
+        c[2] - firstPoint[2],
       };
       const double ld = norm(l);
 
-      defaultNearFar[0] = std::max(0.01, ld - objectDiameter * 0.5);
-      defaultNearFar[1] = ld + objectDiameter * 0.5;
+      defaultNearFar[0] = std::max(0.01, ld - objectDiameter * 0.6);
+      defaultNearFar[1] = ld + objectDiameter * 0.6;
     }
 
     if(this->AutoHeight) {
@@ -124,34 +126,34 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
     }
   }
 
-  // ensure grid contains all camera parameters as field data
+  // Enforce grid contains all camera parameters as field data
   auto aInputGrid
     = vtkSmartPointer<vtkPointSet>::Take(inputGrid->NewInstance());
   aInputGrid->ShallowCopy(inputGrid);
   int n = aInputGrid->GetNumberOfPoints();
   auto aInputGridPD = aInputGrid->GetPointData();
 
-  ttkCinemaImaging::EnsureGridData(
+  ttkCinemaImaging::EnforceGridData(
     aInputGridPD, "Resolution", n,
     {(double)this->Resolution[0], (double)this->Resolution[1]});
-  ttkCinemaImaging::EnsureGridData(
+  ttkCinemaImaging::EnforceGridData(
     aInputGridPD, "ProjectionMode", n, {(double)this->ProjectionMode});
 
-  ttkCinemaImaging::EnsureGridData(
+  ttkCinemaImaging::EnforceGridData(
     aInputGridPD, "CamNearFar", n, defaultNearFar);
-  ttkCinemaImaging::EnsureGridData(
+  ttkCinemaImaging::EnforceGridData(
     aInputGridPD, "CamHeight", n, {defaultHeight});
-  ttkCinemaImaging::EnsureGridData(aInputGridPD, "CamAngle", n, {defaultAngle});
-  ttkCinemaImaging::EnsureGridData(aInputGridPD, "CamUp", n, {0, 1, 0});
+  ttkCinemaImaging::EnforceGridData(aInputGridPD, "CamAngle", n, {defaultAngle});
+  ttkCinemaImaging::EnforceGridData(aInputGridPD, "CamUp", n, {0, 1, 0});
 
   const bool gridHasDirection = aInputGridPD->HasArray("CamDirection");
   const bool gridHasFocalPoint = aInputGridPD->HasArray("CamFocalPoint");
   if(gridHasFocalPoint || !gridHasDirection) {
-    ttkCinemaImaging::EnsureGridData(
+    ttkCinemaImaging::EnforceGridData(
       aInputGridPD, "CamFocalPoint", n, defaultFocalPoint);
     ttkCinemaImaging::ComputeDirFromFocalPoint(aInputGrid);
   } else {
-    ttkCinemaImaging::EnsureGridData(
+    ttkCinemaImaging::EnforceGridData(
       aInputGridPD, "CamDirection", n, {0, 0, -1});
   }
 
@@ -335,7 +337,7 @@ int ttkCinemaImaging::ComputeDirFromFocalPoint(vtkPointSet *inputGrid) {
   return 1;
 };
 
-int ttkCinemaImaging::EnsureGridData(vtkPointData *fd,
+int ttkCinemaImaging::EnforceGridData(vtkPointData *fd,
                                      const std::string &name,
                                      int nTuples,
                                      const std::vector<double> &defaultValues) {
@@ -349,7 +351,7 @@ int ttkCinemaImaging::EnsureGridData(vtkPointData *fd,
     newArray->SetNumberOfComponents(nComponents);
     newArray->SetNumberOfTuples(nTuples);
 
-    auto data = static_cast<double *>(ttkUtils::GetVoidPointer(newArray));
+    auto data = ttkUtils::GetPointer<double>(newArray);
     for(int i = 0, q = 0; i < nTuples; i++)
       for(int j = 0; j < nComponents; j++)
         data[q++] = defaultValues[j];

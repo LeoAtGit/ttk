@@ -203,13 +203,13 @@ int ttkCinemaDarkroomShader::AddTexture(vtkImageData *image,
   std::string textureName = "tex" + std::to_string(textureIdx);
 
   auto properties = this->FullScreenQuadActor->GetProperty();
-  // if texture already exists remove it
-  if(properties->GetTexture(textureName.data()))
-    properties->RemoveTexture(textureName.data());
+  if(!properties->GetTexture(textureName.data())){
+    auto texture = vtkSmartPointer<vtkOpenGLTexture>::New();
+    texture->InterpolateOn();
+    properties->SetTexture(textureName.data(), texture);
+  }
 
-  // create texture
-  auto texture = vtkSmartPointer<vtkOpenGLTexture>::New();
-
+  auto texture = static_cast<vtkOpenGLTexture*>(properties->GetTexture(textureName.data()));
   auto textureObj = vtkSmartPointer<vtkTextureObject>::New();
   textureObj->SetContext(
     vtkOpenGLRenderWindow::SafeDownCast(this->RenderWindow));
@@ -218,11 +218,8 @@ int ttkCinemaDarkroomShader::AddTexture(vtkImageData *image,
   textureObj->Create2DFromRaw(
     dim[0], dim[1], inputArray->GetNumberOfComponents(),
     inputArray->GetDataType(), ttkUtils::GetVoidPointer(inputArray));
-  texture->SetTextureObject(textureObj);
-  texture->InterpolateOn();
 
-  // add texture to properties
-  properties->SetTexture(textureName.data(), texture);
+  texture->SetTextureObject(textureObj);
 
   return 1;
 }
