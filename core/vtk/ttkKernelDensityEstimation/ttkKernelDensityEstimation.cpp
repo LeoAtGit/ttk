@@ -2,6 +2,7 @@
 
 
 #include <vtkInformation.h>
+#include <vtkIntArray.h>
 #include <vtkFloatArray.h>
 #include <vtkDataSet.h>
 #include <vtkPointData.h>
