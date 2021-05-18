@@ -36,19 +36,24 @@ int ttk::HarmonicField::solve(SparseMatrixType const &lap,
 // main routine
 template <class T, class TriangulationType>
 int ttk::HarmonicField::execute(const TriangulationType &triangulation,
-                                SimplexId constraintNumber,
-                                SimplexId *sources,
-                                T *constraints,
-                                T *outputScalarField,
-                                bool useCotanWeights,
-                                SolvingMethodUserType solvingMethod,
-                                double logAlpha) const {
+                                const SimplexId constraintNumber,
+                                const SimplexId *const sources,
+                                const T *const constraints,
+                                T *const outputScalarField,
+                                const bool useCotanWeights,
+                                const SolvingMethodUserType solvingMethod,
+                                const double logAlpha) const {
 
 #ifdef TTK_ENABLE_EIGEN
 
 #ifdef TTK_ENABLE_OPENMP
   Eigen::setNbThreads(threadNumber_);
 #endif // TTK_ENABLE_OPENMP
+
+  if(constraintNumber < 1) {
+    this->printErr("Cannot solve Laplace problem with no boundary constraints");
+    return 1;
+  }
 
   using SpMat = Eigen::SparseMatrix<T>;
   using SpVec = Eigen::SparseVector<T>;
@@ -196,10 +201,11 @@ int ttk::HarmonicField::execute(const TriangulationType &triangulation,
 }
 
 // explicit template specializations for double and float types
-#define HARMONICFIELD_SPECIALIZE(TYPE)                                   \
-  template int ttk::HarmonicField::execute<TYPE>(                        \
-    const Triangulation &, SimplexId, SimplexId *, TYPE *, TYPE *, bool, \
-    SolvingMethodUserType, double) const
+#define HARMONICFIELD_SPECIALIZE(TYPE)                                       \
+  template int ttk::HarmonicField::execute<TYPE>(                            \
+    const Triangulation &, const SimplexId, const SimplexId *const,          \
+    const TYPE *const, TYPE *const, const bool, const SolvingMethodUserType, \
+    const double) const
 
 HARMONICFIELD_SPECIALIZE(float);
 HARMONICFIELD_SPECIALIZE(double);
