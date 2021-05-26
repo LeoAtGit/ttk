@@ -1,6 +1,7 @@
 #include <ttkPlanarGraphLayout.h>
 
 #include <ttkMacros.h>
+#include <ttkUtils.h>
 
 #include <vtkAbstractArray.h>
 #include <vtkCellArray.h>
@@ -56,28 +57,20 @@ int ttkPlanarGraphLayout::RequestData(vtkInformation *request,
 
   // Get input arrays
   auto sequenceArray = this->GetInputArrayToProcess(0, inputVector);
-  if(this->GetUseSequences() && !sequenceArray) {
-    this->printErr("Unable to retrieve sequence array.");
-    return 0;
-  }
+  if(this->UseSequences && !sequenceArray)
+    return !this->printErr("Unable to retrieve sequence array.");
 
   auto sizeArray = this->GetInputArrayToProcess(1, inputVector);
-  if(this->GetUseSizes() && !sizeArray) {
-    this->printErr("Unable to retrieve size array.");
-    return 0;
-  }
+  if(this->UseSizes && (!sizeArray || sizeArray->GetDataType()!=VTK_FLOAT))
+    return !this->printErr("Unable to retrieve float size array.");
 
   auto branchArray = this->GetInputArrayToProcess(2, inputVector);
-  if(this->GetUseBranches() && !branchArray) {
-    this->printErr("Unable to retrieve branch array.");
-    return 0;
-  }
+  if(this->UseBranches && !branchArray)
+    return !this->printErr("Unable to retrieve branch array.");
 
   auto levelArray = this->GetInputArrayToProcess(3, inputVector);
-  if(this->GetUseLevels() && !levelArray) {
-    this->printErr("Unable to retrieve level array.");
-    return 0;
-  }
+  if(this->UseLevels && !levelArray)
+    return !this->printErr("Unable to retrieve level array.");
 
   // Initialize output array
   auto outputArray = vtkSmartPointer<vtkFloatArray>::New();
@@ -85,57 +78,48 @@ int ttkPlanarGraphLayout::RequestData(vtkInformation *request,
   outputArray->SetNumberOfComponents(2); // (x,y) position
   outputArray->SetNumberOfValues(nPoints * 2);
 
-  auto dataType
-    = this->GetUseSequences() ? sequenceArray->GetDataType() : VTK_CHAR;
-  auto idType = this->GetUseBranches() ? branchArray->GetDataType()
-                : this->GetUseLevels() ? levelArray->GetDataType()
-                                       : VTK_CHAR;
-  //   auto levelType
-  //     = this->GetUseLevels()
-  //         ? levels->GetDataType()
-  //         : this->GetUseBranches() ? branches->GetDataType() : VTK_CHAR;
+  auto DT = this->UseSequences ? sequenceArray->GetDataType() : VTK_INT;
+  auto IT = this->UseBranches ? branchArray->GetDataType()
+                : this->UseLevels ? levelArray->GetDataType() : VTK_INT;
 
-  //   if(branchType != levelType) {
-  //     dMsg(cout,
-  //          "[ttkPlanarGraphLayout] ERROR: Branch and Level array must have
-  //          the " "same type.\n", fatalMsg);
-  //     return 0;
-  //   }
+
 
   int status = 1;
+  if(this->Algorithm==ALGORITHM::DOT){
+    ttkTypeMacroAI(DT,IT,
+      (
+        status = this->computeGraphLayout<T0, T1>(
+          // Output
+          ttkUtils::GetPointer<float>(outputArray),
+          // Input
+          output->GetCells()->GetData()->GetPointer(0),
+          nPoints, nEdges,
+          !this->UseSequences ? nullptr : ttkUtils::GetPointer<T0>(sequenceArray),
+          !this->UseSizes ? nullptr : ttkUtils::GetPointer<float>(sizeArray),
+          !this->UseBranches ? nullptr : ttkUtils::GetPointer<T1>(branchArray),
+          !this->UseLevels ? nullptr : ttkUtils::GetPointer<T1>(levelArray)
+        )
+      )
+    );
+  } else {
+    if(!this->UseSequences || !this->UseBranches)
+      return !this->printErr("Merge Tree Layout requires Sequence and Branch Arrays.");
 
-  switch(vtkTemplate2PackMacro(idType, dataType)) {
-    ttkTemplate2IdMacro(
-      (status = this->execute<VTK_T1, VTK_T2>(
-         // Output
-         (float *)outputArray->GetVoidPointer(0),
-         // Input
-         output->GetCells()->GetData()->GetPointer(0), nPoints, nEdges,
-         !this->GetUseSequences() ? nullptr
-                                  : (VTK_T2 *)sequenceArray->GetVoidPointer(0),
-         !this->GetUseSizes() ? nullptr : (float *)sizeArray->GetVoidPointer(0),
-         !this->GetUseBranches() ? nullptr
-                                 : (VTK_T1 *)branchArray->GetVoidPointer(0),
-         !this->GetUseLevels() ? nullptr
-                               : (VTK_T1 *)levelArray->GetVoidPointer(0))));
+    ttkTypeMacroAI(DT,IT,
+      (
+        status = this->computeMergeTreeLayout<T0, T1>(
+          // Output
+          ttkUtils::GetPointer<float>(outputArray),
+          // Input
+          output->GetCells()->GetData()->GetPointer(0),
+          nPoints, nEdges,
+          ttkUtils::GetPointer<T0>(sequenceArray),
+          ttkUtils::GetPointer<T1>(branchArray)
+        )
+      )
+    );
   }
 
-  //   // Compute layout with base code
-  //   switch(vtkTemplate2PackMacro(branchType, sequenceType)) {
-  //     vtkTemplate2Macro(
-  //       (status = planarGraphLayout.execute<vtkIdType, VTK_T1, VTK_T2>(
-  //          // Input
-  //          !this->GetUseSequences() ? nullptr
-  //                                   : (VTK_T2 *)sequences->GetVoidPointer(0),
-  //          !this->GetUseSizes() ? nullptr : (float
-  //          *)sizes->GetVoidPointer(0), !this->GetUseBranches() ? nullptr
-  //                                  : (VTK_T1 *)branches->GetVoidPointer(0),
-  //          !this->GetUseLevels() ? nullptr : (VTK_T1
-  //          *)levels->GetVoidPointer(0), output->GetCells()->GetPointer(),
-  //          nPoints, nEdges,
-  //          // Output
-  //          (float *)outputField->GetVoidPointer(0))));
-  //   }
   if(status != 1)
     return 0;
 
