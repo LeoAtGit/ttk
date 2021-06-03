@@ -77,7 +77,7 @@ namespace ttk {
       bottleneckDistance_.setCTDiagram2(&CTDiagram1);
       bottleneckDistance_.setOutputMatchings(&matchings);
       int status = bottleneckDistance_.execute<double>(false);
-      if (!status) return -1;
+      if (status < 0) return -1;
 
 //#ifdef TTK_ENABLE_OPENMP
 //#pragma omp parallel for num_threads(this->threadNumber_)

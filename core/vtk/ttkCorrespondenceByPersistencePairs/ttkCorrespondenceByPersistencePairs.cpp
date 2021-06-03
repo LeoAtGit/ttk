@@ -30,11 +30,12 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
 ){
   int status = 0;
     
-    // unpack input
+  // unpack input
   vtkUnstructuredGrid *p0 = vtkUnstructuredGrid::SafeDownCast(inputDataObjects0); // set of persist. pairs from previous timestep
   vtkUnstructuredGrid *p1 = vtkUnstructuredGrid::SafeDownCast(inputDataObjects1); // PPs from current timestep
+
   if(!p0 || !p1)
-    return !this->printErr("Input data objects need to be vtkPointSets.");
+    return !this->printErr("Input data objects need to be vtkUnstructuredGrids.");
 
   // get point coordinates
   auto coords0 = p0->GetPoints()->GetData();
@@ -74,10 +75,23 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
   //const int nPairs1 = coords1->GetNumberOfTuples() / 2;
   const int nFeatures0 = CTDiagram0.size();
   const int nFeatures1 = CTDiagram1.size();
+  //std::cout<<nFeatures0<<endl;
+  //std::cout<<nFeatures1<<endl;
+  
+  //std::cout<<"first one"<<std::endl;
+  //for (auto&c : CTDiagram0) {
+  //  std::cout << "   " << std::get<7>(c) <<","<<std::get<8>(c)<<","<<std::get<9>(c)<<" ; "<<std::get<11>(c)<<","<<std::get<12>(c)<<","<<std::get<13>(c);
+  //    std::cout << endl;
+  //  }
+  //std::cout<<"second one"<<std::endl;
+  //for (auto&c : CTDiagram1) {
+  //  std::cout << "   " << std::get<7>(c) <<","<<std::get<8>(c)<<","<<std::get<9>(c)<<" ; "<<std::get<11>(c)<<","<<std::get<12>(c)<<","<<std::get<13>(c);
+  //    std::cout << endl;
+  //  }
 
   // initialize correspondence matrix i.e., distance matrix
   correspondences->SetDimensions(nFeatures0, nFeatures1, 1);
-  correspondences->AllocateScalars(VTK_DOUBLE, 1); // matching output = double
+  correspondences->AllocateScalars(VTK_FLOAT, 1); // matching output = double
 
   auto correspondencesArray = correspondences->GetPointData()->GetArray(0);
   correspondencesArray->SetName("LiftedWassersteinDistance");
@@ -120,6 +134,11 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
       this->printErr("Error computing distance matrix.");
       return -1;
   }
+
+  //std::cout<<"nb matchings"<<std::endl;
+  //std::cout<<matchings.size()<<std::endl;
+  //for (auto&m:matchings)
+  //    std::cout<<" "<<std::get<0>(m)<<","<<std::get<1>(m)<<","<<std::get<2>(m)<<std::endl;
     //));
     //}
 
@@ -138,21 +157,24 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
           continue;
       }
 
-      correspondanceMatrix[n2 * nFeatures0 + n1]++;
+      correspondanceMatrix[n2 * nFeatures0 + n1] = 1.;
     }
   }
   
   // add index label maps
   int a=0;
   auto fd = correspondences->GetFieldData();
-  for (auto& it : std::vector<vtkUnstructuredGrid*> ({p0, p1})) // vtkPointSett
+  for (const auto it : std::vector<vtkUnstructuredGrid*> ({p0, p1})) // vtkPointSet
   {
     auto labels = this->GetInputArrayToProcess(0, it);
-    if(!labels)
-      return !this->printErr("Unable to retrieve labels.");
+    if(!labels) {
+      this->printErr("Unable to retrieve labels.");
+      return -1;
+    }
     auto array = vtkSmartPointer<vtkDataArray>::Take( labels->NewInstance() );
     array->ShallowCopy(labels);
     array->SetName(("IndexLabelMap"+std::to_string(a++)).data());
+
     fd->AddArray(array);
   }
 
