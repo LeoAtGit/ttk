@@ -36,11 +36,11 @@ namespace ttk {
       for(int t = 0; t < this->threadNumber_; t++)
         sizeDataPerThread[t].resize(n_mtPoints, 0);
 
-    #pragma omp parallel num_threads(this->threadNumber_)
+      #pragma omp parallel num_threads(this->threadNumber_)
       {
         int* sizeDataThread = sizeDataPerThread[omp_get_thread_num()].data();
 
-    #pragma omp for
+        #pragma omp for
         for(size_t i = 0; i < n_sPoints; i++) {
 
           const int &branchId = sBranchIds[i];
@@ -83,7 +83,7 @@ namespace ttk {
       //     mtVertexId = v;
       // }
 
-    #pragma omp parallel for num_threads(this->threadNumber_)
+      #pragma omp parallel for num_threads(this->threadNumber_)
       for(size_t i = 0; i < n_mtPoints; i++) {
         // map point to vertex id
         // auto& vertexId = mtVertexIds[i];

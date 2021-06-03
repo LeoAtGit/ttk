@@ -48,12 +48,15 @@
 
 // TTK includes
 #include <PlanarGraphLayout.h>
+#include <ttkMacros.h>
 
 class TTKPLANARGRAPHLAYOUT_EXPORT ttkPlanarGraphLayout
   : public ttkAlgorithm,
     protected ttk::PlanarGraphLayout {
 
 private:
+  ALGORITHM Algorithm{ALGORITHM::DOT};
+
   // optional field data
   bool UseSequences{false};
   bool UseSizes{false};
@@ -64,6 +67,9 @@ private:
   std::string OutputArrayName{"Layout"};
 
 public:
+  ttkSetEnumMacro(Algorithm, ALGORITHM);
+  vtkGetEnumMacro(Algorithm, ALGORITHM);
+
   // getters and setters for optional arrays
   vtkSetMacro(UseSequences, bool);
   vtkGetMacro(UseSequences, bool);

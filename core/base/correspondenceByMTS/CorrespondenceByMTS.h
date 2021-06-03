@@ -69,41 +69,42 @@ namespace ttk {
         this->getBaseRepresentative<IT, DT>(base0, bl, scalars0, next0);
         this->getBaseRepresentative<IT, DT>(base1, bl, scalars1, next1);
 
-        {
-          IT c0 = base0;
-          IT c1 = base1;
+        correlationsArray[base1 * nEdges0 + base0]++;
+//         {
+//           IT c0 = base0;
+//           IT c1 = base1;
 
-          while(true) {
-#ifdef TTK_ENABLE_OPENMP
-#pragma omp atomic update
-#endif
-            correlationsArray[c1 * nEdges0 + c0]++;
+//           while(true) {
+// #ifdef TTK_ENABLE_OPENMP
+// #pragma omp atomic update
+// #endif
+//             correlationsArray[c1 * nEdges0 + c0]++;
 
-            const auto &cNext0 = next0[c0];
-            const auto &cNext1 = next1[c1];
+//             const auto &cNext0 = next0[c0];
+//             const auto &cNext1 = next1[c1];
 
-            if(cNext0 < 0 && cNext1 < 0)
-              break;
+//             if(cNext0 < 0 && cNext1 < 0)
+//               break;
 
-            if(cNext0 < 0) {
-              c1 = cNext1;
-            } else if(cNext1 < 0) {
-              c0 = cNext0;
-            } else {
-              const auto &cNextScalar0 = scalars0[cNext0];
-              const auto &cNextScalar1 = scalars1[cNext1];
+//             if(cNext0 < 0) {
+//               c1 = cNext1;
+//             } else if(cNext1 < 0) {
+//               c0 = cNext0;
+//             } else {
+//               const auto &cNextScalar0 = scalars0[cNext0];
+//               const auto &cNextScalar1 = scalars1[cNext1];
 
-              if(cNextScalar0 == cNextScalar1) {
-                c0 = cNext0;
-                c1 = cNext1;
-              } else if(cNextScalar0 < cNextScalar1) {
-                c1 = cNext1;
-              } else {
-                c0 = cNext0;
-              }
-            }
-          };
-        }
+//               if(cNextScalar0 == cNextScalar1) {
+//                 c0 = cNext0;
+//                 c1 = cNext1;
+//               } else if(cNextScalar0 < cNextScalar1) {
+//                 c1 = cNext1;
+//               } else {
+//                 c0 = cNext0;
+//               }
+//             }
+//           };
+//         }
       }
 
       this->printMsg(msg, 1, timer.getElapsedTime(), this->threadNumber_);
