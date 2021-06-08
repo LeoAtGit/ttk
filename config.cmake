@@ -96,20 +96,22 @@ endif()
 
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
-  message(STATUS "BOOST_INCLUDE_DIR: ${Boost_INCLUDE_DIR}")
+  message(STATUS "Found Boost ${Boost_VERSION} (${Boost_INCLUDE_DIR})")
 endif()
 
-find_package(ZLIB)
+find_package(ZLIB QUIET)
 if(NOT ZLIB_FOUND)
   option(TTK_ENABLE_ZLIB "Enable Zlib support" OFF)
   message(STATUS "Zlib not found, disabling Zlib support in TTK.")
 else()
   option(TTK_ENABLE_ZLIB "Enable Zlib support" ON)
+  message(STATUS "Found Zlib ${ZLIB_VERSION_STRING} (${ZLIB_LIBRARIES})")
 endif()
 
-find_package(EMBREE 3.4)
+find_package(EMBREE 3.4 QUIET)
 if(EMBREE_FOUND)
   option(TTK_ENABLE_EMBREE "Enable embree raytracing for ttkCinemaImaging" ON)
+  message(STATUS "Found Embree ${EMBREE_VERSION} (${EMBREE_LIBRARY})")
 else()
   option(TTK_ENABLE_EMBREE "Enable embree raytracing for ttkCinemaImaging" OFF)
   message(STATUS "EMBREE library not found, disabling embree support in TTK.")
@@ -164,53 +166,28 @@ endif()
 
 if(GRAPHVIZ_FOUND)
   option(TTK_ENABLE_GRAPHVIZ "Enable GraphViz support" ON)
-  message(STATUS "GraphViz found")
+  message(STATUS "Found GraphViz (${GRAPHVIZ_CDT_LIBRARY})")
 else()
   option(TTK_ENABLE_GRAPHVIZ "Enable GraphViz support" OFF)
   message(STATUS "GraphViz not found, disabling GraphViz support in TTK.")
 endif()
 # END_FIND_GRAPHVIZ
 
-# START_FIND_SQLITE3
-find_path(SQLITE3_INCLUDE_DIR sqlite3.h
-  PATHS
-    /usr/include
-    /usr/local/include
-    )
-set(SQLITE3_NAMES ${SQLITE3_NAMES} sqlite3)
-find_library(SQLITE3_LIBRARY
-  NAMES
-    ${SQLITE3_NAMES}
-  PATHS
-    $ENV{SQLITE3_ROOT_DIR}/lib /opt/sqlite3/lib
-    )
-if (SQLITE3_LIBRARY AND SQLITE3_INCLUDE_DIR)
-  set(SQLITE3_LIBRARIES ${SQLITE3_LIBRARY})
-  set(SQLITE3_FOUND "YES")
-else (SQLITE3_LIBRARY AND SQLITE3_INCLUDE_DIR)
-  set(SQLITE3_FOUND "NO")
-endif (SQLITE3_LIBRARY AND SQLITE3_INCLUDE_DIR)
-if (SQLITE3_FOUND)
-  if (NOT SQLITE3_FIND_QUIETLY)
-    message(STATUS "Found SQLITE3: ${SQLITE3_LIBRARIES}")
-  endif (NOT SQLITE3_FIND_QUIETLY)
-else (SQLITE3_FOUND)
-  if (SQLITE3_FIND_REQUIRED)
-    message(FATAL_ERROR "Could not find SQLITE3 library...")
-  endif (SQLITE3_FIND_REQUIRED)
-endif (SQLITE3_FOUND)
-mark_as_advanced(SQLITE3_LIBRARY SQLITE3_INCLUDE_DIR)
-# END_FINDSQLITE3
-if(SQLITE3_FOUND)
+# FindSQLite3 supported since CMake 3.14
+find_package(SQLite3 QUIET)
+if(SQLite3_FOUND)
   option(TTK_ENABLE_SQLITE3 "Enable SQLITE3 support" ON)
+  message(STATUS "Found SQLite3 ${SQLite3_VERSION} (${SQLite3_LIBRARIES})")
 else()
   option(TTK_ENABLE_SQLITE3 "Enable SQLITE3 support" OFF)
-  message(STATUS "SQLITE3 not found, disabling SQLITE3 support in TTK.")
+  message(STATUS "SQLite3 not found, disabling SQLite3 support in TTK.")
 endif()
 
 find_package(ZFP QUIET)
 if(ZFP_INCLUDE_DIRS)
   option(TTK_ENABLE_ZFP "Enable ZFP support" ON)
+  get_property(ZFP_LIB TARGET ${ZFP_LIBRARIES} PROPERTY IMPORTED_LOCATION_RELEASE)
+  message(STATUS "Found ZFP ${ZFP_VERSION} (${ZFP_LIB})")
 else()
   option(TTK_ENABLE_ZFP "Enable ZFP support" OFF)
   message(STATUS "ZFP not found, disabling ZFP support in TTK.")
@@ -222,13 +199,16 @@ if(NOT TTK_ENABLE_ZFP)
   find_package(ZFP QUIET)
 endif()
 
-find_package(Eigen3 3.3 NO_MODULE)
+find_package(Eigen3 3.3 QUIET NO_MODULE)
 if(EIGEN3_FOUND)
   option(TTK_ENABLE_EIGEN "Enable Eigen3 support" ON)
+  message(STATUS "Found Eigen ${Eigen3_VERSION} (${EIGEN3_INCLUDE_DIR})")
 
   find_package(Spectra QUIET)
   if(Spectra_FOUND)
     option(TTK_ENABLE_SPECTRA "Enable Spectra support" ON)
+    get_property(SPECTRA_INCLUDES TARGET Spectra::Spectra PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Found Spectra ${Spectra_VERSION} (${SPECTRA_INCLUDES})")
   else()
     option(TTK_ENABLE_SPECTRA "Enable Spectra support" OFF)
     message(STATUS "Spectra >=0.9.0 not found, disabling Spectra support in TTK.")
@@ -241,7 +221,7 @@ else()
   message(STATUS "Spectra not found, disabling Spectra support in TTK.")
 endif()
 
-find_package(Python3 COMPONENTS Development NumPy)
+find_package(Python3 COMPONENTS Development NumPy QUIET)
 
 if(Python3_FOUND AND Python3_NumPy_FOUND)
   include_directories(SYSTEM ${Python3_INCLUDE_DIRS})
@@ -251,6 +231,7 @@ if(Python3_FOUND AND Python3_NumPy_FOUND)
     CACHE INTERNAL "TTK_PYTHON_MINOR_VERSION")
 
   option(TTK_ENABLE_SCIKIT_LEARN "Enable scikit-learn support" ON)
+  message(STATUS "Found Python ${Python3_VERSION} (${Python3_EXECUTABLE})")
 else()
   option(TTK_ENABLE_SCIKIT_LEARN "Enable scikit-learn support" OFF)
   message(STATUS "Improper Python/NumPy setup. Disabling scikit-learn support in TTK.")
@@ -302,13 +283,13 @@ if (TTK_ENABLE_MPI)
   find_package(MPI REQUIRED)
 endif()
 
-find_package(WEBSOCKETPP)
+find_package(WEBSOCKETPP QUIET)
 if(NOT WEBSOCKETPP_FOUND)
   option(TTK_ENABLE_WEBSOCKETPP "Enable WebSocketIO module" OFF)
   message(STATUS "WebSocketPP not found, disabling WebSocketIO module in TTK.")
 else()
   option(TTK_ENABLE_WEBSOCKETPP "Enable WebSocketIO module" ON)
-  message(STATUS "WebSocketPP found, enabling WebSocketIO module in TTK.")
+  message(STATUS "Found WebSocketPP ${WEBSOCKETPP_VERSION} (${WEBSOCKETPP_INCLUDE_DIR}), enabling WebSocketIO module in TTK.")
 endif()
 
 # Install path

@@ -3,7 +3,7 @@
 #include <boost/heap/fibonacci_heap.hpp>
 #include <vector>
 
-namespace ttk {
+namespace ttk::mt {
 
   template <typename IT>
   struct Propagation {

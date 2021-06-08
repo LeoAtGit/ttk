@@ -7,25 +7,112 @@
       </Documentation>
 
       <!-- Inputs -->
-      <InputProperty name="Points" port_index="0" command="SetInputConnection">
+      <InputProperty name="Diagrams" port_index="0" command="SetInputConnection">
         <ProxyGroupDomain name="groups">
           <Group name="sources" />
           <Group name="filters" />
         </ProxyGroupDomain>
         <DataTypeDomain name="input_type">
-          <DataType value="vtkPointSet" />
+          <DataType value="vtkUnstructuredGrid" />
           <DataType value="vtkMultiBlockDataSet" />
         </DataTypeDomain>
         <InputArrayDomain name="input_arrays" attribute_type="point" />
-        <Documentation>Points.</Documentation>
+        <Documentation>Persistence Diagrams.</Documentation>
       </InputProperty>
+      
+      <StringVectorProperty
+      name="n"
+      label="p parameter"
+      command="SetWassersteinMetric"
+      number_of_elements="1"
+      default_values="2" >
+        <Documentation>
+          Value of the parameter p for the Wp (p-th Wasserstein) distance
+          computation (type "inf" for the Bottleneck distance).
+        </Documentation>
+      </StringVectorProperty>
+
+    <IntVectorProperty
+      name="Assignment method"
+      label="Assignment method"
+      command="SetPVAlgorithm"
+      number_of_elements="1"
+      default_values="0" >
+        <EnumerationDomain name="enum">
+          <Entry value="0" text="ttk: pMunkres (Wasserstein), Gabow-Tarjan (Bottleneck)"/>
+          <!-- <Entry value="1" text="legacy: doubleMunkres (Wasserstein, Bottleneck)"/> -->
+        </EnumerationDomain>
+        <Documentation>
+          Value of the parameter p for the Wp (p-th Wasserstein) distance
+          computation (type "inf" for the Bottleneck distance).
+        </Documentation>
+      </IntVectorProperty>
+
+      <DoubleVectorProperty
+      name="spe"
+      label="Extremum weight"
+      command="SetPE"
+      number_of_elements="1"
+      default_values="1"
+      panel_visibility="advanced">
+        <DoubleRangeDomain name="spe" min="0.0" max="1.0"/>
+        <Documentation>Importance weight for extrema</Documentation>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+      name="sps"
+      label="Saddle weight"
+      command="SetPS"
+      number_of_elements="1"
+      default_values="1"
+      panel_visibility="advanced">
+        <DoubleRangeDomain name="sps" min="0.0" max="1.0"/>
+        <Documentation>Importance weight for saddles</Documentation>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+      name="spx"
+      label="X weight"
+      command="SetPX"
+      number_of_elements="1"
+      default_values="1"
+      panel_visibility="advanced">
+        <DoubleRangeDomain name="spx" min="0.0" max="1.0"/>
+        <Documentation>Importance weight for the X component of
+the extremum</Documentation>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+      name="spy"
+      label="Y weight"
+      command="SetPY"
+      number_of_elements="1"
+      default_values="1"
+      panel_visibility="advanced"
+      >
+        <DoubleRangeDomain name="spy" min="0.0" max="1.0"/>
+        <Documentation>Importance weight for the Y component of
+the extremum</Documentation>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+      name="spz"
+      label="Z weight"
+      command="SetPZ"
+      number_of_elements="1"
+      default_values="1"
+      panel_visibility="advanced">
+        <DoubleRangeDomain name="spz" min="0.0" max="1.0"/>
+        <Documentation>Importance weight for the Z component of
+the extremum</Documentation>
+      </DoubleVectorProperty>
 
       <OutputPort index="0" id="port0" name="Correlations" />
 
       <StringVectorProperty name="Labels" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5">
         <ArrayListDomain name="array_list" input_domain_name="input_arrays">
           <RequiredProperties>
-            <Property function="Input" name="Points" />
+            <Property function="Input" name="Diagrams" />
           </RequiredProperties>
         </ArrayListDomain>
         <Documentation>Feature Labels.</Documentation>
