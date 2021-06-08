@@ -36,24 +36,19 @@ namespace ttk {
   template <typename DT, typename IT>
   struct Branch {
 
-    ttk::LongSimplexId leaf, root, connectedFrom;
+    ttk::LongSimplexId leaf, connectedFrom;
     int currentX;
-    //branchID, leaf value
     std::vector<IT> branchPoints;
     std::set<ttk::LongSimplexId> vertices;
     bool rendered;
 
     Branch() {
       leaf = -1;
-      root = -1;
       connectedFrom = -1;
       currentX = -1;
       rendered = false;
     }
-
-    DT GetMaxValues(const DT &sequenceList) {
-      return sequenceList[leaf];
-    }
+    
   };
 
   class PlanarGraphLayout : virtual public Debug {
@@ -83,8 +78,7 @@ namespace ttk {
                        float *layout,
                        std::vector<Branch<DT, IT>>& branchList,
                        const DT *pointSequences,
-                       const IT *branches,
-                       IT offset) const;
+                       const IT *branches) const;
 
     template <typename DT, typename IT>
     int computeMergeTreeLayout(
@@ -549,12 +543,71 @@ int ttk::PlanarGraphLayout::GenerateLayout(
   float *layout,
   std::vector<Branch<DT, IT>> &branchList,
   const DT *pointSequences,
-  const IT *branches,
-  IT offset) const {
+  const IT *branches) const {
 
   Branch<DT, IT> *curr_branch = &branchList[b];
 
   // go through branches first
+  
+  IT lastB = b;
+  IT newB = b;
+  
+  if(curr_branch->connectedFrom != -1) {
+
+    IT root_branch_id = branches[curr_branch->connectedFrom];
+    const Branch<DT, IT> *root_branch = &branchList[root_branch_id];
+
+    lastB = root_branch->currentX + 1;
+    newB = lastB;
+    
+    DT branchLine[4]
+      = {(DT)root_branch->currentX, pointSequences[curr_branch->connectedFrom],
+         (DT)newB, pointSequences[curr_branch->leaf]};
+
+    bool safe = false;
+
+    while(!safe) {
+      for(size_t i = 1; i < branchList.size(); i++) {
+
+        if((IT)i != b && (IT) i != root_branch_id) {
+          Branch<DT, IT> *next_branch = &branchList[i];
+          IT nroot_branch_id = branches[next_branch->connectedFrom];
+          Branch<DT, IT> *nroot_branch = &branchList[nroot_branch_id];
+
+	  if(next_branch->rendered) {
+            DT bBox[4]
+              = {(DT)nroot_branch->currentX,
+                 pointSequences[next_branch->connectedFrom],
+                 (DT)next_branch->currentX, pointSequences[next_branch->leaf]};
+
+            if((branchLine[0] <= bBox[2] && branchLine[2] >= bBox[0]
+		&& branchLine[1] <= bBox[3] && branchLine[3] >= bBox[1])) {
+	      
+	      if(next_branch->currentX + 1 > newB) {
+		newB = next_branch->currentX + 1;
+	      }
+	      
+              branchLine[2] = (DT) newB;
+            }
+          }
+	  
+          if(lastB == newB) {
+            safe = true;
+          }
+	  
+          lastB = newB;
+        }
+      }
+    }
+  }
+  
+  curr_branch->rendered = true;
+  curr_branch->currentX = newB;
+
+  for(ttk::LongSimplexId v : curr_branch->vertices) {
+    layout[v * 2] = (float) newB;
+    layout[v * 2 + 1] = (float)pointSequences[v];
+  }
 
   std::vector<std::pair<IT,DT>> branchOrder;
   
@@ -566,64 +619,11 @@ int ttk::PlanarGraphLayout::GenerateLayout(
   std::sort(branchOrder.begin(), branchOrder.end(), [](const std::pair<IT,DT> &left, const std::pair<IT,DT> &right) {
     return left.second > right.second;
   });
- 
+
   for(auto bo : branchOrder) {
-    GenerateLayout(bo.first, layout, branchList, pointSequences, branches, offset + 1);
-  }
-
-  IT root_branch_id = branches[curr_branch->connectedFrom];
-  const Branch<DT, IT> *root_branch = &branchList[root_branch_id];
-  
-  if(curr_branch->connectedFrom != -1) {
-    
-    IT lastB = offset;
-
-    DT branchLine[4]
-      = {(DT)root_branch->currentX, pointSequences[curr_branch->connectedFrom],
-         (DT)offset, pointSequences[curr_branch->leaf]};
-
-    bool safe = false;
-
-    while(!safe) {
-      for(size_t i = 1; i < branchList.size(); i++) {
-
-        if((IT)i != b) {
-          Branch<DT, IT> *next_branch = &branchList[i];
-          IT nroot_branch_id = branches[next_branch->connectedFrom];
-          Branch<DT, IT> *nroot_branch = &branchList[nroot_branch_id];
-
-	  if(next_branch->rendered) {
-            // minX,minY,maxX,maxY
-            DT bBox[4]
-              = {(DT)nroot_branch->currentX,
-                 pointSequences[next_branch->connectedFrom],
-                 (DT)next_branch->currentX, pointSequences[next_branch->leaf]};
-
-            // is there an intersection?
-            if(branchLine[0] <= bBox[2] && branchLine[2] >= bBox[0]
-               && branchLine[1] <= bBox[3] && branchLine[3] >= bBox[1]) {
-              offset++;
-              branchLine[2] = (DT) offset;
-            }
-          }
-
-          if(lastB == offset) {
-            safe = true;
-          }
-          lastB = offset;
-        }
-      }
-    }
+    GenerateLayout(bo.first, layout, branchList, pointSequences, branches);
   }
   
-  curr_branch->rendered = true;
-  curr_branch->currentX = offset;
-
-  for(ttk::LongSimplexId v : curr_branch->vertices) {
-    layout[v * 2] = (float) offset;
-    layout[v * 2 + 1] = (float)pointSequences[v];
-  }
-
   return 1;
 }
 
@@ -676,28 +676,23 @@ int ttk::PlanarGraphLayout::computeMergeTreeLayout(
       Branch<DT, IT> *b = &branchList[b1];
 
       if(b->leaf != -1) {
-        b->leaf = (s1 > pointSequences[(int)b->leaf]) ? v1 : b->leaf;
-        b->leaf = (s2 > pointSequences[(int)b->leaf]) ? v2 : b->leaf;
+	if(s1 > s2) {
+	  b->leaf = (s1 > pointSequences[(int)b->leaf]) ? v1 : b->leaf;
+	}
+	if(s2 > s1) {
+	  b->leaf = (s2 > pointSequences[(int)b->leaf]) ? v2 : b->leaf;
+	}
       } else {
         b->leaf = (s1 > s2) ? v1 : v2;
-      }
-
-      if(b->root != -1) {
-        b->root = (s1 < pointSequences[(int)b->root]) ? b->root : v1;
-        b->root = (s2 < pointSequences[(int)b->root]) ? b->root : v2;
-      } else {
-        b->root = (s1 < s2) ? v1 : v2;
       }
 
       b->vertices.insert(v1);
       b->vertices.insert(v2);
 
     } else {
-      // we have a branch point
       Branch<DT, IT> *branch1 = &branchList[b1];
       Branch<DT, IT> *branch2 = &branchList[b2];
 
-      // branch from right to left
       if(s2 >= s1) {
         branch1->branchPoints.push_back(b2);
         branch2->connectedFrom = v1;
@@ -711,7 +706,7 @@ int ttk::PlanarGraphLayout::computeMergeTreeLayout(
     }
   }
 
-  GenerateLayout((IT)0, layout, branchList, pointSequences, branches, (IT)0);
+  GenerateLayout((IT)0, layout, branchList, pointSequences, branches);
 
   this->printMsg(msg, 1, timer.getElapsedTime());
 
