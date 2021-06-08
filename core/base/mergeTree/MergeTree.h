@@ -12,7 +12,7 @@
 // for numerical perturbation
 #include <boost/math/special_functions/next.hpp>
 
-namespace ttk {
+namespace ttk::mt {
 
   class MergeTree : virtual public Debug {
 

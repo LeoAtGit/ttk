@@ -10,9 +10,8 @@
 #include <MergeTree.h>
 
 class TTKMERGETREE_EXPORT ttkMergeTree
-  : public ttkAlgorithm // we inherit from the generic ttkAlgorithm class
-  ,
-    public ttk::MergeTree // and we inherit from the base class
+  : public ttkAlgorithm
+  , public ttk::mt::MergeTree
 {
 private:
   int Type{0};

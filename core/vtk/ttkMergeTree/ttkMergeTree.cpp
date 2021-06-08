@@ -87,8 +87,8 @@ int ttkMergeTree::RequestData(vtkInformation *request,
   segmentationIds->SetNumberOfTuples(nVertices);
 
   // Compute merge tree segmentation
-  std::vector<ttk::Propagation<ttk::SimplexId>> propagations;
-  std::vector<const ttk::Propagation<ttk::SimplexId> *> sortedPropagations;
+  std::vector<ttk::mt::Propagation<ttk::SimplexId>> propagations;
+  std::vector<const ttk::mt::Propagation<ttk::SimplexId> *> sortedPropagations;
   {
     int status = 0;
     ttkTypeMacroT(
