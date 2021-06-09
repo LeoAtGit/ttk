@@ -125,31 +125,7 @@ calculator1.ResultArrayName = 'Mask'
 calculator1.Function = 'Field>0.7'
 calculator1.ResultArrayType = 'Signed Char'
 
-# create a new 'TTK ConnectedComponents'
-#tTKConnectedComponents1 = TTKConnectedComponents(Segmentation=calculator1)
-#tTKConnectedComponents1.FeatureMask = ['POINTS', 'Mask']
-
-# find source
-#tTKConnectedComponents1_1 = FindSource('TTKConnectedComponents1')
-
 # create a new 'TTK BlockAggregator'
-#tTKBlockAggregator2 = TTKBlockAggregator(Input=OutputPort(tTKConnectedComponents1_1,1))
-
-# create a new 'TTK MorphologicalOperators'
-#tTKMorphologicalOperators1 = TTKMorphologicalOperators(Input=tTKConnectedComponents1)
-#tTKMorphologicalOperators1.Labels = ['POINTS', 'ComponentId']
-#tTKMorphologicalOperators1.Iterations = 0
-#tTKMorphologicalOperators1.UseGrayscaleOperators = 1
-
-# create a new 'TTK CorrespondenceByOverlap'
-#tTKCorrespondenceByOverlap1 = TTKCorrespondenceByOverlap(Segmentations=tTKMorphologicalOperators1)
-#tTKCorrespondenceByOverlap1.Labels = ['POINTS', 'ComponentId']
-
-# create a new 'TTK BlockAggregator'
-#tTKBlockAggregator1 = TTKBlockAggregator(Input=tTKCorrespondenceByOverlap1)
-
-# create a new 'TTK BlockAggregator'
-#tTKBlockAggregator3 = TTKBlockAggregator(Input=[tTKBlockAggregator1, tTKBlockAggregator2, tTKBlockAggregator4, tTKBlockAggregator5, ])
 tTKBlockAggregator3 = TTKBlockAggregator(Input=[tTKBlockAggregator4, tTKBlockAggregator5, ])
 tTKBlockAggregator3.ForceReset = 1
 tTKBlockAggregator3.FlattenInput = 0
@@ -157,20 +133,6 @@ tTKBlockAggregator3.FlattenInput = 0
 # create a new 'TTK EndFor'
 tTKEndFor1 = TTKEndFor(Data=tTKBlockAggregator3,
     For=tTKForEach1)
-
-# create a new 'TTK Extract'
-#tTKExtract2 = TTKExtract(Input=tTKEndFor1)
-#tTKExtract2.Expression = '0'
-#tTKExtract2.OutputType = 'vtkMultiBlockDataSet'
-#tTKExtract2.ImageExtent = [0, 84, 0, 84, 0, 0]
-#tTKExtract2.InputArray = ['POINTS', 'Label']
-
-# create a new 'TTK Extract'
-#tTKExtract3 = TTKExtract(Input=tTKEndFor1)
-#tTKExtract3.Expression = '1'
-#tTKExtract3.OutputType = 'vtkMultiBlockDataSet'
-#tTKExtract3.ImageExtent = [0, 84, 0, 84, 0, 0]
-#tTKExtract3.InputArray = ['POINTS', 'Label']
 
 # create a new 'TTK Extract'
 tTKExtract4 = TTKExtract(Input=tTKEndFor1)
@@ -182,17 +144,6 @@ tTKExtract5 = TTKExtract(Input=tTKEndFor1)
 tTKExtract5.Expression = '1'
 tTKExtract5.OutputType = 'vtkMultiBlockDataSet'
 
-# create a new 'Threshold'
-#threshold1 = Threshold(Input=tTKExtract3)
-#threshold1.Scalars = ['POINTS', 'Size']
-#threshold1.ThresholdRange = [3.0, 877.0]
-
-# create a new 'TTK TrackingGraph'
-#tTKTrackingGraph1 = TTKTrackingGraph(Correspondences=tTKExtract2,
-#    Features=threshold1)
-#tTKTrackingGraph1.Matrix = ['POINTS', 'Overlap']
-#tTKTrackingGraph1.Labels = ['POINTS', 'ComponentId']
-
 # create a new 'TTK TrackingGraph'
 tTKTrackingGraph2 = TTKTrackingGraph(Correspondences=tTKExtract4,
     Features=tTKExtract5)
@@ -200,9 +151,6 @@ tTKTrackingGraph2.Matrix = ['POINTS', 'LiftedWassersteinDistance']
 tTKTrackingGraph2.Labels = ['POINTS', 'PairId']
 
 # create a new 'Threshold'
-#threshold2 = Threshold(Input=tTKTrackingGraph1)
-#threshold2.Scalars = ['POINTS', 'Size']
-#threshold2.ThresholdRange = [0.0, 877.0]
 threshold2 = Threshold(Input=tTKTrackingGraph2)
 threshold2.Scalars = ['POINTS', 'Persistence']
 threshold2.ThresholdRange = [0.19, 0.91]

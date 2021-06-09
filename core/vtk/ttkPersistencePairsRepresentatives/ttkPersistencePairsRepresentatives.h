@@ -7,7 +7,7 @@
 ///
 /// This filter consumes a ttkPersistenceDiagram, outputs a vtkPointSet a domain-embedded point
 /// (x,y,z) for each input persistence pair.
-/// The order in which points are laid out must be the same as ttkCorrespondenceByPersistencePairs.
+/// The order in which points are laid out must be the same as in ttkCorrespondenceByPersistencePairs.
 ///
 
 #pragma once
@@ -23,12 +23,7 @@
 class TTKPERSISTENCEPAIRSREPRESENTATIVES_EXPORT ttkPersistencePairsRepresentatives
   : public ttkAlgorithm {
 
-private:
-  //bool UseSeedIdAsComponentId{true};
-
 public:
-  //vtkSetMacro(UseSeedIdAsComponentId, bool);
-  //vtkGetMacro(UseSeedIdAsComponentId, bool);
 
   static ttkPersistencePairsRepresentatives *New();
   vtkTypeMacro(ttkPersistencePairsRepresentatives, ttkAlgorithm);

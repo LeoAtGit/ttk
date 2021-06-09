@@ -18,34 +18,30 @@
 
 vtkStandardNewMacro(ttkPersistencePairsRepresentatives);
 
-ttkPersistencePairsRepresentatives::ttkPersistencePairsRepresentatives() {
+ttkPersistencePairsRepresentatives::ttkPersistencePairsRepresentatives()
+{
   this->SetNumberOfInputPorts(1);
   this->SetNumberOfOutputPorts(1);
 }
 
-ttkPersistencePairsRepresentatives::~ttkPersistencePairsRepresentatives() {
-}
+ttkPersistencePairsRepresentatives::~ttkPersistencePairsRepresentatives()
+{}
 
-int ttkPersistencePairsRepresentatives::FillInputPortInformation(int port,
-                                                     vtkInformation *info) {
+int ttkPersistencePairsRepresentatives::FillInputPortInformation(
+    int port,
+    vtkInformation *info)
+{
   if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkUnstructuredGrid");
     return 1;
   }
-  //else if(port == 1) {
-  //  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
-  //  info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 1);
-  //  return 1;
-  //}
   return 0;
 }
 
-int ttkPersistencePairsRepresentatives::FillOutputPortInformation(int port,
-                                                      vtkInformation *info) {
-  //if(port == 0) {
-  //  info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
-  //  return 1;
-  //} else
+int ttkPersistencePairsRepresentatives::FillOutputPortInformation(
+    int port,
+    vtkInformation *info)
+{
   if(port == 0) {
     info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
     return 1;
@@ -53,61 +49,15 @@ int ttkPersistencePairsRepresentatives::FillOutputPortInformation(int port,
   return 0;
 }
 
-int ttkPersistencePairsRepresentatives::RequestData(vtkInformation *request,
-                                        vtkInformationVector **inputVector,
-                                        vtkInformationVector *outputVector) {
-
+int ttkPersistencePairsRepresentatives::RequestData(
+    vtkInformation *request,
+    vtkInformationVector **inputVector,
+    vtkInformationVector *outputVector)
+{
   // Fetch Input Data
   auto inputDataSet = vtkUnstructuredGrid::GetData(inputVector[0]);
   if(!inputDataSet)
     return 0;
-    
-  //vtkUnstructuredGrid *p0 = vtkUnstructuredGrid::SafeDownCast(inputDataObjects0);
-
-  //auto inputArray = this->GetInputArrayToProcess(0, inputVector);
-  //if(!inputArray) {
-  //  this->printErr("Unable to retrieve input array.");
-  //  return 0;
-  //}
-
-  //if(this->GetInputArrayAssociation(0, inputVector) != 0) {
-  //  this->printErr("Input array needs to be a point data array.");
-  //  return 0;
-  //}
-  //if(inputArray->GetNumberOfComponents() != 1) {
-  //  this->printErr("Input array needs to be a scalar array.");
-  //  return 0;
-  //}
-
-  //auto triangulation = ttkAlgorithm::GetTriangulation(inputDataSet);
-  //if(!triangulation)
-  //  return 0;
-
-  // Allocate Output Label Data
-  //auto outputArray = vtkSmartPointer<vtkIntArray>::New();
-  //outputArray->SetName("ComponentId");
-  //outputArray->SetNumberOfTuples(inputArray->GetNumberOfTuples());
-
-  // Compute Connected Components
-  //std::vector<ttk::ConnectedComponents::Component> components;
-  //{
-
-    //this->preconditionTriangulation(triangulation);
-
-    //int status = 0;
-    //ttkVtkTemplateMacro(
-    //  inputArray->GetDataType(), triangulation->getType(),
-    //  (status = this->computeConnectedComponents<VTK_TT, TTK_TT>(
-    //     components,
-    //     ttkUtils::GetPointer<int>(outputArray),
-    //     ttkUtils::GetPointer<const VTK_TT>(inputArray),
-    //     static_cast<const TTK_TT *>(triangulation->getData()),
-    //     this->UseSeedIdAsComponentId
-    //   )));
-
-    //if(status != 1)
-    //  return 0;
-  //}
 
   // get persistence diagram
   auto coords0 = inputDataSet->GetPoints()->GetData();
@@ -129,17 +79,8 @@ int ttkPersistencePairsRepresentatives::RequestData(vtkInformation *request,
     return 0;
   }
 
-  // Segmentation Output
-  //{
-  //  auto outputDataSet = vtkDataSet::GetData(outputVector, 0);
-  //  outputDataSet->ShallowCopy(inputDataSet);
-  //  outputDataSet->GetPointData()->AddArray(outputArray);
-  //}
-
-  // Components Output
   // PD Output
   {
-    // const int nComponents = components.size();
     const int nComponents = inputDiagram.size();
     auto outputComponents = vtkPolyData::GetData(outputVector, 0); // 1);
 
@@ -182,15 +123,13 @@ int ttkPersistencePairsRepresentatives::RequestData(vtkInformation *request,
           
         float v1 = (float) (t1Max ? std::get<10> (t) : t1Min ? std::get<6>(t) : 0);
 
-        //const auto &c = components[i];
-        
-        pointsData[j++] = x1; // c.center[0];
-        pointsData[j++] = y1; // c.center[1];
-        pointsData[j++] = z1; // c.center[2];
+        pointsData[j++] = x1;
+        pointsData[j++] = y1;
+        pointsData[j++] = z1;
 
         persistenceArrayData[i] = std::get<4>(t);
         valueArrayData[i] = v1;
-        idArrayData[i] = i; // this->UseSeedIdAsComponentId ? c.seed : i;
+        idArrayData[i] = i;
       }
 
       outputComponents->SetPoints(points);
@@ -219,9 +158,6 @@ int ttkPersistencePairsRepresentatives::RequestData(vtkInformation *request,
 
       outputComponents->SetVerts(cellArray);
     }
-
-    // Copy Field Data
-    //outputComponents->GetFieldData()->ShallowCopy(inputDataSet->GetFieldData());
   }
 
   // return success
@@ -245,17 +181,11 @@ int ttkPersistencePairsRepresentatives::getDiagram(
 
   auto vertexIdentifierScalars = ttkSimplexIdTypeArray::SafeDownCast(
     pointData->GetArray(ttk::VertexScalarFieldName));
-
   auto nodeTypeScalars = vtkIntArray::SafeDownCast(pointData->GetArray("CriticalType"));
-
   auto pairIdentifierScalars = ttkSimplexIdTypeArray::SafeDownCast(cellData->GetArray("PairIdentifier"));
-
   auto extremumIndexScalars = vtkIntArray::SafeDownCast(cellData->GetArray("PairType"));
-
   auto persistenceScalars = vtkDoubleArray::SafeDownCast(cellData->GetArray("Persistence"));
-
   auto birthScalars = vtkDoubleArray::SafeDownCast(pointData->GetArray("Birth"));
-
   auto deathScalars = vtkDoubleArray::SafeDownCast(pointData->GetArray("Death"));
 
   vtkPoints *points = CTPersistenceDiagram_->GetPoints();
@@ -276,10 +206,6 @@ int ttkPersistencePairsRepresentatives::getDiagram(
     return -2;
   bool is2D = !deathScalars && !birthScalars;
   bool is3D = !is2D;
-  //if(Is3D && !is3D)
-  //  Is3D = false;
-  //if(!Is3D && diagramNumber == 1)
-  //  s = (float)spacing;
 
   if(pairingsSize < 1 || !vertexIdentifierScalars || !nodeTypeScalars
      || !persistenceScalars || !extremumIndexScalars || !points)
