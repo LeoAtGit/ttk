@@ -157,25 +157,65 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
           continue;
       }
 
-      correspondanceMatrix[n2 * nFeatures0 + n1] = (float) std::get<2>(t);
+      correspondanceMatrix[n2 * nFeatures0 + n1] = (float) 1; // std::get<2>(t);
     }
   }
   
   // add index label maps
-  int a=0;
-  auto fd = correspondences->GetFieldData();
-  for (const auto it : std::vector<vtkUnstructuredGrid*> ({p0, p1})) // vtkPointSet
-  {
-    auto labels = this->GetInputArrayToProcess(0, it);
-    if(!labels) {
-      this->printErr("Unable to retrieve labels.");
-      return -1;
-    }
-    auto array = vtkSmartPointer<vtkDataArray>::Take( labels->NewInstance() );
-    array->ShallowCopy(labels);
-    array->SetName(("IndexLabelMap"+std::to_string(a++)).data());
+  //int a=0;
+  //auto fd = correspondences->GetFieldData();
+  //for (const auto it : std::vector<vtkUnstructuredGrid*> ({p0, p1})) // vtkPointSet
+  //{
+  //  auto labels = this->GetInputArrayToProcess(0, it);
+  //  if(!labels) {
+  //    this->printErr("Unable to retrieve labels.");
+  //    return -1;
+  //  }
+  //  auto array = vtkSmartPointer<vtkDataArray>::Take( labels->NewInstance() );
+  //  array->ShallowCopy(labels);
+  //  array->SetName(("IndexLabelMap"+std::to_string(a++)).data());
 
-    fd->AddArray(array);
+  //  fd->AddArray(array);
+  //}
+  
+  // add index label maps
+  using LabelIndexMap = std::unordered_map<long long,long long>;
+  LabelIndexMap labelsIndexMap0;
+  LabelIndexMap labelsIndexMap1;
+  for(auto& it : std::vector<std::pair<std::vector<dT>*,LabelIndexMap*>>(
+      {{&CTDiagram0,//labels0,
+      &labelsIndexMap0},
+       {&CTDiagram1,//labels1,
+      &labelsIndexMap1}
+      }))
+  {
+      long long labelIndex = 0;
+      const int nLabels = it.first->size();
+      // there are no gaps in indices in the Persistence Diagrams pipleine
+      for (int i = 0; i < nLabels; ++i)
+      {
+          //const auto& l = get<>
+          it.second->insert({i, labelIndex++});
+      }
+
+      //status = this->computeLabelIndexMap<VTK_TT>(
+      //  *it.second,
+      //  ttkUtils::GetPointer<const VTK_TT>(it.first),
+      //  nVertices
+      //);
+      //if(!status) return 0;
+  }
+
+  int a=0;
+  for(const auto it : std::vector<LabelIndexMap*>({&labelsIndexMap0,&labelsIndexMap1})){
+    auto array = vtkSmartPointer<vtkIntArray>::New();
+    array->SetName(std::string("IndexLabelMap"+std::to_string(a++)).data());
+    array->SetNumberOfTuples(it->size());
+    auto arrayData = ttkUtils::GetPointer<int>(array);
+    for(const auto& it2: *it)
+      arrayData[it2.second] = it2.first;
+
+    correspondences->GetFieldData()->AddArray(array);
   }
 
   return 1;
