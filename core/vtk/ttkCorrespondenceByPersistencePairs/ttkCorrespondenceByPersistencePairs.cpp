@@ -157,7 +157,7 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
           continue;
       }
 
-      correspondanceMatrix[n2 * nFeatures0 + n1] = 1.;
+      correspondanceMatrix[n2 * nFeatures0 + n1] = (float) std::get<2>(t);
     }
   }
   
