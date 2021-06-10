@@ -1,0 +1,8 @@
+NAME
+  ttkPersistencePairsRepresentatives
+SOURCES
+  ttkPersistencePairsRepresentatives.cpp
+HEADERS
+  ttkPersistencePairsRepresentatives.h
+DEPENDS
+  ttkAlgorithm

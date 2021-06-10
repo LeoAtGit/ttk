@@ -1,19 +1,19 @@
-/// TODO 1: Provide your information
 ///
 /// \ingroup base
 /// \class ttk::CorrespondenceByPersistencePairs
-/// \author Your Name Here <Your Email Address Here>
-/// \date The Date Here.
+/// \author Maxime Soler
+/// \date 09.06.2021
 ///
-/// This module defines the %CorrespondenceByPersistencePairs class that computes for each
-/// vertex of a triangulation the average scalar value of itself and its direct
-/// neighbors.
+/// \brief Computes a correspondence matrix from persistence diagram matchings.
+/// 
+/// This module defines the CorrespondenceByPersistencePairs class that computes 
+/// the correspondance matrix from the output of a Wasserstein-based matching
+/// between persistence diagrams. 1 row = 1 persistence pair in diagram 1, 
+/// 1 column = 1 persistence pair in diagram 2, 
+/// value = 0 => no matching
+/// value > 0 => matching.
 ///
-/// \b Related \b publication: \n
-/// 'CorrespondenceByPersistencePairs'
-/// Maxime Soler, Jonas Lukasczyk and Julien Tierny.
-/// TTK Publications.
-/// 2020.
+/// Maxime Soler, Jonas Lukasczyk, Julien Tierny, 2020.
 ///
 
 #pragma once

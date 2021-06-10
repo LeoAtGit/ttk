@@ -41,7 +41,7 @@ Type:
             </PropertyGroup>
 
             <Hints>
-                <ShowInMenu category="TTK - Time-varying Scalar Data" />
+                <ShowInMenu category="TTK - Time-Varying Scalar Data" />
             </Hints>
         </SourceProxy>
     </ProxyGroup>

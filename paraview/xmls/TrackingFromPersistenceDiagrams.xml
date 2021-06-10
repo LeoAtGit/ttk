@@ -232,7 +232,7 @@ the extremum</Documentation>
       <OutputPort name="Persistence Mesh" index="2" id="port3"/>
 
       <Hints>
-        <ShowInMenu category="TTK - Time-varying Scalar Data" />
+        <ShowInMenu category="TTK - Time-Varying Scalar Data" />
       </Hints>
     </SourceProxy>
   </ProxyGroup>
