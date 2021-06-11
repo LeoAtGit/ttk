@@ -1,4 +1,4 @@
-#include <ttkCinemaDarkroomRendering.h>
+#include <ttkCinemaDarkroomShading.h>
 
 #include <vtkInformation.h>
 #include <vtkObjectFactory.h>
@@ -8,24 +8,25 @@
 #include <vtkDataArray.h>
 #include <vtkPointData.h>
 
+#include <vtkPassThrough.h>
 #include <ttkCinemaDarkroomColorMapping.h>
 #include <ttkCinemaDarkroomSSSAO.h>
 #include <ttkCinemaDarkroomIBS.h>
 #include <ttkCinemaDarkroomSSDoF.h>
 #include <ttkCinemaDarkroomFXAA.h>
 
-vtkStandardNewMacro(ttkCinemaDarkroomRendering);
+vtkStandardNewMacro(ttkCinemaDarkroomShading);
 
-ttkCinemaDarkroomRendering::ttkCinemaDarkroomRendering() : ttkAlgorithm() {
-  this->setDebugMsgPrefix("CinemaDarkroomRendering");
+ttkCinemaDarkroomShading::ttkCinemaDarkroomShading() : ttkAlgorithm() {
+  this->setDebugMsgPrefix("CinemaDarkroomShading");
   this->SetNumberOfInputPorts(1);
   this->SetNumberOfOutputPorts(1);
 }
 
-ttkCinemaDarkroomRendering::~ttkCinemaDarkroomRendering() {
+ttkCinemaDarkroomShading::~ttkCinemaDarkroomShading() {
 }
 
-int ttkCinemaDarkroomRendering::FillInputPortInformation(int port, vtkInformation *info) {
+int ttkCinemaDarkroomShading::FillInputPortInformation(int port, vtkInformation *info) {
   if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
     info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkMultiBlockDataSet");
@@ -34,7 +35,7 @@ int ttkCinemaDarkroomRendering::FillInputPortInformation(int port, vtkInformatio
   return 0;
 }
 
-int ttkCinemaDarkroomRendering::FillOutputPortInformation(int port, vtkInformation *info) {
+int ttkCinemaDarkroomShading::FillOutputPortInformation(int port, vtkInformation *info) {
   if(port == 0) {
     info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
     return 1;
@@ -42,7 +43,7 @@ int ttkCinemaDarkroomRendering::FillOutputPortInformation(int port, vtkInformati
   return 0;
 }
 
-int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
+int ttkCinemaDarkroomShading::RequestData(vtkInformation *request,
                                       vtkInformationVector **inputVector,
                                       vtkInformationVector *outputVector) {
 
@@ -54,35 +55,57 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
   else
     inputAsMB->SetBlock(0,input);
 
+  const size_t nInputImages = inputAsMB->GetNumberOfBlocks();
+  if(nInputImages<1)
+    return this->printWrn("Empty Input Image Set");
+  auto firstImage = vtkImageData::SafeDownCast(inputAsMB->GetBlock(0));
+  if(!firstImage)
+    return !this->printErr("Input contains non-vtkImageData Objects.");
+  auto firstImagePD = firstImage->GetPointData();
+
   ttk::Timer timer;
-  std::string msg = "CM -> SSSAO -> IBS";
-  if(this->UseSSDoF) msg += " -> SSDoF";
-  if(this->UseFXAA) msg += " -> FXAA";
-  this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
+  std::string msg = "";
 
   // build pipeline
+  auto passThrough = vtkSmartPointer<vtkPassThrough>::New();
   auto cm = vtkSmartPointer<ttkCinemaDarkroomColorMapping>::New();
   auto sssao = vtkSmartPointer<ttkCinemaDarkroomSSSAO>::New();
   auto ibs = vtkSmartPointer<ttkCinemaDarkroomIBS>::New();
   auto dof = vtkSmartPointer<ttkCinemaDarkroomSSDoF>::New();
   auto fxaa = vtkSmartPointer<ttkCinemaDarkroomFXAA>::New();
-  ttkAlgorithm* lastUsed;
+  vtkAlgorithm* lastUsed = passThrough;
   std::string lastResult = "";
 
-  // always perform color mapping
+  // initialize pipeline
   {
-    cm->SetInputArrayToProcess(0,this->GetInputArrayInformation(0));
-    cm->SyncColorMapWithParaView();
-    cm->SetManualColorMap(this->ManualColorMap);
-    cm->SetColorMap(-2);
-    lastUsed = cm;
+    if(!firstImagePD->HasArray("Diffuse")){
+      cm->SetInputConnection(0, lastUsed->GetOutputPort(0));
+      cm->SetInputArrayToProcess(0,this->GetInputArrayInformation(0));
 
-    sssao->SetInputConnection(0, lastUsed->GetOutputPort(0));
-    sssao->SetInputArrayToProcess(0,0,0,0,"Depth");
-    sssao->SetSamples(this->Samples);
-    sssao->SetRadius(this->Radius);
-    sssao->SetDiffArea(this->DiffArea);
-    lastUsed = sssao;
+      if(this->ColorMap==-3){
+        cm->SetColorMap(-2);
+        cm->SyncColorMapsWithParaView();
+      } else
+        cm->SetColorMap(this->ColorMap);
+
+      cm->SetColorMapData(this->ColorMapData);
+      cm->SetSingleColor(this->SingleColor);
+      cm->SetNANColor(this->NANColor);
+      cm->SetScalarRange(this->ScalarRange);
+
+      lastUsed = cm;
+      msg += " -> CM";
+    }
+
+    if(!firstImagePD->HasArray("SSSAO")){
+      sssao->SetInputConnection(0, lastUsed->GetOutputPort(0));
+      sssao->SetInputArrayToProcess(0,0,0,0,"Depth");
+      sssao->SetSamples(this->Samples);
+      sssao->SetRadius(this->Radius);
+      sssao->SetDiffArea(this->DiffArea);
+      lastUsed = sssao;
+      msg += " -> SSSAO";
+    }
 
     ibs->SetInputConnection(0, lastUsed->GetOutputPort(0));
     ibs->SetInputArrayToProcess(0,0,0,0,"Diffuse");
@@ -93,6 +116,7 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
     ibs->SetAmbient(this->Ambient);
     lastUsed = ibs;
     lastResult = "IBS";
+    msg += " -> IBS";
   }
 
   if(this->UseSSDoF) {
@@ -105,6 +129,7 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
     dof->SetMaxBlur(this->MaxBlur);
     lastUsed = dof;
     lastResult = "SSDoF";
+    msg += " -> SSDoF";
   }
 
   if(this->UseFXAA) {
@@ -112,17 +137,26 @@ int ttkCinemaDarkroomRendering::RequestData(vtkInformation *request,
     fxaa->SetInputArrayToProcess(0,0,0,0,lastResult.data());
     lastUsed = fxaa;
     lastResult = "FXAA";
+    msg += " -> FXAA";
   }
+  msg = "["+std::to_string(nInputImages) + "x] " + msg.substr(4);
 
-  const size_t nInputImages = inputAsMB->GetNumberOfBlocks();
+  this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
+
+  // process images
   for(size_t i=0; i<nInputImages; i++){
     auto inputImage = vtkDataSet::SafeDownCast( inputAsMB->GetBlock(i) );
-    cm->SetInputDataObject( inputImage );
+    passThrough->SetInputDataObject( inputImage );
     lastUsed->Update();
 
     auto outputImage = vtkImageData::SafeDownCast(lastUsed->GetOutputDataObject(0));
+    if(!outputImage)
+      return 0;
+
     auto array = outputImage->GetPointData()->GetArray(lastResult.data());
-    array->SetName("Rendering");
+    if(!array)
+      return 0;
+    array->SetName("Shading");
 
     auto outputImageCopy = vtkSmartPointer<vtkImageData>::New();
     outputImageCopy->ShallowCopy(inputImage);

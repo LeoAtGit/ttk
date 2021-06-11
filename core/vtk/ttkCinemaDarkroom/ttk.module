@@ -12,7 +12,7 @@ SOURCES
   ttkCinemaDarkroomColorMapping.cpp
   ttkCinemaDarkroomNoise.cpp
   ttkCinemaDarkroomColorMaps.cpp
-  ttkCinemaDarkroomRendering.cpp
+  ttkCinemaDarkroomShading.cpp
 HEADERS
   ttkCinemaDarkroomCamera.h
   ttkCinemaDarkroomShader.h
@@ -24,7 +24,7 @@ HEADERS
   ttkCinemaDarkroomCompositing.h
   ttkCinemaDarkroomColorMapping.h
   ttkCinemaDarkroomNoise.h
-  ttkCinemaDarkroomRendering.h
+  ttkCinemaDarkroomShading.h
 DEPENDS
   ttkAlgorithm
   Boost::boost

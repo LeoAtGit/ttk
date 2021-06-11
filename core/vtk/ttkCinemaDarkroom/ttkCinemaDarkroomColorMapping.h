@@ -30,28 +30,25 @@ class TTKCINEMADARKROOM_EXPORT ttkCinemaDarkroomColorMapping
 private:
   static const std::vector<std::vector<double>> ColorMaps;
 
-  bool AutoRange{true};
-  double ValueRange[2]{0, 1};
+  double ScalarRange[2]{0, 1};
   int ColorMap{0};
-  std::string ManualColorMap{""};
+  std::string ColorMapData{""};
   double SingleColor[3]{0, 0, 0};
   double NANColor[3]{0, 0, 0};
 
 public:
-  vtkSetMacro(AutoRange, bool);
-  vtkGetMacro(AutoRange, bool);
-  vtkSetVector2Macro(ValueRange, double);
-  vtkGetVector2Macro(ValueRange, double);
+  vtkSetVector2Macro(ScalarRange, double);
+  vtkGetVector2Macro(ScalarRange, double);
   vtkSetMacro(ColorMap, int);
   vtkGetMacro(ColorMap, int);
-  vtkSetMacro(ManualColorMap, const std::string &);
-  vtkGetMacro(ManualColorMap, std::string);
+  vtkSetMacro(ColorMapData, const std::string &);
+  vtkGetMacro(ColorMapData, std::string);
   vtkSetVector3Macro(NANColor, double);
   vtkGetVector3Macro(NANColor, double);
   vtkSetVector3Macro(SingleColor, double);
   vtkGetVector3Macro(SingleColor, double);
 
-  int SyncColorMapWithParaView();
+  int SyncColorMapsWithParaView();
 
   static ttkCinemaDarkroomColorMapping *New();
   vtkTypeMacro(ttkCinemaDarkroomColorMapping, ttkCinemaDarkroomShader);

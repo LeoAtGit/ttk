@@ -93,8 +93,7 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
     const double d[3]{objectBounds[1] - objectBounds[0],
                       objectBounds[3] - objectBounds[2],
                       objectBounds[5] - objectBounds[4]};
-    for(int i=0; i<6; i++)
-      std::cout<<objectBounds[i]<<std::endl;
+
     const double objectDiameter = norm(d);
 
     const double c[3]{objectBounds[0] + 0.5 * d[0],

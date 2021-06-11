@@ -138,6 +138,9 @@
 
       <DoubleVectorProperty name="NANColor" label="NAN Color" command="SetNANColor" number_of_elements="3" default_values="0 0 0" panel_widget="color_selector">
         <Documentation>The color that is used for Not-A-Number values.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" inverse="1" property="ColorMap" value="-3" />
+        </Hints>
       </DoubleVectorProperty>
 
       <DoubleVectorProperty name="SingleColor" command="SetSingleColor" number_of_elements="3" default_values="0 0 0" panel_widget="color_selector">
@@ -147,22 +150,29 @@
         </Hints>
       </DoubleVectorProperty>
 
-      <StringVectorProperty name="ManualColorMap" command="SetManualColorMap" number_of_elements="1" default_values="0,0,0,0,1,1,1,1">
+      <StringVectorProperty name="ColorMapData" command="SetColorMapData" number_of_elements="1" default_values="0,0,0,0,1,1,1,1">
         <Documentation>The manually defined color map in the from of a list of quadruples with normalized float values between 0 and 1: x0,r0,g0,b0, x1,r1,g1,b1, ...</Documentation>
         <Hints>
           <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="ColorMap" value="-2" />
         </Hints>
       </StringVectorProperty>
 
+      <DoubleVectorProperty name="ScalarRange" command="SetScalarRange" number_of_elements="2" default_values="0 1">
+        <Documentation>Range of the Scalar Values.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" inverse="1" property="ColorMap" value="-3" />
+        </Hints>
+      </DoubleVectorProperty>
 
       <PropertyGroup panel_widget="Line" label="Input Options">
         <Property name="Scalars" />
       </PropertyGroup>
       <PropertyGroup panel_widget="Line" label="Output Options">
         <Property name="ColorMap" />
-        <Property name="NANColor" />
+        <Property name="ColorMapData" />
         <Property name="SingleColor" />
-        <Property name="ManualColorMap" />
+        <Property name="NANColor" />
+        <Property name="ScalarRange" />
       </PropertyGroup>
 
       ${DEBUG_WIDGETS}
@@ -687,8 +697,10 @@
 
     <!-- ////////////////////////////////////////////////////////////////////-->
 
-    <SourceProxy name="ttkCinemaDarkroomRendering" class="ttkCinemaDarkroomRendering" label="TTK Darkroom Rendering">
+    <SourceProxy name="ttkCinemaDarkroomShading" class="ttkCinemaDarkroomShading" label="TTK Darkroom Shading">
       <Documentation long_help="Cinema Darkroom Image Based Shading" short_help="Cinema Darkroom Image Based Shading">
+        This filter is a combination of the ttkCinemaDarkroomColorMapping, ttkCinemaDarkroomSSSAO, ttkCinemaDarkroomIBS,a nd ttkCinemaDarkroomFXAA shader.
+
         "Cinema Darkroom: A Deferred Rendering Framework for Large-Scale Datasets".
         J. Lukasczyk, C. Garth, M. Larsen, W. Engelke, I. Hotz, D. Rogers, J. Ahrens, and R. Maciejewski.
         IEEE 10th Symposium on Large Data Analysis and Visualization (LDAV). 2020.
@@ -706,7 +718,7 @@
         <Documentation>A vtkImageData object.</Documentation>
       </InputProperty>
 
-      <StringVectorProperty name="Scalar" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
+      <StringVectorProperty name="Scalars" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
         <ArrayListDomain attribute_type="Scalars" name="array_list">
           <RequiredProperties>
             <Property function="Input" name="Input" />
@@ -715,10 +727,46 @@
         <Documentation>The array that contains scalar values.</Documentation>
       </StringVectorProperty>
 
-      <StringVectorProperty name="ManualColorMap" command="SetManualColorMap" number_of_elements="1" default_values="0,0,0,0,1,1,1,1">
+      <!-- Color Mapping -->
+      <IntVectorProperty name="ColorMap" command="SetColorMap" number_of_elements="1" default_values="-3">
+        <EnumerationDomain name="enum">
+          <Entry value="-3" text="ParaView" />
+          <Entry value="-2" text="Manual" />
+          <Entry value="-1" text="Single" />
+          <Entry value="0" text="R2B_EX" /><Entry value="1" text="Accent" /><Entry value="2" text="Blues" /><Entry value="3" text="BrBG" /><Entry value="4" text="BuGn" /><Entry value="5" text="BuPu" /><Entry value="6" text="Dark2" /><Entry value="7" text="GnBu" /><Entry value="8" text="Greens" /><Entry value="9" text="Greys" /><Entry value="10" text="OrRd" /><Entry value="11" text="Oranges" /><Entry value="12" text="PRGn" /><Entry value="13" text="Paired" /><Entry value="14" text="Pastel1" /><Entry value="15" text="Pastel2" /><Entry value="16" text="PiYG" /><Entry value="17" text="PuBu" /><Entry value="18" text="PuBuGn" /><Entry value="19" text="PuOr" /><Entry value="20" text="PuRd" /><Entry value="21" text="Purples" /><Entry value="22" text="RdBu" /><Entry value="23" text="RdGy" /><Entry value="24" text="RdPu" /><Entry value="25" text="RdYlBu" /><Entry value="26" text="RdYlGn" /><Entry value="27" text="Reds" /><Entry value="28" text="Set1" /><Entry value="29" text="Set2" /><Entry value="30" text="Set3" /><Entry value="31" text="Spectral" /><Entry value="32" text="YlGn" /><Entry value="33" text="YlGnBu" /><Entry value="34" text="YlOrBr" /><Entry value="35" text="YlOrRd" /><Entry value="36" text="autumn" /><Entry value="37" text="binary" /><Entry value="38" text="bone" /><Entry value="39" text="cool" /><Entry value="40" text="copper" /><Entry value="41" text="flag" /><Entry value="42" text="gist_earth" /><Entry value="43" text="gist_gray" /><Entry value="44" text="gist_heat" /><Entry value="45" text="gist_ncar" /><Entry value="46" text="gist_rainbow" /><Entry value="47" text="gist_stern" /><Entry value="48" text="gist_yarg" /><Entry value="49" text="gray" /><Entry value="50" text="hot" />
+        </EnumerationDomain>
+        <Documentation>This option controls if the filter uses a single color, a manually defined color map, or any predefined color map for the mapping.</Documentation>
+      </IntVectorProperty>
+
+      <DoubleVectorProperty name="NANColor" label="NAN Color" command="SetNANColor" number_of_elements="3" default_values="0 0 0" panel_widget="color_selector">
+        <Documentation>The color that is used for Not-A-Number values.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" inverse="1" property="ColorMap" value="-3" />
+        </Hints>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="SingleColor" command="SetSingleColor" number_of_elements="3" default_values="0 0 0" panel_widget="color_selector">
+        <Documentation>The color that is going to be used for fixed color mapping.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="ColorMap" value="-1" />
+        </Hints>
+      </DoubleVectorProperty>
+
+      <StringVectorProperty name="ColorMapData" command="SetColorMapData" number_of_elements="1" default_values="0,0,0,0,1,1,1,1">
         <Documentation>The manually defined color map in the from of a list of quadruples with normalized float values between 0 and 1: x0,r0,g0,b0, x1,r1,g1,b1, ...</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="ColorMap" value="-2" />
+        </Hints>
       </StringVectorProperty>
 
+      <DoubleVectorProperty name="ScalarRange" command="SetScalarRange" number_of_elements="2" default_values="0 1">
+        <Documentation>Range of the Scalar Values.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" inverse="1" property="ColorMap" value="-3" />
+        </Hints>
+      </DoubleVectorProperty>
+
+      <!--SSSAO-->
       <IntVectorProperty name="Samples" command="SetSamples" number_of_elements="1" default_values="32">
         <IntRangeDomain name="range" min="1" max="1000" />
         <Documentation>Number of depth samples.</Documentation>
@@ -734,6 +782,7 @@
         <Documentation>Factor that controls self-shadowing.</Documentation>
       </DoubleVectorProperty>
 
+      <!--IBS-->
       <DoubleVectorProperty name="Strength" command="SetStrength" number_of_elements="1" default_values="1">
         <DoubleRangeDomain name="range" min="0" max="10000" />
         <Documentation>Strength of the silhouette effect.</Documentation>
@@ -788,13 +837,21 @@
       </DoubleVectorProperty>
 
       <!-- FXAA Parameters -->
-      <IntVectorProperty name="UseFXAA" command="SetUseFXAA" number_of_elements="1" default_values="1">
+      <IntVectorProperty name="UseFXAA" label="Use FXAA" command="SetUseFXAA" number_of_elements="1" default_values="1">
         <BooleanDomain name="bool" />
         <Documentation>Enables/Disables Fast Approximate Anti-Aliasing.</Documentation>
       </IntVectorProperty>
 
       <PropertyGroup panel_widget="Line" label="Input Options">
-        <Property name="Scalar" />
+        <Property name="Scalars" />
+      </PropertyGroup>
+
+      <PropertyGroup panel_widget="Line" label="Color Mapping">
+        <Property name="ColorMap" />
+        <Property name="ColorMapData" />
+        <Property name="SingleColor" />
+        <Property name="NANColor" />
+        <Property name="ScalarRange" />
       </PropertyGroup>
 
       <PropertyGroup panel_widget="Line" label="SSSAO + IBS Parameters">
@@ -804,6 +861,7 @@
         <Property name="Strength" />
         <Property name="Luminance" />
         <Property name="Ambient" />
+        <Property name="UseFXAA" />
       </PropertyGroup>
 
       <PropertyGroup panel_widget="Line" label="DoF Parameters">
@@ -812,10 +870,6 @@
         <Property name="Aperture" />
         <Property name="FocalDepth" />
         <Property name="MaxBlur" />
-      </PropertyGroup>
-
-      <PropertyGroup panel_widget="Line" label="FXAA Parameters">
-        <Property name="UseFXAA" />
       </PropertyGroup>
 
       ${DEBUG_WIDGETS}

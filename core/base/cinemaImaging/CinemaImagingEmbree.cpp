@@ -139,7 +139,7 @@ int ttk::CinemaImagingEmbree::renderImage(
         rayhit.ray.dir_z = camDir[2];
 
         // compute hit
-        rayhit.ray.tnear = 0.01;
+        rayhit.ray.tnear = 0;
         rayhit.ray.tfar = INFINITY;
         rayhit.ray.mask = 0;
         rayhit.ray.flags = 0;
@@ -186,7 +186,7 @@ int ttk::CinemaImagingEmbree::renderImage(
         rayhit.ray.dir_z = camDir[2] + u * camRight[2] + v * camUpTrue[2];
 
         // compute hit
-        rayhit.ray.tnear = 0.01;
+        rayhit.ray.tnear = 0;
         rayhit.ray.tfar = INFINITY;
         rayhit.ray.mask = 0;
         rayhit.ray.flags = 0;

@@ -1,7 +1,7 @@
 /// \ingroup vtk
-/// \class ttkCinemaDarkroomIBS
-/// \author Jonas Lukasczyk <jl@jluk.de>
-/// \date 01.11.2020
+/// \class ttkCinemaDarkroomShading
+/// \author Rosty Hnatyshyn <rostyslav.hnatyshyn@gmail.com> and Jonas Lukasczyk <jl@jluk.de>
+/// \date 01.06.2021
 ///
 /// \brief Image Based Shading
 ///
@@ -9,10 +9,10 @@
 /// \param Output vtkImageData.
 ///
 /// \b Related \b Publication:
-/// "Dynamic Nested Tracking Graphs".
-/// Jonas Lukasczyk, Christoph Garth, Gunther H. Weber, Tim Biedert, Ross
-/// Maciejewski, Heike Leitte. IEEE Transactions on Visualization and Computer
-/// Graphics. 2019
+/// "Cinema Darkroom: A Deferred Rendering Framework for Large-Scale Datasets".
+/// J. Lukasczyk, C. Garth, M. Larsen, W. Engelke, I. Hotz, D. Rogers, J.
+/// Ahrens, and R. Maciejewski. IEEE 10th Symposium on Large Data Analysis and
+/// Visualization (LDAV), 2020.
 ///
 /// \sa ttkCinemaDarkroomShader
 
@@ -22,11 +22,15 @@
 #include <ttkCinemaDarkroomModule.h>
 #include <ttkAlgorithm.h>
 
-class TTKCINEMADARKROOM_EXPORT ttkCinemaDarkroomRendering
+class TTKCINEMADARKROOM_EXPORT ttkCinemaDarkroomShading
   : public ttkAlgorithm {
 private:
   // CM
-  std::string ManualColorMap{""};
+  double ScalarRange[2]{0, 1};
+  int ColorMap{0};
+  std::string ColorMapData{""};
+  double SingleColor[3]{0, 0, 0};
+  double NANColor[3]{0, 0, 0};
 
   //SSSAO
   int Samples{1};
@@ -50,8 +54,16 @@ private:
 
 public:
   // CM
-  vtkSetMacro(ManualColorMap, const std::string &);
-  vtkGetMacro(ManualColorMap, std::string);
+  vtkSetVector2Macro(ScalarRange, double);
+  vtkGetVector2Macro(ScalarRange, double);
+  vtkSetMacro(ColorMap, int);
+  vtkGetMacro(ColorMap, int);
+  vtkSetMacro(ColorMapData, const std::string &);
+  vtkGetMacro(ColorMapData, std::string);
+  vtkSetVector3Macro(NANColor, double);
+  vtkGetVector3Macro(NANColor, double);
+  vtkSetVector3Macro(SingleColor, double);
+  vtkGetVector3Macro(SingleColor, double);
 
   //SSSAO
   vtkSetMacro(Samples, int);
@@ -85,12 +97,12 @@ public:
   vtkSetMacro(UseFXAA, int);
   vtkGetMacro(UseFXAA, int);
 
-  static ttkCinemaDarkroomRendering *New();
-  vtkTypeMacro(ttkCinemaDarkroomRendering, ttkAlgorithm);
+  static ttkCinemaDarkroomShading *New();
+  vtkTypeMacro(ttkCinemaDarkroomShading, ttkAlgorithm);
 
 protected:
-  ttkCinemaDarkroomRendering();
-  ~ttkCinemaDarkroomRendering() override;
+  ttkCinemaDarkroomShading();
+  ~ttkCinemaDarkroomShading() override;
 
   int FillInputPortInformation(int port, vtkInformation *info) override;
   int FillOutputPortInformation(int port, vtkInformation *info) override;
