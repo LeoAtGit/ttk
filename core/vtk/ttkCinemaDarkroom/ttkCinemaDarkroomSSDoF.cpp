@@ -20,19 +20,17 @@ std::string ttkCinemaDarkroomSSDoF::GetFragmentShaderCode() {
 
 varying vec4 vPos;
 
-uniform sampler2D tex0;
-uniform sampler2D tex1;
+uniform sampler2D tex0; // depth
+uniform sampler2D tex1; // color
 
-float readDepth( const in vec2 coord ){
-    return texture2D( tex1, coord ).r;
-}
+READ_DEPTH
 
 float computeCircleOfConfusion(
-    const in vec2 coord
+  const in vec2 coord
 ){
-    float s2 = readDepth(coord);
-    float c = cAperture * abs(s2-cFocalDepth);
-    return clamp(c, 0.0, cMaxBlur);
+  float s2 = readDepth(coord);
+  float c = APERTURE * abs(s2-FOCAL_DEPTH);
+  return clamp(c, 0.0, MAX_BLUR);
 }
 
 const vec2 poissonDisk[32] = vec2[](
@@ -83,9 +81,9 @@ vec4 SSDoF(
     float totalWeight = 0.0;
 
     vec2 adjustedRadius = vec2(
-        cResolution[1]/cResolution[0],
+        RESOLUTION.y/RESOLUTION.x,
         1.0
-    )*cRadius;
+    )*RADIUS;
 
     for(int i=0; i<32; i++){
         vec2 offset = poissonDisk[i] * adjustedRadius;
@@ -93,7 +91,7 @@ vec4 SSDoF(
         vec2 sampleCoords = coord + offset * centerCoC;
         float sampleCoC = computeCircleOfConfusion(sampleCoords);
 
-        vec4 samplePixel = texture2D(tex0, sampleCoords);
+        vec4 samplePixel = texture2D(tex1, sampleCoords);
         float sampleDepth = readDepth(sampleCoords);
 
         float weight = sampleDepth < centerDepth ? sampleCoC * bleedingMult : 1.0;
@@ -113,27 +111,20 @@ void main() {
   )");
 }
 
-int ttkCinemaDarkroomSSDoF::RequestData(vtkInformation *request,
-                                        vtkInformationVector **inputVector,
-                                        vtkInformationVector *outputVector) {
+int ttkCinemaDarkroomSSDoF::RegisterReplacements() {
+  ttkCinemaDarkroomShader::RegisterReplacements();
 
-  auto inputImage = vtkImageData::GetData(inputVector[0]);
-  auto outputImage = vtkImageData::GetData(outputVector);
-  outputImage->ShallowCopy(inputImage);
+  this->AddReplacement("RADIUS", {this->Radius});
+  this->AddReplacement("MAX_BLUR", {this->MaxBlur});
+  this->AddReplacement("APERTURE", {this->Aperture});
+  this->AddReplacement("FOCAL_DEPTH", {this->FocalDepth});
+  return 1;
+}
 
-  this->InitRenderer(outputImage);
-
-  this->AddReplacement("cRadius", {this->Radius});
-  this->AddReplacement("cMaxBlur", {this->MaxBlur});
-  this->AddReplacement("cAperture", {this->Aperture});
-  this->AddReplacement("cFocalDepth", {this->FocalDepth});
-
-  if(!this->AddTexture(outputImage, 0, 0))
+int ttkCinemaDarkroomSSDoF::RegisterTextures(vtkImageData *image) {
+  if(!this->AddTexture(image, 0, 0))
     return 0;
-  if(!this->AddTexture(outputImage, 1, 1))
+  if(!this->AddTexture(image, 1, 1))
     return 0;
-
-  this->Render(outputImage, "SSDoF");
-
   return 1;
 }

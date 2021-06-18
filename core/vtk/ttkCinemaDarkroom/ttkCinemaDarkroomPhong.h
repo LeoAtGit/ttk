@@ -1,5 +1,5 @@
 /// \ingroup vtk
-/// \class ttkCinemaDarkroomIBS
+/// \class ttkCinemaDarkroomPhong
 /// \author Jonas Lukasczyk <jl@jluk.de>
 /// \date 01.11.2020
 ///
@@ -22,27 +22,30 @@
 #include <ttkCinemaDarkroomModule.h>
 #include <ttkCinemaDarkroomShader.h>
 
-class TTKCINEMADARKROOM_EXPORT ttkCinemaDarkroomIBS
+class TTKCINEMADARKROOM_EXPORT ttkCinemaDarkroomPhong
   : public ttkCinemaDarkroomShader {
 private:
-  double Strength{1.0};
-  double Luminance{1.0};
-  double Ambient{0.2};
+  double Exponent{16.0};
+  double Ambient{0.7};
+  double Diffuse{0.7};
+  double Specular{1.0};
 
 public:
-  vtkSetMacro(Strength, double);
-  vtkGetMacro(Strength, double);
-  vtkSetMacro(Luminance, double);
-  vtkGetMacro(Luminance, double);
+  vtkSetMacro(Exponent, double);
+  vtkGetMacro(Exponent, double);
   vtkSetMacro(Ambient, double);
   vtkGetMacro(Ambient, double);
+  vtkSetMacro(Diffuse, double);
+  vtkGetMacro(Diffuse, double);
+  vtkSetMacro(Specular, double);
+  vtkGetMacro(Specular, double);
 
-  static ttkCinemaDarkroomIBS *New();
-  vtkTypeMacro(ttkCinemaDarkroomIBS, ttkCinemaDarkroomShader);
+  static ttkCinemaDarkroomPhong *New();
+  vtkTypeMacro(ttkCinemaDarkroomPhong, ttkCinemaDarkroomShader);
 
 protected:
-  ttkCinemaDarkroomIBS();
-  ~ttkCinemaDarkroomIBS() override;
+  ttkCinemaDarkroomPhong();
+  ~ttkCinemaDarkroomPhong() override;
 
   std::string GetFragmentShaderCode() override;
 

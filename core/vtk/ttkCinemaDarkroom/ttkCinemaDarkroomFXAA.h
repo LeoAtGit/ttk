@@ -34,7 +34,6 @@ protected:
   std::string GetVertexShaderCode() override;
   std::string GetFragmentShaderCode() override;
 
-  int RequestData(vtkInformation *request,
-                  vtkInformationVector **inputVector,
-                  vtkInformationVector *outputVector) override;
+  int RegisterReplacements() override;
+  int RegisterTextures(vtkImageData* image) override;
 };

@@ -115,23 +115,16 @@ void main(){
   )");
 }
 
-int ttkCinemaDarkroomSSAO::RequestData(vtkInformation *request,
-                                       vtkInformationVector **inputVector,
-                                       vtkInformationVector *outputVector) {
-
-  auto inputImage = vtkImageData::GetData(inputVector[0]);
-  auto outputImage = vtkImageData::GetData(outputVector);
-  outputImage->ShallowCopy(inputImage);
-
-  this->InitRenderer(outputImage);
+int ttkCinemaDarkroomSSAO::RegisterReplacements() {
+  ttkCinemaDarkroomShader::RegisterReplacements();
 
   this->AddReplacement("cRadius", {this->Radius});
   this->AddReplacement("cDiffArea", {this->DiffArea});
+  return 1;
+}
 
-  if(!this->AddTexture(outputImage, 0, 0))
+int ttkCinemaDarkroomSSAO::RegisterTextures(vtkImageData *image) {
+  if(!this->AddTexture(image, 0, 0))
     return 0;
-
-  this->Render(outputImage, "SSAO");
-
   return 1;
 }

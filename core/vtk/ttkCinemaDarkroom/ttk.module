@@ -4,26 +4,28 @@ SOURCES
   ttkCinemaDarkroomCamera.cpp
   ttkCinemaDarkroomShader.cpp
   ttkCinemaDarkroomIBS.cpp
+  ttkCinemaDarkroomPBR.cpp
+  ttkCinemaDarkroomPhong.cpp
   ttkCinemaDarkroomFXAA.cpp
   ttkCinemaDarkroomSSAO.cpp
   ttkCinemaDarkroomSSSAO.cpp
   ttkCinemaDarkroomSSDoF.cpp
   ttkCinemaDarkroomCompositing.cpp
   ttkCinemaDarkroomColorMapping.cpp
-  ttkCinemaDarkroomNoise.cpp
   ttkCinemaDarkroomColorMaps.cpp
   ttkCinemaDarkroomShading.cpp
 HEADERS
   ttkCinemaDarkroomCamera.h
   ttkCinemaDarkroomShader.h
   ttkCinemaDarkroomIBS.h
+  ttkCinemaDarkroomPBR.h
+  ttkCinemaDarkroomPhong.h
   ttkCinemaDarkroomFXAA.h
   ttkCinemaDarkroomSSAO.h
   ttkCinemaDarkroomSSSAO.h
   ttkCinemaDarkroomSSDoF.h
   ttkCinemaDarkroomCompositing.h
   ttkCinemaDarkroomColorMapping.h
-  ttkCinemaDarkroomNoise.h
   ttkCinemaDarkroomShading.h
 DEPENDS
   ttkAlgorithm

@@ -45,6 +45,7 @@
 #include <unordered_map>
 
 class vtkImageData;
+class vtkMultiBlockDataSet;
 class vtkPolyData;
 class vtkActor;
 class vtkRenderer;
@@ -53,46 +54,11 @@ class vtkRenderWindow;
 class TTKCINEMADARKROOM_EXPORT ttkCinemaDarkroomShader : public ttkAlgorithm {
 
 private:
-  struct Replacement {
-    std::vector<double> values;
-    bool isInt{false};
+  std::string OutputName{"Shading"};
+  bool FloatOutput{false};
+  bool UseMSAA{false};
 
-    Replacement(const std::vector<double> &values_, const bool &isInt_)
-      : values(values_), isInt(isInt_) {
-    }
-
-    std::string toString() const {
-      std::string result = "";
-      if(this->values.size() == 0) {
-        return "";
-      }
-
-      if(this->values.size() > 1) {
-        if(this->isInt)
-          result += "i";
-
-        result += "vec" + std::to_string(this->values.size()) + "(";
-      }
-
-      if(this->isInt)
-        result += std::to_string((int)this->values[0]);
-      else
-        result += std::to_string(this->values[0]);
-
-      for(size_t i = 1; i < this->values.size(); i++)
-        if(this->isInt)
-          result += "," + std::to_string((int)this->values[i]);
-        else
-          result += "," + std::to_string(this->values[i]);
-
-      if(this->values.size() > 1)
-        result += ")";
-
-      return result;
-    }
-  };
-
-  std::unordered_map<std::string, Replacement> Replacements;
+  std::vector<std::pair<std::string, std::string>> Replacements;
 
   vtkSmartPointer<vtkPolyData> FullScreenQuad;
   vtkSmartPointer<vtkActor> FullScreenQuadActor;
@@ -100,6 +66,14 @@ private:
   vtkSmartPointer<vtkRenderWindow> RenderWindow;
 
 public:
+
+  vtkSetMacro(OutputName, const std::string&);
+  vtkGetMacro(OutputName, const std::string&);
+  vtkSetMacro(FloatOutput, bool);
+  vtkGetMacro(FloatOutput, bool);
+  vtkSetMacro(UseMSAA, bool);
+  vtkGetMacro(UseMSAA, bool);
+
   static ttkCinemaDarkroomShader *New();
   vtkTypeMacro(ttkCinemaDarkroomShader, ttkAlgorithm);
 
@@ -120,6 +94,10 @@ protected:
                      const std::vector<double> &values,
                      const bool &isInt = false);
 
+  /// Adds or updates a replacement that will be later used during the render
+  /// pass to update shader strings.
+  int AddReplacementText(const std::string &name, const std::string &text);
+
   int CreateFullScreenQuad();
   int CreateRenderer();
 
@@ -134,8 +112,14 @@ protected:
 
   virtual std::string GetVertexShaderCode();
   virtual std::string GetFragmentShaderCode();
+  virtual int RegisterReplacements();
+  virtual int RegisterTextures(vtkImageData *image);
+
+  int RequestData(vtkInformation *request,
+                  vtkInformationVector **inputVector,
+                  vtkInformationVector *outputVector) override;
 
   /// Performs a single render pass and adds the result to the image as a point
   /// data array with the specified name.
-  virtual int Render(vtkImageData *image, const std::string &name);
+  virtual int Render(vtkImageData *image);
 };

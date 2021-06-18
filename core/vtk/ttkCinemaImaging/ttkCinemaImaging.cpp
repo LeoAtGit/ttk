@@ -331,6 +331,15 @@ int ttkCinemaImaging::ComputeDirFromFocalPoint(vtkPointSet *inputGrid) {
   for(int i = 0, j = nTuples * 3; i < j; i++)
     dir[i] = focal[i] - pos[i];
 
+  // normalize
+  for(int i = 0; i < nTuples; i++){
+    double* d = &dir[i*3];
+    const double norm = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+    d[0] /= norm;
+    d[1] /= norm;
+    d[2] /= norm;
+  }
+
   inputGrid->GetPointData()->AddArray(newArray);
 
   return 1;

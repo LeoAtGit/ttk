@@ -29,8 +29,8 @@ varying vec2 v_rgbM;
 void main() {
     vPos = vertexMC/2. + vec4(0.5,0.5,0.5,0);
 
-    vec2 fragCoord = vPos.xy * cResolution;
-    vec2 inverseVP = 1.0 / cResolution.xy;
+    vec2 fragCoord = vPos.xy * RESOLUTION;
+    vec2 inverseVP = 1.0 / RESOLUTION.xy;
     v_rgbNW = (fragCoord + vec2(-1.0, -1.0)) * inverseVP;
     v_rgbNE = (fragCoord + vec2(1.0, -1.0)) * inverseVP;
     v_rgbSW = (fragCoord + vec2(-1.0, 1.0)) * inverseVP;
@@ -121,26 +121,19 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution,
 }
 
 void main() {
-    vec2 fragCoord = vPos.xy * cResolution;
-    gl_FragColor = fxaa(tex0, fragCoord, cResolution, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);
+    vec2 fragCoord = vPos.xy * RESOLUTION;
+    gl_FragColor = fxaa(tex0, fragCoord, RESOLUTION, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);
 }
   )");
 }
 
-int ttkCinemaDarkroomFXAA::RequestData(vtkInformation *request,
-                                       vtkInformationVector **inputVector,
-                                       vtkInformationVector *outputVector) {
+int ttkCinemaDarkroomFXAA::RegisterReplacements() {
+  ttkCinemaDarkroomShader::RegisterReplacements();
+  return 1;
+}
 
-  auto inputImage = vtkImageData::GetData(inputVector[0]);
-  auto outputImage = vtkImageData::GetData(outputVector);
-  outputImage->ShallowCopy(inputImage);
-
-  this->InitRenderer(outputImage);
-
-  if(!this->AddTexture(outputImage, 0, 0))
+int ttkCinemaDarkroomFXAA::RegisterTextures(vtkImageData *image) {
+  if(!this->AddTexture(image, 0, 0))
     return 0;
-
-  this->Render(outputImage, "FXAA");
-
   return 1;
 }

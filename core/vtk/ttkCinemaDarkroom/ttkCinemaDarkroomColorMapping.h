@@ -35,6 +35,7 @@ private:
   std::string ColorMapData{""};
   double SingleColor[3]{0, 0, 0};
   double NANColor[3]{0, 0, 0};
+  bool TransparentNAN{true};
 
 public:
   vtkSetVector2Macro(ScalarRange, double);
@@ -47,6 +48,8 @@ public:
   vtkGetVector3Macro(NANColor, double);
   vtkSetVector3Macro(SingleColor, double);
   vtkGetVector3Macro(SingleColor, double);
+  vtkSetMacro(TransparentNAN, bool);
+  vtkGetMacro(TransparentNAN, bool);
 
   int SyncColorMapsWithParaView();
 
@@ -57,7 +60,5 @@ protected:
   ttkCinemaDarkroomColorMapping();
   ~ttkCinemaDarkroomColorMapping() override;
 
-  int RequestData(vtkInformation *request,
-                  vtkInformationVector **inputVector,
-                  vtkInformationVector *outputVector) override;
+  int Render(vtkImageData *image) override;
 };

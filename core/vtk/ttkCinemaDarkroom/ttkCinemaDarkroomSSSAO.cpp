@@ -8,6 +8,9 @@ vtkStandardNewMacro(ttkCinemaDarkroomSSSAO);
 
 ttkCinemaDarkroomSSSAO::ttkCinemaDarkroomSSSAO() : ttkCinemaDarkroomShader() {
   this->setDebugMsgPrefix("CinemaDarkroomSSSAO");
+
+  this->SetOutputName("SSSAO");
+  this->SetFloatOutput(true);
 }
 
 ttkCinemaDarkroomSSSAO::~ttkCinemaDarkroomSSSAO() {
@@ -31,9 +34,7 @@ varying vec4 vPos;
 #define DL 2.399963229728653  // PI * ( 3.0 - sqrt( 5.0 ) )
 #define EULER 2.718281828459045
 
-float readDepth( const in vec2 coord ){
-    return texture2D( tex0, coord ).r;
-}
+READ_DEPTH
 
 const float gDisplace = 0.5;  // gauss bell center
 float compareDepths( const in float depth1, const in float depth2, inout int far ) {
@@ -42,7 +43,7 @@ float compareDepths( const in float depth1, const in float depth2, inout int far
 
     // reduce left bell width to avoid self-shadowing
     if(diff<gDisplace){
-        garea = cDiffArea;
+        garea = DIFF_AREA;
     } else {
         far = 1;
     }
@@ -67,54 +68,46 @@ float calcAO( float depth, float dw, float dh, vec2 uv ) {
     return temp1;
 }
 
-void main() {
-    float depth = readDepth( vPos.xy );
+float compute(in vec2 uv){
+  float depth = readDepth( uv );
 
-    const float samplesF = cSamples;
-    float occlusion = 0.0;
+  const float samplesF = SAMPLES;
+  float occlusion = 0.0;
 
-    float dz = 1.0 / samplesF;
-    float l = 0.0;
-    float z = 1.0 - dz / 2.0;
+  float dz = 1.0 / samplesF;
+  float l = 0.0;
+  float z = 1.0 - dz / 2.0;
 
-    float aspect = cResolution.y/cResolution.x;
+  float aspect = RESOLUTION.y/RESOLUTION.x;
 
-    for(int i=0; i<cSamples; i++){
-        float r = sqrt( 1.0 - z ) * cRadius;
-        float pw = cos( l ) * r;
-        float ph = sin( l ) * r;
-        occlusion += calcAO( depth, pw * aspect, ph, vPos.xy );
-        z = z - dz;
-        l = l + DL;
-    }
+  for(int i=0; i<SAMPLES; i++){
+      float r = sqrt( 1.0 - z ) * RADIUS;
+      float pw = cos( l ) * r;
+      float ph = sin( l ) * r;
+      occlusion += calcAO( depth, pw * aspect, ph, uv );
+      z = z - dz;
+      l = l + DL;
+  }
 
-    float ao = 1.-occlusion/samplesF;
-    gl_FragColor = vec4(ao,ao,ao, 1 );
+  return 1.-occlusion/samplesF;
 }
+
+MAIN_SCALAR_MSAA
+
   )");
 }
 
-int ttkCinemaDarkroomSSSAO::RequestData(vtkInformation *request,
-                                        vtkInformationVector **inputVector,
-                                        vtkInformationVector *outputVector) {
+int ttkCinemaDarkroomSSSAO::RegisterReplacements() {
+  ttkCinemaDarkroomShader::RegisterReplacements();
 
-  auto inputImage = vtkImageData::GetData(inputVector[0]);
-  auto outputImage = vtkImageData::GetData(outputVector);
-  outputImage->ShallowCopy(inputImage);
+  this->AddReplacement("SAMPLES", {(double)this->Samples}, true);
+  this->AddReplacement("RADIUS", {this->Radius});
+  this->AddReplacement("DIFF_AREA", {this->DiffArea});
+  return 1;
+}
 
-  int dim[3];
-  outputImage->GetDimensions(dim);
-
-  this->InitRenderer(outputImage);
-
-  this->AddReplacement("cSamples", {(double)this->Samples}, true);
-  this->AddReplacement("cRadius", {this->Radius});
-  this->AddReplacement("cDiffArea", {this->DiffArea});
-
-  if(!this->AddTexture(outputImage, 0, 0))
+int ttkCinemaDarkroomSSSAO::RegisterTextures(vtkImageData *image) {
+  if(!this->AddTexture(image, 0, 0))
     return 0;
-
-  this->Render(outputImage, "SSSAO");
-
   return 1;
 }
