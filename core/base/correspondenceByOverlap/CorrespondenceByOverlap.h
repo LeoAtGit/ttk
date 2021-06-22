@@ -5,9 +5,9 @@
 /// \author Your Name Here <Your Email Address Here>
 /// \date The Date Here.
 ///
-/// This module defines the %CorrespondenceByOverlap class that computes for each
-/// vertex of a triangulation the average scalar value of itself and its direct
-/// neighbors.
+/// This module defines the %CorrespondenceByOverlap class that computes for
+/// each vertex of a triangulation the average scalar value of itself and its
+/// direct neighbors.
 ///
 /// \b Related \b publication: \n
 /// 'CorrespondenceByOverlap'
@@ -27,8 +27,7 @@ namespace ttk {
   class CorrespondenceByOverlap : virtual public Debug {
 
   public:
-
-    typedef std::unordered_map<long long,long long> LabelIndexMap;
+    typedef std::unordered_map<long long, long long> LabelIndexMap;
 
     CorrespondenceByOverlap() {
       this->setDebugMsgPrefix("CorrespondenceByOverlap");
@@ -36,17 +35,15 @@ namespace ttk {
     ~CorrespondenceByOverlap(){};
 
     template <class DT>
-    int computeLabelIndexMap(
-      LabelIndexMap& labelIndexMap,
-      const DT* labels,
-      const int nLabels
-    ) const {
+    int computeLabelIndexMap(LabelIndexMap &labelIndexMap,
+                             const DT *labels,
+                             const int nLabels) const {
 
       long long labelIndex = 0;
-      for(int i=0; i<nLabels; i++){
-        const auto& l = labels[i];
-        if(l>=0 && labelIndexMap.find(l)==labelIndexMap.end())
-          labelIndexMap.insert({l,labelIndex++});
+      for(int i = 0; i < nLabels; i++) {
+        const auto &l = labels[i];
+        if(l >= 0 && labelIndexMap.find(l) == labelIndexMap.end())
+          labelIndexMap.insert({l, labelIndex++});
       }
 
       return 1;
@@ -57,9 +54,8 @@ namespace ttk {
                                const DT *labels0,
                                const DT *labels1,
                                const int nVertices,
-                               const LabelIndexMap& labelIndexMap0,
-                               const LabelIndexMap& labelIndexMap1
-    ) const {
+                               const LabelIndexMap &labelIndexMap0,
+                               const LabelIndexMap &labelIndexMap1) const {
 
       ttk::Timer timer;
 
@@ -71,7 +67,8 @@ namespace ttk {
       if(nLabels1 < 1)
         return this->printWrn("Number of second labels smaller than 1.");
 
-      const std::string msg = "Computing Overlap "+std::to_string(nLabels0)+"x"+std::to_string(nLabels1);
+      const std::string msg = "Computing Overlap " + std::to_string(nLabels0)
+                              + "x" + std::to_string(nLabels1);
       this->printMsg(msg, 0, 0, this->threadNumber_, debug::LineMode::REPLACE);
 
       int nLables = nLabels0 * nLabels1;
@@ -91,7 +88,8 @@ namespace ttk {
         const int l1 = labels1[i];
         if(l0 >= 0 && l1 >= 0) {
 #pragma omp atomic update
-          adjacencyMatrix[labelIndexMap1.at(l1) * nLabels0 + labelIndexMap0.at(l0)]++;
+          adjacencyMatrix[labelIndexMap1.at(l1) * nLabels0
+                          + labelIndexMap0.at(l0)]++;
         }
       }
 

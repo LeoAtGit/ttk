@@ -91,12 +91,10 @@ int ttkConnectedComponents::RequestData(vtkInformation *request,
     ttkVtkTemplateMacro(
       inputArray->GetDataType(), triangulation->getType(),
       (status = this->computeConnectedComponents<VTK_TT, TTK_TT>(
-         components,
-         ttkUtils::GetPointer<int>(outputArray),
+         components, ttkUtils::GetPointer<int>(outputArray),
          ttkUtils::GetPointer<const VTK_TT>(inputArray),
          static_cast<const TTK_TT *>(triangulation->getData()),
-         this->UseSeedIdAsComponentId
-       )));
+         this->UseSeedIdAsComponentId)));
 
     if(status != 1)
       return 0;

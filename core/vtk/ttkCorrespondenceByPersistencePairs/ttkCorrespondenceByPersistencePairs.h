@@ -10,7 +10,8 @@
 // TTK Base Includes
 #include <CorrespondenceByPersistencePairs.h>
 
-class TTKCORRESPONDENCEBYPERSISTENCEPAIRS_EXPORT ttkCorrespondenceByPersistencePairs
+class TTKCORRESPONDENCEBYPERSISTENCEPAIRS_EXPORT
+  ttkCorrespondenceByPersistencePairs
   : public ttkCorrespondenceAlgorithm,
     protected ttk::CorrespondenceByPersistencePairs {
 
@@ -46,24 +47,33 @@ public:
   vtkGetMacro(DistanceAlgorithm, std::string);
 
   template <typename dataType>
-  int getDiagram(
-      std::vector<std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType,
-          int, dataType, float, float, float, dataType, float, float, float> > &diagram,
-      vtkUnstructuredGrid *CTPersistenceDiagram_,
-      const double spacing,
-      const int diagramNumber);
+  int getDiagram(std::vector<std::tuple<int,
+                                        ttk::CriticalType,
+                                        int,
+                                        ttk::CriticalType,
+                                        dataType,
+                                        int,
+                                        dataType,
+                                        float,
+                                        float,
+                                        float,
+                                        dataType,
+                                        float,
+                                        float,
+                                        float>> &diagram,
+                 vtkUnstructuredGrid *CTPersistenceDiagram_,
+                 const double spacing,
+                 const int diagramNumber);
 
 protected:
   ttkCorrespondenceByPersistencePairs();
   ~ttkCorrespondenceByPersistencePairs();
 
-  int Correlate(vtkImageData *correspondences,
-                vtkDataObject *inputDataObjects0,
-                vtkDataObject *inputDataObjects1
-  ) override;
+  int ComputeCorrespondences(vtkImageData *correspondenceMatrix,
+                             vtkDataObject *inputDataObjects0,
+                             vtkDataObject *inputDataObjects1) override;
 
 private:
-
   // Metric weights
   double PX{1};
   double PY{1};

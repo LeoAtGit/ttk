@@ -25,7 +25,7 @@ ttkCorrespondenceAlgorithm::~ttkCorrespondenceAlgorithm() {
 }
 
 int ttkCorrespondenceAlgorithm::FillInputPortInformation(int port,
-                                                   vtkInformation *info) {
+                                                         vtkInformation *info) {
   if(port >= 0 && port < this->GetNumberOfInputPorts()) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
     info->Append(
@@ -35,8 +35,8 @@ int ttkCorrespondenceAlgorithm::FillInputPortInformation(int port,
   return 0;
 }
 
-int ttkCorrespondenceAlgorithm::FillOutputPortInformation(int port,
-                                                    vtkInformation *info) {
+int ttkCorrespondenceAlgorithm::FillOutputPortInformation(
+  int port, vtkInformation *info) {
   if(port == 0) {
     info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkMultiBlockDataSet");
     return 1;
@@ -44,9 +44,10 @@ int ttkCorrespondenceAlgorithm::FillOutputPortInformation(int port,
   return 0;
 }
 
-int ttkCorrespondenceAlgorithm::RequestData(vtkInformation *request,
-                                      vtkInformationVector **inputVector,
-                                      vtkInformationVector *outputVector) {
+int ttkCorrespondenceAlgorithm::RequestData(
+  vtkInformation *request,
+  vtkInformationVector **inputVector,
+  vtkInformationVector *outputVector) {
 
   auto output = vtkMultiBlockDataSet::GetData(outputVector);
 
@@ -68,7 +69,7 @@ int ttkCorrespondenceAlgorithm::RequestData(vtkInformation *request,
     auto iterationInformation = vtkDoubleArray::SafeDownCast(
       firstInput->GetFieldData()->GetArray("_ttk_IterationInfo"));
     if(this->PreviousInputs->GetNumberOfBlocks() > 0
-      && (!iterationInformation || iterationInformation->GetValue(0) > 0)) {
+       && (!iterationInformation || iterationInformation->GetValue(0) > 0)) {
       sequence.resize(2);
       sequence[0] = vtkSmartPointer<vtkMultiBlockDataSet>::New();
       sequence[0]->ShallowCopy(this->PreviousInputs);
@@ -78,41 +79,37 @@ int ttkCorrespondenceAlgorithm::RequestData(vtkInformation *request,
         sequence[1]->SetBlock(i, inputs[i]);
     }
   } else {
-    const int nSteps = static_cast<vtkMultiBlockDataSet *>(firstInput)->GetNumberOfBlocks();
+    const int nSteps
+      = static_cast<vtkMultiBlockDataSet *>(firstInput)->GetNumberOfBlocks();
     sequence.resize(nSteps);
-    for(int s=0; s<nSteps; s++){
+    for(int s = 0; s < nSteps; s++) {
       sequence[s] = vtkSmartPointer<vtkMultiBlockDataSet>::New();
       for(int i = 0; i < nInputs; i++) {
         sequence[s]->SetBlock(
-          i,
-          static_cast<vtkMultiBlockDataSet *>(inputs[i])->GetBlock(s)
-        );
+          i, static_cast<vtkMultiBlockDataSet *>(inputs[i])->GetBlock(s));
       }
     }
   }
 
   for(size_t s = 1; s < sequence.size(); s++) {
-    auto correlations = vtkSmartPointer<vtkImageData>::New();
-    auto data0 = sequence[s-1];
-    auto data1 = sequence[s+0];
-    bool singleInput = data0->GetNumberOfBlocks()==1;
+    auto correspondenceMatrix = vtkSmartPointer<vtkImageData>::New();
+    auto data0 = sequence[s - 1];
+    auto data1 = sequence[s + 0];
+    bool singleInput = data0->GetNumberOfBlocks() == 1;
 
-    if(!this->Correlate(
-      correlations,
-      singleInput ? data0->GetBlock(0) : data0,
-      singleInput ? data1->GetBlock(0) : data1
-    ))
+    if(!this->ComputeCorrespondences(correspondenceMatrix,
+                                     singleInput ? data0->GetBlock(0) : data0,
+                                     singleInput ? data1->GetBlock(0) : data1))
       return 0;
 
-    output->SetBlock(s - 1, correlations);
+    output->SetBlock(s - 1, correspondenceMatrix);
   }
 
-  if(streamingMode){
+  if(streamingMode) {
     this->PreviousInputs = vtkSmartPointer<vtkMultiBlockDataSet>::New();
-    for(int i = 0; i < nInputs; i++){
+    for(int i = 0; i < nInputs; i++) {
       auto copy = vtkSmartPointer<vtkDataSet>::Take(
-        static_cast<vtkDataSet*>(inputs[i])->NewInstance()
-      );
+        static_cast<vtkDataSet *>(inputs[i])->NewInstance());
       copy->ShallowCopy(inputs[i]);
       this->PreviousInputs->SetBlock(i, copy);
     }

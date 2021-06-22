@@ -40,13 +40,9 @@ protected:
                   vtkInformationVector **inputVector,
                   vtkInformationVector *outputVector) override;
 
-  int GenerateSpatialTrackingGraph(
-    vtkPolyData* output,
-    vtkMultiBlockDataSet* correspondences,
-    vtkMultiBlockDataSet* features
-  );
-  int GeneratePlanarTrackingGraph(
-    vtkPolyData* output,
-    vtkMultiBlockDataSet* correspondences
-  );
+  int GenerateSpatialTrackingGraph(vtkPolyData *output,
+                                   vtkMultiBlockDataSet *correspondences,
+                                   vtkMultiBlockDataSet *features);
+  int GeneratePlanarTrackingGraph(vtkPolyData *output,
+                                  vtkMultiBlockDataSet *correspondences);
 };

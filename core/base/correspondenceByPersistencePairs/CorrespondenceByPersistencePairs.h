@@ -5,11 +5,11 @@
 /// \date 09.06.2021
 ///
 /// \brief Computes a correspondence matrix from persistence diagram matchings.
-/// 
-/// This module defines the CorrespondenceByPersistencePairs class that computes 
+///
+/// This module defines the CorrespondenceByPersistencePairs class that computes
 /// the correspondance matrix from the output of a Wasserstein-based matching
-/// between persistence diagrams. 1 row = 1 persistence pair in diagram 1, 
-/// 1 column = 1 persistence pair in diagram 2, 
+/// between persistence diagrams. 1 row = 1 persistence pair in diagram 1,
+/// 1 column = 1 persistence pair in diagram 2,
 /// value = 0 => no matching
 /// value > 0 => matching.
 ///
@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <Debug.h>
 #include <BottleneckDistance.h>
+#include <Debug.h>
 
 namespace ttk {
 
@@ -33,32 +33,57 @@ namespace ttk {
 
     template <class DT>
     int computeDistanceMatrix(
-        //DT *distanceMatrix,
-        //const DT *coords0,
-        std::vector< std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, DT,
-            int, DT, float, float, float, DT, float, float, float> > &CTDiagram0,
-        std::vector< std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, DT,
-            int, DT, float, float, float, DT, float, float, float> > &CTDiagram1,
-        std::vector< std::tuple<int, int, double> > &matchings,
-        //const DT *coords1,
-        //const int nFeatures0,
-        //const int nFeatures1,
-        const double PX, const double PY, const double PZ, 
-        const double PS, const double PE,
-        const std::string algorithm,
-        const std::string wasserstein,
-        const double alpha,
-        const int pvAlgorithm
-        ) const
-    {
+      // DT *distanceMatrix,
+      // const DT *coords0,
+      std::vector<std::tuple<int,
+                             ttk::CriticalType,
+                             int,
+                             ttk::CriticalType,
+                             DT,
+                             int,
+                             DT,
+                             float,
+                             float,
+                             float,
+                             DT,
+                             float,
+                             float,
+                             float>> &CTDiagram0,
+      std::vector<std::tuple<int,
+                             ttk::CriticalType,
+                             int,
+                             ttk::CriticalType,
+                             DT,
+                             int,
+                             DT,
+                             float,
+                             float,
+                             float,
+                             DT,
+                             float,
+                             float,
+                             float>> &CTDiagram1,
+      std::vector<std::tuple<int, int, double>> &matchings,
+      // const DT *coords1,
+      // const int nFeatures0,
+      // const int nFeatures1,
+      const double PX,
+      const double PY,
+      const double PZ,
+      const double PS,
+      const double PE,
+      const std::string algorithm,
+      const std::string wasserstein,
+      const double alpha,
+      const int pvAlgorithm) const {
       ttk::Timer timer;
 
-      //const int nPoints0 = nPairs0 * 2;
-      //const int nPoints1 = nPairs1 * 2;
-      //const std::string msg = "Computing Distance Matrix ("
+      // const int nPoints0 = nPairs0 * 2;
+      // const int nPoints1 = nPairs1 * 2;
+      // const std::string msg = "Computing Distance Matrix ("
       //                        + std::to_string(nPoints0) + "x"
       //                        + std::to_string(nPoints1) + ")";
-      //this->printMsg(
+      // this->printMsg(
       //  msg, 0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE);
 
       ttk::BottleneckDistance bottleneckDistance_;
@@ -77,12 +102,13 @@ namespace ttk {
       bottleneckDistance_.setCTDiagram2(&CTDiagram1);
       bottleneckDistance_.setOutputMatchings(&matchings);
       int status = bottleneckDistance_.execute<double>(false);
-      if (status < 0) return -1;
+      if(status < 0)
+        return -1;
 
-//#ifdef TTK_ENABLE_OPENMP
-//#pragma omp parallel for num_threads(this->threadNumber_)
-//#endif
-      //for(int i = 0; i < nPoints0; i++) {
+      //#ifdef TTK_ENABLE_OPENMP
+      //#pragma omp parallel for num_threads(this->threadNumber_)
+      //#endif
+      // for(int i = 0; i < nPoints0; i++) {
       //  for(int j = 0; j < nPoints1; j++) {
       //    const int i3 = i * 3;
       //    const int j3 = j * 3;
@@ -94,7 +120,7 @@ namespace ttk {
       //  }
       //}
 
-      //this->printMsg(msg, 1, timer.getElapsedTime(), this->threadNumber_);
+      // this->printMsg(msg, 1, timer.getElapsedTime(), this->threadNumber_);
 
       return 1;
     }

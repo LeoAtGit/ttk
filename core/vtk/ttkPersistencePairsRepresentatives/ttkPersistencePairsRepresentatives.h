@@ -3,11 +3,13 @@
 /// \author Maxime Soler
 /// \date 09.06.2021
 ///
-/// \brief TTK VTK-filter that computes point representatives from a persistence diagram.
+/// \brief TTK VTK-filter that computes point representatives from a persistence
+/// diagram.
 ///
-/// This filter consumes a ttkPersistenceDiagram, outputs a vtkPointSet a domain-embedded point
-/// (x,y,z) for each input persistence pair.
-/// The order in which points are laid out must be the same as in ttkCorrespondenceByPersistencePairs.
+/// This filter consumes a ttkPersistenceDiagram, outputs a vtkPointSet a
+/// domain-embedded point (x,y,z) for each input persistence pair. The order in
+/// which points are laid out must be the same as in
+/// ttkCorrespondenceByPersistencePairs.
 ///
 
 #pragma once
@@ -20,21 +22,31 @@
 //#include <ConnectedComponents.h>
 #include <ttkAlgorithm.h>
 
-class TTKPERSISTENCEPAIRSREPRESENTATIVES_EXPORT ttkPersistencePairsRepresentatives
-  : public ttkAlgorithm {
+class TTKPERSISTENCEPAIRSREPRESENTATIVES_EXPORT
+  ttkPersistencePairsRepresentatives : public ttkAlgorithm {
 
 public:
-
   static ttkPersistencePairsRepresentatives *New();
   vtkTypeMacro(ttkPersistencePairsRepresentatives, ttkAlgorithm);
 
   template <typename dataType>
-  int getDiagram(
-      std::vector<std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType,
-          int, dataType, float, float, float, dataType, float, float, float> > &diagram,
-      vtkUnstructuredGrid *CTPersistenceDiagram_,
-      const double spacing,
-      const int diagramNumber);
+  int getDiagram(std::vector<std::tuple<int,
+                                        ttk::CriticalType,
+                                        int,
+                                        ttk::CriticalType,
+                                        dataType,
+                                        int,
+                                        dataType,
+                                        float,
+                                        float,
+                                        float,
+                                        dataType,
+                                        float,
+                                        float,
+                                        float>> &diagram,
+                 vtkUnstructuredGrid *CTPersistenceDiagram_,
+                 const double spacing,
+                 const int diagramNumber);
 
 protected:
   ttkPersistencePairsRepresentatives();

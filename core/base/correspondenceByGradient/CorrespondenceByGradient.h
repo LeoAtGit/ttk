@@ -76,15 +76,15 @@ namespace ttk {
     template <typename IT, typename TT, typename CF, typename IF>
     int computeCorrespondences(int *correspondences,
 
-                            const IT *order,
-                            const TT *triangulation,
+                               const IT *order,
+                               const TT *triangulation,
 
-                            const IT *criticalPointVertexIds0,
-                            const IT *criticalPointVertexIds1,
-                            const IT nFeatures0,
-                            const IT nFeatures1,
-                            const CF comperatorFunction,
-                            const IF indexFunction) const {
+                               const IT *criticalPointVertexIds0,
+                               const IT *criticalPointVertexIds1,
+                               const IT nFeatures0,
+                               const IT nFeatures1,
+                               const CF comperatorFunction,
+                               const IF indexFunction) const {
       ttk::Timer timer;
       this->printMsg("Computing Correspondences", 0, 0, this->threadNumber_,
                      debug::LineMode::REPLACE);

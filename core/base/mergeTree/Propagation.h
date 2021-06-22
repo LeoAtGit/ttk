@@ -20,7 +20,7 @@ namespace ttk::mt {
 
     inline Propagation *find() {
       Propagation *p;
-      #pragma omp atomic read
+#pragma omp atomic read
       p = this->parent;
 
       if(p == this)
@@ -44,7 +44,7 @@ namespace ttk::mt {
       auto master = p0->find();
       auto slave = p1->find();
 
-      if(master==slave)
+      if(master == slave)
         return master;
 
       // determine master and slave based on rank
@@ -66,4 +66,4 @@ namespace ttk::mt {
       return master;
     }
   };
-} // namespace ttk
+} // namespace ttk::mt

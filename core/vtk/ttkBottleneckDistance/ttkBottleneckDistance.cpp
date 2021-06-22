@@ -500,7 +500,8 @@ int ttkBottleneckDistance::doBenchmark() {
   // this->setThreadNumber(thread);
 
   // Empty matchings.
-  auto matchings = new std::vector<diagramTuple>(); // TODO isn’t it matchingTuple instead?
+  auto matchings
+    = new std::vector<diagramTuple>(); // TODO isn’t it matchingTuple instead?
   this->setOutputMatchings(matchings);
 
   // Exec.
