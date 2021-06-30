@@ -448,8 +448,8 @@ int ttkBottleneckDistance::RequestData(
     CTPersistenceDiagram2->GetPointData()->GetArray("Death"));
   bool is2D1 = !deathScalars1 && !birthScalars1;
   bool is2D2 = !deathScalars2 && !birthScalars2;
-  if(is2D1 != is2D2) {
-    this->printErr("Diagrams should not be embedded");
+  if (is2D1 != is2D2) {
+    this->printErr("Diagrams should have the same embedding type and hold double values.");
     return 0;
   }
   bool is2D = is2D1;

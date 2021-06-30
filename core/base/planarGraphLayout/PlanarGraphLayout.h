@@ -36,7 +36,7 @@ namespace ttk {
   template <typename DT, typename IT>
   struct Branch {
 
-    ttk::LongSimplexId leaf, connectedFrom;
+    ttk::LongSimplexId leaf, saddlePoint;
     int currentX;
     std::vector<IT> branchPoints;
     std::set<ttk::LongSimplexId> vertices;
@@ -44,11 +44,10 @@ namespace ttk {
 
     Branch() {
       leaf = -1;
-      connectedFrom = -1;
+      saddlePoint = -1;
       currentX = -1;
       rendered = false;
     }
-    
   };
 
   class PlanarGraphLayout : virtual public Debug {
@@ -76,7 +75,7 @@ namespace ttk {
     template <typename DT, typename IT>
     int GenerateLayout(IT b,
                        float *layout,
-                       std::vector<Branch<DT, IT>>& branchList,
+                       std::vector<Branch<DT, IT>> &branchList,
                        const DT *pointSequences,
                        const IT *branches) const;
 
@@ -547,83 +546,85 @@ int ttk::PlanarGraphLayout::GenerateLayout(
 
   Branch<DT, IT> *curr_branch = &branchList[b];
 
-  // go through branches first
-  
   IT lastB = b;
   IT newB = b;
-  
-  if(curr_branch->connectedFrom != -1) {
 
-    IT root_branch_id = branches[curr_branch->connectedFrom];
+  // only root branch has a -1 connection
+  if(curr_branch->saddlePoint != -1) {
+
+    IT root_branch_id = branches[curr_branch->saddlePoint];
     const Branch<DT, IT> *root_branch = &branchList[root_branch_id];
 
     lastB = root_branch->currentX + 1;
     newB = lastB;
-    
+
     DT branchLine[4]
-      = {(DT)root_branch->currentX, pointSequences[curr_branch->connectedFrom],
+      = {(DT)root_branch->currentX, pointSequences[curr_branch->saddlePoint],
          (DT)newB, pointSequences[curr_branch->leaf]};
 
     bool safe = false;
 
     while(!safe) {
+      // start with 1 to skip intersection test with root branch
       for(size_t i = 1; i < branchList.size(); i++) {
 
-        if((IT)i != b && (IT) i != root_branch_id) {
+        if((IT)i != b && (IT)i != root_branch_id) {
           Branch<DT, IT> *next_branch = &branchList[i];
-          IT nroot_branch_id = branches[next_branch->connectedFrom];
+          IT nroot_branch_id = branches[next_branch->saddlePoint];
           Branch<DT, IT> *nroot_branch = &branchList[nroot_branch_id];
 
-	  if(next_branch->rendered) {
+          if(next_branch->rendered) {
             DT bBox[4]
               = {(DT)nroot_branch->currentX,
-                 pointSequences[next_branch->connectedFrom],
+                 pointSequences[next_branch->saddlePoint],
                  (DT)next_branch->currentX, pointSequences[next_branch->leaf]};
 
             if((branchLine[0] <= bBox[2] && branchLine[2] >= bBox[0]
-		&& branchLine[1] <= bBox[3] && branchLine[3] >= bBox[1])) {
-	      
-	      if(next_branch->currentX + 1 > newB) {
-		newB = next_branch->currentX + 1;
-	      }
-	      
-              branchLine[2] = (DT) newB;
+                && branchLine[1] <= bBox[3] && branchLine[3] >= bBox[1])) {
+              // always move new branch to one past the furthest conflicting
+              // branch
+              if(next_branch->currentX + 1 > newB) {
+                newB = next_branch->currentX + 1;
+              }
+
+              branchLine[2] = (DT)newB;
             }
           }
-	  
+
           if(lastB == newB) {
             safe = true;
           }
-	  
           lastB = newB;
         }
       }
     }
   }
-  
+
   curr_branch->rendered = true;
   curr_branch->currentX = newB;
 
   for(ttk::LongSimplexId v : curr_branch->vertices) {
-    layout[v * 2] = (float) newB;
+    layout[v * 2] = (float)newB;
     layout[v * 2 + 1] = (float)pointSequences[v];
   }
 
-  std::vector<std::pair<IT,DT>> branchOrder;
-  
+  std::vector<std::pair<IT, DT>> branchOrder;
+
   for(IT bp : curr_branch->branchPoints) {
-    const Branch<DT,IT>* this_branch = &branchList[bp];
-    branchOrder.push_back(std::pair<IT,DT>(bp,pointSequences[this_branch->connectedFrom]));
+    const Branch<DT, IT> *this_branch = &branchList[bp];
+    branchOrder.push_back(
+      std::pair<IT, DT>(bp, pointSequences[this_branch->saddlePoint]));
   }
 
-  std::sort(branchOrder.begin(), branchOrder.end(), [](const std::pair<IT,DT> &left, const std::pair<IT,DT> &right) {
-    return left.second > right.second;
-  });
+  std::sort(branchOrder.begin(), branchOrder.end(),
+            [](const std::pair<IT, DT> &left, const std::pair<IT, DT> &right) {
+              return left.second > right.second;
+            });
 
   for(auto bo : branchOrder) {
     GenerateLayout(bo.first, layout, branchList, pointSequences, branches);
   }
-  
+
   return 1;
 }
 
@@ -676,12 +677,12 @@ int ttk::PlanarGraphLayout::computeMergeTreeLayout(
       Branch<DT, IT> *b = &branchList[b1];
 
       if(b->leaf != -1) {
-	if(s1 > s2) {
-	  b->leaf = (s1 > pointSequences[(int)b->leaf]) ? v1 : b->leaf;
-	}
-	if(s2 > s1) {
-	  b->leaf = (s2 > pointSequences[(int)b->leaf]) ? v2 : b->leaf;
-	}
+        if(s1 > s2) {
+          b->leaf = (s1 > pointSequences[(int)b->leaf]) ? v1 : b->leaf;
+        }
+        if(s2 > s1) {
+          b->leaf = (s2 > pointSequences[(int)b->leaf]) ? v2 : b->leaf;
+        }
       } else {
         b->leaf = (s1 > s2) ? v1 : v2;
       }
@@ -695,11 +696,18 @@ int ttk::PlanarGraphLayout::computeMergeTreeLayout(
 
       if(s2 >= s1) {
         branch1->branchPoints.push_back(b2);
-        branch2->connectedFrom = v1;
-       } else {
+        branch2->saddlePoint = v1;
+        // handles edge case of leaf not existing
+        if(branch2->leaf == -1) {
+          branch2->leaf = v2;
+        }
+      } else {
         branch2->branchPoints.push_back(b1);
-        branch1->connectedFrom = v2;
-       }
+        branch1->saddlePoint = v2;
+        if(branch1->leaf == -1) {
+          branch1->leaf = v1;
+        }
+      }
 
       branch1->vertices.insert(v1);
       branch2->vertices.insert(v2);

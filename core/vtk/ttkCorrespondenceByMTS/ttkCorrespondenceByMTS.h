@@ -21,8 +21,7 @@ protected:
   ttkCorrespondenceByMTS();
   ~ttkCorrespondenceByMTS() override;
 
-  int Correlate(vtkImageData *correspondences,
-                vtkDataObject *inputDataObjects0,
-                vtkDataObject *inputDataObjects1
-  ) override;
+  int ComputeCorrespondences(vtkImageData *correspondenceMatrix,
+                             vtkDataObject *inputDataObjects0,
+                             vtkDataObject *inputDataObjects1) override;
 };

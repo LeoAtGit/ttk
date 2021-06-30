@@ -1,17 +1,17 @@
 #include <ttkCorrespondenceByPersistencePairs.h>
 
-#include <vtkObjectFactory.h>
-#include <vtkInformation.h>
-#include <vtkImageData.h>
-#include <vtkMultiBlockDataSet.h>
-#include <vtkPointSet.h>
-#include <vtkPointData.h>
-#include <vtkIntArray.h>
 #include <vtkCellData.h>
 #include <vtkDoubleArray.h>
+#include <vtkImageData.h>
+#include <vtkInformation.h>
+#include <vtkIntArray.h>
+#include <vtkMultiBlockDataSet.h>
+#include <vtkObjectFactory.h>
+#include <vtkPointData.h>
+#include <vtkPointSet.h>
 
-#include <ttkUtils.h>
 #include <ttkMacros.h>
+#include <ttkUtils.h>
 
 vtkStandardNewMacro(ttkCorrespondenceByPersistencePairs);
 
@@ -23,19 +23,21 @@ ttkCorrespondenceByPersistencePairs::ttkCorrespondenceByPersistencePairs() {
 ttkCorrespondenceByPersistencePairs::~ttkCorrespondenceByPersistencePairs() {
 }
 
-int ttkCorrespondenceByPersistencePairs::Correlate(
-    vtkImageData *correspondences,
-    vtkDataObject* inputDataObjects0,
-    vtkDataObject* inputDataObjects1
-){
+int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
+  vtkImageData *correspondenceMatrix,
+  vtkDataObject *inputDataObjects0,
+  vtkDataObject *inputDataObjects1) {
   int status = 0;
-    
+
   // unpack input
-  vtkUnstructuredGrid *p0 = vtkUnstructuredGrid::SafeDownCast(inputDataObjects0); // set of persist. pairs from previous timestep
-  vtkUnstructuredGrid *p1 = vtkUnstructuredGrid::SafeDownCast(inputDataObjects1); // PPs from current timestep
+  vtkUnstructuredGrid *p0 = vtkUnstructuredGrid::SafeDownCast(
+    inputDataObjects0); // set of persist. pairs from previous timestep
+  vtkUnstructuredGrid *p1 = vtkUnstructuredGrid::SafeDownCast(
+    inputDataObjects1); // PPs from current timestep
 
   if(!p0 || !p1)
-    return !this->printErr("Input data objects need to be vtkUnstructuredGrids.");
+    return !this->printErr(
+      "Input data objects need to be vtkUnstructuredGrids.");
 
   // get point coordinates
   auto coords0 = p0->GetPoints()->GetData();
@@ -43,16 +45,18 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
 
   // get and format persistence diagrams
   using dataType = double;
-  using dT = std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType,
-      int, dataType, float, float, float, dataType, float, float, float>;
+  using dT
+    = std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType, int,
+                 dataType, float, float, float, dataType, float, float, float>;
   using mT = std::tuple<int, int, double>;
 
   std::vector<dT> CTDiagram0;
   std::vector<dT> CTDiagram1;
 
-  const double spacing = 0; // 2d tracking -> height spacing parameter for 3d display
+  const double spacing
+    = 0; // 2d tracking -> height spacing parameter for 3d display
   status = getDiagram<double>(CTDiagram0, p0, spacing, 0);
-  if (status < 0) {
+  if(status < 0) {
     this->printErr("Could not extract diagram from first input data-set");
     return 0;
   }
@@ -69,17 +73,18 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
   const int nFeatures1 = CTDiagram1.size();
 
   // initialize correspondence matrix i.e., distance matrix
-  correspondences->SetDimensions(nFeatures0, nFeatures1, 1);
-  correspondences->AllocateScalars(VTK_FLOAT, 1); // matching output = float
+  correspondenceMatrix->SetDimensions(nFeatures0, nFeatures1, 1);
+  correspondenceMatrix->AllocateScalars(
+    VTK_FLOAT, 1); // matching output = float
 
-  auto correspondencesArray = correspondences->GetPointData()->GetArray(0);
+  auto correspondencesArray = correspondenceMatrix->GetPointData()->GetArray(0);
   correspondencesArray->SetName("LiftedWassersteinDistance");
-  auto correspondanceMatrix = ttkUtils::GetPointer<float>(correspondencesArray);
-  for (int i = 0; i < nFeatures0; ++i)
-      for (int j = 0; j < nFeatures1; ++j) 
-      {
-          correspondanceMatrix[j * nFeatures0 + i] = 0;
-      }
+  auto correspondenceMatrixData
+    = ttkUtils::GetPointer<float>(correspondencesArray);
+  for(int i = 0; i < nFeatures0; ++i)
+    for(int j = 0; j < nFeatures1; ++j) {
+      correspondenceMatrixData[j * nFeatures0 + i] = 0;
+    }
 
   // get metric parameters
   const std::string algorithm = DistanceAlgorithm;
@@ -116,66 +121,61 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
   // compute correspondences in basecode
   std::vector<mT> matchings;
   switch (coords0->GetDataType()) {
-  vtkTemplateMacro(
+    vtkTemplateMacro(
       status = this->computeDistanceMatrix<double>(
       CTDiagram0,
       CTDiagram1,
       matchings,
       px, py, pz, ps, pe, algorithm, wasserstein, pvAlgorithm, maxJump));
   }
-  if (status < 0) 
-  {
-      this->printErr("Error computing distance matrix.");
-      return -1;
+  if(status < 0) {
+    this->printErr("Error computing distance matrix.");
+    return -1;
   }
 
   // build matrix
   auto matchingsSize = matchings.size();
-  if (matchingsSize > 0)
-  {
-    for (int i = 0; i < matchingsSize; ++i) {
+  if(matchingsSize > 0) {
+    for(int i = 0; i < matchingsSize; ++i) {
       vtkIdType ids[2];
       mT t = matchings.at((unsigned long)i);
       auto n1 = (int)std::get<0>(t); // diagram 0
       auto n2 = (int)std::get<1>(t); // diagram 1
-      if (n1 >= nFeatures0 || n2 >= nFeatures1) 
-      {
-          this->printErr("Invalid indexing: feature index > feature number.");
-          continue;
+      if(n1 >= nFeatures0 || n2 >= nFeatures1) {
+        this->printErr("Invalid indexing: feature index > feature number.");
+        continue;
       }
 
-      correspondanceMatrix[n2 * nFeatures0 + n1] = (float) 1; // std::get<2>(t);
+      correspondenceMatrixData[n2 * nFeatures0 + n1]
+        = (float)1; // std::get<2>(t);
     }
   }
-  
+
   // add index label maps
-  using LabelIndexMap = std::unordered_map<long long,long long>;
+  using LabelIndexMap = std::unordered_map<long long, long long>;
   LabelIndexMap labelsIndexMap0;
   LabelIndexMap labelsIndexMap1;
-  for(auto& it : std::vector<std::pair<std::vector<dT>*,LabelIndexMap*>>(
-      {{&CTDiagram0, &labelsIndexMap0},
-       {&CTDiagram1, &labelsIndexMap1}
-      }))
-  {
-      long long labelIndex = 0;
-      const int nLabels = it.first->size();
-      // there are no gaps in indices in the Persistence Diagrams pipleine
-      for (int i = 0; i < nLabels; ++i)
-      {
-          it.second->insert({i, labelIndex++});
-      }
+  for(auto &it : std::vector<std::pair<std::vector<dT> *, LabelIndexMap *>>(
+        {{&CTDiagram0, &labelsIndexMap0}, {&CTDiagram1, &labelsIndexMap1}})) {
+    long long labelIndex = 0;
+    const int nLabels = it.first->size();
+    // there are no gaps in indices in the Persistence Diagrams pipleine
+    for(int i = 0; i < nLabels; ++i) {
+      it.second->insert({i, labelIndex++});
+    }
   }
 
-  int a=0;
-  for(const auto it : std::vector<LabelIndexMap*>({&labelsIndexMap0,&labelsIndexMap1})){
+  int a = 0;
+  for(const auto it :
+      std::vector<LabelIndexMap *>({&labelsIndexMap0, &labelsIndexMap1})) {
     auto array = vtkSmartPointer<vtkIntArray>::New();
-    array->SetName(std::string("IndexLabelMap"+std::to_string(a++)).data());
+    array->SetName(std::string("IndexLabelMap" + std::to_string(a++)).data());
     array->SetNumberOfTuples(it->size());
     auto arrayData = ttkUtils::GetPointer<int>(array);
-    for(const auto& it2: *it)
+    for(const auto &it2 : *it)
       arrayData[it2.second] = it2.first;
 
-    correspondences->GetFieldData()->AddArray(array);
+    correspondenceMatrix->GetFieldData()->AddArray(array);
   }
 
   return 1;
@@ -183,12 +183,23 @@ int ttkCorrespondenceByPersistencePairs::Correlate(
 
 template <typename dataType>
 int ttkCorrespondenceByPersistencePairs::getDiagram(
-  std::vector<std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType,
-      int, dataType, float, float, float, dataType, float, float, float> > &diagram,
+  std::vector<std::tuple<int,
+                         ttk::CriticalType,
+                         int,
+                         ttk::CriticalType,
+                         dataType,
+                         int,
+                         dataType,
+                         float,
+                         float,
+                         float,
+                         dataType,
+                         float,
+                         float,
+                         float>> &diagram,
   vtkUnstructuredGrid *CTPersistenceDiagram_,
   const double spacing,
-  const int diagramNumber)
-{
+  const int diagramNumber) {
   auto pointData = CTPersistenceDiagram_->GetPointData();
   auto cellData = CTPersistenceDiagram_->GetCellData();
 
@@ -199,15 +210,22 @@ int ttkCorrespondenceByPersistencePairs::getDiagram(
   auto vertexIdentifierScalars = ttkSimplexIdTypeArray::SafeDownCast(
     pointData->GetArray(ttk::VertexScalarFieldName));
 
-  auto nodeTypeScalars = vtkIntArray::SafeDownCast(pointData->GetArray("CriticalType"));
-  auto pairIdentifierScalars = ttkSimplexIdTypeArray::SafeDownCast(cellData->GetArray("PairIdentifier"));
-  auto extremumIndexScalars = vtkIntArray::SafeDownCast(cellData->GetArray("PairType"));
-  auto persistenceScalars = vtkDoubleArray::SafeDownCast(cellData->GetArray("Persistence"));
-  auto birthScalars = vtkDoubleArray::SafeDownCast(pointData->GetArray("Birth"));
-  auto deathScalars = vtkDoubleArray::SafeDownCast(pointData->GetArray("Death"));
+  auto nodeTypeScalars
+    = vtkIntArray::SafeDownCast(pointData->GetArray("CriticalType"));
+  auto pairIdentifierScalars
+    = ttkSimplexIdTypeArray::SafeDownCast(cellData->GetArray("PairIdentifier"));
+  auto extremumIndexScalars
+    = vtkIntArray::SafeDownCast(cellData->GetArray("PairType"));
+  auto persistenceScalars
+    = vtkDoubleArray::SafeDownCast(cellData->GetArray("Persistence"));
+  auto birthScalars
+    = vtkDoubleArray::SafeDownCast(pointData->GetArray("Birth"));
+  auto deathScalars
+    = vtkDoubleArray::SafeDownCast(pointData->GetArray("Death"));
 
   vtkPoints *points = CTPersistenceDiagram_->GetPoints();
-  if (!pairIdentifierScalars) return -2;
+  if(!pairIdentifierScalars)
+    return -2;
 
   auto pairingsSize = (int)pairIdentifierScalars->GetNumberOfTuples();
 

@@ -5,7 +5,14 @@
 ///
 /// \brief TTK %connectedComponents processing package.
 ///
-/// This filter consumes a scalar field with a feature mask and computes for each edge connected group of vertices with a non-background mask value a so-called connected component via flood-filling, where the backgroud is masked with values smaller-equal zero. The computed components store the size, seed, and center of mass of each component. The flag UseSeedIdAsComponentId controls if the resulting segmentation is either labeled by the index of the component, or by its seed location (which can be used as a deterministic component label).
+/// This filter consumes a scalar field with a feature mask and computes for
+/// each edge connected group of vertices with a non-background mask value a
+/// so-called connected component via flood-filling, where the backgroud is
+/// masked with values smaller-equal zero. The computed components store the
+/// size, seed, and center of mass of each component. The flag
+/// UseSeedIdAsComponentId controls if the resulting segmentation is either
+/// labeled by the index of the component, or by its seed location (which can be
+/// used as a deterministic component label).
 
 #pragma once
 
@@ -92,13 +99,12 @@ namespace ttk {
     }
 
     template <class DT, class TT = ttk::AbstractTriangulation>
-    int computeConnectedComponents(
-      std::vector<Component> &components,
-      int *outputLabels,
-      const DT *featureMask,
-      const TT *triangulation,
-      const bool useSeedAsComponentId = false
-    ) const {
+    int computeConnectedComponents(std::vector<Component> &components,
+                                   int *outputLabels,
+                                   const DT *featureMask,
+                                   const TT *triangulation,
+                                   const bool useSeedAsComponentId
+                                   = false) const {
 
       Timer timer;
 
@@ -121,20 +127,22 @@ namespace ttk {
 
       for(TID i = 0; i < nVertices; i++)
         if(outputLabels[i] == featureLabel)
-          this->computeFloodFill<int,TT>(outputLabels, components, stack, triangulation, i);
+          this->computeFloodFill<int, TT>(
+            outputLabels, components, stack, triangulation, i);
 
       this->printMsg(msg, 1, timer.getElapsedTime(), 1);
 
-      if(useSeedAsComponentId){
+      if(useSeedAsComponentId) {
         timer.reStart();
         msg = "Labeling Components by Seed Id";
-        this->printMsg( msg, 0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE);
+        this->printMsg(
+          msg, 0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE);
 
-        #ifdef TTK_ENABLE_OPENMP
-        #pragma omp parallel for num_threads(this->threadNumber_)
-        #endif
-        for(TID i = 0; i < nVertices; i++){
-          auto& cid = outputLabels[i];
+#ifdef TTK_ENABLE_OPENMP
+#pragma omp parallel for num_threads(this->threadNumber_)
+#endif
+        for(TID i = 0; i < nVertices; i++) {
+          auto &cid = outputLabels[i];
           if(cid >= 0)
             cid = components[cid].seed;
         }
@@ -145,4 +153,4 @@ namespace ttk {
       return 1;
     }
   };
-}
+} // namespace ttk

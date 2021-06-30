@@ -184,8 +184,9 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
     = static_cast<int *>(prepArray(o_mtParentEdge2, n_o_mtEdges, 1, "Parent"));
 
   auto o_mtNodeId = vtkSmartPointer<vtkIntArray>::New();
-  auto o_mtNodeIdData = static_cast<int *>(prepArray(o_mtNodeId, n_o_mtPoints, 1, "NodeId"));
-  for(size_t i=0; i<n_o_mtPoints; i++)
+  auto o_mtNodeIdData
+    = static_cast<int *>(prepArray(o_mtNodeId, n_o_mtPoints, 1, "NodeId"));
+  for(size_t i = 0; i < n_o_mtPoints; i++)
     o_mtNodeIdData[i] = i;
 
   auto nextId = vtkSmartPointer<vtkIntArray>::New();
@@ -306,7 +307,7 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
       for(size_t i = 0; i < n_i_mtPoints; i++)
         outArray->SetTuple(i, i, inArray);
 
-      if(std::string("VertexId").compare(outArray->GetName()) == 0){
+      if(std::string("VertexId").compare(outArray->GetName()) == 0) {
         for(size_t i = n_i_mtPoints; i < n_o_mtPoints; i++)
           outArray->SetTuple1(i, -1);
         continue;
@@ -390,21 +391,13 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
     int status = 0;
     ttkTypeMacroA(
       i_sScalars->GetDataType(),
-      (
-        status = this->computeRefinedSegmentation<T0, ttk::SimplexId>(
-        nodeIdData,
-        sizeData,
+      (status = this->computeRefinedSegmentation<T0, ttk::SimplexId>(
+         nodeIdData, sizeData,
 
-        isSplitTree,
-        i_sBranchIdData,
-        ttkUtils::GetPointer<const T0>(i_sScalars),
-        ttkUtils::GetPointer<const T0>(o_mtScalars),
-        nextIdData,
-        n_o_mtPoints,
-        n_i_sPoints
-        )
-      )
-    );
+         isSplitTree, i_sBranchIdData,
+         ttkUtils::GetPointer<const T0>(i_sScalars),
+         ttkUtils::GetPointer<const T0>(o_mtScalars), nextIdData, n_o_mtPoints,
+         n_i_sPoints)));
     if(!status)
       return 0;
 

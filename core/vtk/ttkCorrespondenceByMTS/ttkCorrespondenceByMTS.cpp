@@ -22,14 +22,14 @@ ttkCorrespondenceByMTS::ttkCorrespondenceByMTS() {
 ttkCorrespondenceByMTS::~ttkCorrespondenceByMTS() {
 }
 
-int ttkCorrespondenceByMTS::Correlate(vtkImageData *correspondences,
-                                  vtkDataObject* inputDataObjects0,
-                                  vtkDataObject* inputDataObjects1
-                                  ) {
+int ttkCorrespondenceByMTS::ComputeCorrespondences(
+  vtkImageData *correspondenceMatrix,
+  vtkDataObject *inputDataObjects0,
+  vtkDataObject *inputDataObjects1) {
 
   // unpack inputs
-  auto inputsAsMB0 = static_cast<vtkMultiBlockDataSet*>(inputDataObjects0);
-  auto inputsAsMB1 = static_cast<vtkMultiBlockDataSet*>(inputDataObjects1);
+  auto inputsAsMB0 = static_cast<vtkMultiBlockDataSet *>(inputDataObjects0);
+  auto inputsAsMB1 = static_cast<vtkMultiBlockDataSet *>(inputDataObjects1);
 
   auto d0 = vtkDataSet::SafeDownCast(inputsAsMB0->GetBlock(0));
   auto d1 = vtkDataSet::SafeDownCast(inputsAsMB1->GetBlock(0));
@@ -61,38 +61,38 @@ int ttkCorrespondenceByMTS::Correlate(vtkImageData *correspondences,
     return !this->printErr("Unable to retrieve merge tree scalar arrays.");
 
   // initialize correspondence matrix
-  correspondences->SetDimensions(nEdges0, nEdges1, 1);
-  correspondences->AllocateScalars(VTK_INT, 1);
-  auto correspondencesArray = correspondences->GetPointData()->GetArray(0);
-  correspondencesArray->SetName("Overlap");
+  correspondenceMatrix->SetDimensions(nEdges0, nEdges1, 1);
+  correspondenceMatrix->AllocateScalars(VTK_INT, 1);
+  auto matrixData = correspondenceMatrix->GetPointData()->GetArray(0);
+  matrixData->SetName("Overlap");
 
   // compute overlap of segments
   int status = 0;
   switch(scalars0->GetDataType()) {
     vtkTemplateMacro(
       (status = this->computeSegmentationOverlap<int, VTK_TT>(
-        ttkUtils::GetPointer<int>(correspondencesArray),
+         ttkUtils::GetPointer<int>(matrixData),
 
-        ttkUtils::GetPointer<const int>(seg0),
-        ttkUtils::GetPointer<const int>(seg1), seg0->GetNumberOfTuples(),
-        ttkUtils::GetPointer<const int>(next0),
-        ttkUtils::GetPointer<const int>(next1),
-        ttkUtils::GetPointer<const VTK_TT>(scalars0),
-        ttkUtils::GetPointer<const VTK_TT>(scalars1), nEdges0, nEdges1)));
+         ttkUtils::GetPointer<const int>(seg0),
+         ttkUtils::GetPointer<const int>(seg1), seg0->GetNumberOfTuples(),
+         ttkUtils::GetPointer<const int>(next0),
+         ttkUtils::GetPointer<const int>(next1),
+         ttkUtils::GetPointer<const VTK_TT>(scalars0),
+         ttkUtils::GetPointer<const VTK_TT>(scalars1), nEdges0, nEdges1)));
   }
   if(!status)
     return 0;
 
   // add index label maps
-  int a=0;
-  auto fd = correspondences->GetFieldData();
-  for(auto& it : std::vector<vtkDataSet*>({m0,m1})){
+  int a = 0;
+  auto fd = correspondenceMatrix->GetFieldData();
+  for(auto &it : std::vector<vtkDataSet *>({m0, m1})) {
     auto labels = this->GetInputArrayToProcess(1, it);
     if(!labels)
       return !this->printErr("Unable to retrieve labels.");
-    auto array = vtkSmartPointer<vtkDataArray>::Take( labels->NewInstance() );
+    auto array = vtkSmartPointer<vtkDataArray>::Take(labels->NewInstance());
     array->ShallowCopy(labels);
-    array->SetName(("IndexLabelMap"+std::to_string(a++)).data());
+    array->SetName(("IndexLabelMap" + std::to_string(a++)).data());
     fd->AddArray(array);
   }
 

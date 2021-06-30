@@ -25,13 +25,12 @@ vtkIntArray *GetVertexIdArray(vtkDataSet *input) {
     input->GetPointData()->GetArray("ttkVertexScalarField"));
 }
 
-int ttkCorrespondenceByGradient::Correlate(
-  vtkImageData *correspondences,
+int ttkCorrespondenceByGradient::ComputeCorrespondences(
+  vtkImageData *correspondenceMatrix,
   vtkDataObject *inputDataObjects0,
-  vtkDataObject *inputDataObjects1
-) {
-  auto inputs0AsMB = static_cast<vtkMultiBlockDataSet*>(inputDataObjects0);
-  auto inputs1AsMB = static_cast<vtkMultiBlockDataSet*>(inputDataObjects1);
+  vtkDataObject *inputDataObjects1) {
+  auto inputs0AsMB = static_cast<vtkMultiBlockDataSet *>(inputDataObjects0);
+  auto inputs1AsMB = static_cast<vtkMultiBlockDataSet *>(inputDataObjects1);
 
   auto domain0 = vtkDataSet::SafeDownCast(inputs0AsMB->GetBlock(0));
   auto domain1 = vtkDataSet::SafeDownCast(inputs1AsMB->GetBlock(0));
@@ -42,16 +41,16 @@ int ttkCorrespondenceByGradient::Correlate(
   int nFeatures1 = seeds1->GetNumberOfElements(0);
 
   // allocate correlation matrices
-  correspondences->SetDimensions(nFeatures0, nFeatures1, 1);
-  correspondences->AllocateScalars(VTK_INT, 1);
+  correspondenceMatrix->SetDimensions(nFeatures0, nFeatures1, 1);
+  correspondenceMatrix->AllocateScalars(VTK_INT, 1);
 
-  auto forward = correspondences->GetPointData()->GetArray(0);
+  auto forward = correspondenceMatrix->GetPointData()->GetArray(0);
   forward->SetName("Forward");
 
   auto backward = vtkSmartPointer<vtkIntArray>::New();
   backward->DeepCopy(forward);
   backward->SetName("Backward");
-  correspondences->GetPointData()->AddArray(backward);
+  correspondenceMatrix->GetPointData()->AddArray(backward);
 
   auto orderArray0 = ttkAlgorithm::GetOrderArray(domain0, 0);
   auto orderArray1 = ttkAlgorithm::GetOrderArray(domain1, 0);
@@ -93,15 +92,15 @@ int ttkCorrespondenceByGradient::Correlate(
     return 0;
 
   // add index label maps
-  int a=0;
-  auto fd = correspondences->GetFieldData();
-  for(auto& it : std::vector<vtkDataSet*>({seeds0,seeds1})){
+  int a = 0;
+  auto fd = correspondenceMatrix->GetFieldData();
+  for(auto &it : std::vector<vtkDataSet *>({seeds0, seeds1})) {
     auto labels = this->GetInputArrayToProcess(1, it);
     if(!labels)
       return !this->printErr("Unable to retrieve labels.");
-    auto array = vtkSmartPointer<vtkDataArray>::Take( labels->NewInstance() );
+    auto array = vtkSmartPointer<vtkDataArray>::Take(labels->NewInstance());
     array->ShallowCopy(labels);
-    array->SetName(("IndexLabelMap"+std::to_string(a++)).data());
+    array->SetName(("IndexLabelMap" + std::to_string(a++)).data());
     fd->AddArray(array);
   }
 

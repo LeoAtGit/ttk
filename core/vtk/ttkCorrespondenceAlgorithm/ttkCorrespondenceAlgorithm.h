@@ -23,7 +23,8 @@ class vtkImageData;
 class vtkMultiBlockDataSet;
 class vtkDataSet;
 
-class TTKCORRESPONDENCEALGORITHM_EXPORT ttkCorrespondenceAlgorithm : public ttkAlgorithm {
+class TTKCORRESPONDENCEALGORITHM_EXPORT ttkCorrespondenceAlgorithm
+  : public ttkAlgorithm {
 
 private:
   vtkSmartPointer<vtkMultiBlockDataSet> PreviousInputs;
@@ -42,10 +43,9 @@ protected:
                   vtkInformationVector **inputVector,
                   vtkInformationVector *outputVector) override;
 
-  virtual int Correlate(vtkImageData *correlations,
-                vtkDataObject *inputDataObjects0,
-                vtkDataObject *inputDataObjects1
-  ) {
+  virtual int ComputeCorrespondences(vtkImageData *correspondenceMatrix,
+                                     vtkDataObject *inputDataObjects0,
+                                     vtkDataObject *inputDataObjects1) {
     return 0;
   };
 };

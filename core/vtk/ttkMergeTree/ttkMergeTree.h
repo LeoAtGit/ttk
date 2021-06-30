@@ -9,10 +9,8 @@
 // TTK Base Includes
 #include <MergeTree.h>
 
-class TTKMERGETREE_EXPORT ttkMergeTree
-  : public ttkAlgorithm
-  , public ttk::mt::MergeTree
-{
+class TTKMERGETREE_EXPORT ttkMergeTree : public ttkAlgorithm,
+                                         public ttk::mt::MergeTree {
 private:
   int Type{0};
 

@@ -61,7 +61,7 @@ int ttkPlanarGraphLayout::RequestData(vtkInformation *request,
     return !this->printErr("Unable to retrieve sequence array.");
 
   auto sizeArray = this->GetInputArrayToProcess(1, inputVector);
-  if(this->UseSizes && (!sizeArray || sizeArray->GetDataType()!=VTK_FLOAT))
+  if(this->UseSizes && (!sizeArray || sizeArray->GetDataType() != VTK_FLOAT))
     return !this->printErr("Unable to retrieve float size array.");
 
   auto branchArray = this->GetInputArrayToProcess(2, inputVector);
@@ -80,44 +80,36 @@ int ttkPlanarGraphLayout::RequestData(vtkInformation *request,
 
   auto DT = this->UseSequences ? sequenceArray->GetDataType() : VTK_INT;
   auto IT = this->UseBranches ? branchArray->GetDataType()
-                : this->UseLevels ? levelArray->GetDataType() : VTK_INT;
-
-
+            : this->UseLevels ? levelArray->GetDataType()
+                              : VTK_INT;
 
   int status = 1;
-  if(this->Algorithm==ALGORITHM::DOT){
-    ttkTypeMacroAI(DT,IT,
-      (
-        status = this->computeGraphLayout<T0, T1>(
-          // Output
-          ttkUtils::GetPointer<float>(outputArray),
-          // Input
-          output->GetCells()->GetData()->GetPointer(0),
-          nPoints, nEdges,
-          !this->UseSequences ? nullptr : ttkUtils::GetPointer<T0>(sequenceArray),
-          !this->UseSizes ? nullptr : ttkUtils::GetPointer<float>(sizeArray),
-          !this->UseBranches ? nullptr : ttkUtils::GetPointer<T1>(branchArray),
-          !this->UseLevels ? nullptr : ttkUtils::GetPointer<T1>(levelArray)
-        )
-      )
-    );
+  if(this->Algorithm == ALGORITHM::DOT) {
+    ttkTypeMacroAI(
+      DT, IT,
+      (status = this->computeGraphLayout<T0, T1>(
+         // Output
+         ttkUtils::GetPointer<float>(outputArray),
+         // Input
+         output->GetCells()->GetData()->GetPointer(0), nPoints, nEdges,
+         !this->UseSequences ? nullptr
+                             : ttkUtils::GetPointer<T0>(sequenceArray),
+         !this->UseSizes ? nullptr : ttkUtils::GetPointer<float>(sizeArray),
+         !this->UseBranches ? nullptr : ttkUtils::GetPointer<T1>(branchArray),
+         !this->UseLevels ? nullptr : ttkUtils::GetPointer<T1>(levelArray))));
   } else {
     if(!this->UseSequences || !this->UseBranches)
-      return !this->printErr("Merge Tree Layout requires Sequence and Branch Arrays.");
+      return !this->printErr(
+        "Merge Tree Layout requires Sequence and Branch Arrays.");
 
-    ttkTypeMacroAI(DT,IT,
-      (
-        status = this->computeMergeTreeLayout<T0, T1>(
-          // Output
-          ttkUtils::GetPointer<float>(outputArray),
-          // Input
-          output->GetCells()->GetData()->GetPointer(0),
-          nPoints, nEdges,
-          ttkUtils::GetPointer<T0>(sequenceArray),
-          ttkUtils::GetPointer<T1>(branchArray)
-        )
-      )
-    );
+    ttkTypeMacroAI(DT, IT,
+                   (status = this->computeMergeTreeLayout<T0, T1>(
+                      // Output
+                      ttkUtils::GetPointer<float>(outputArray),
+                      // Input
+                      output->GetCells()->GetData()->GetPointer(0), nPoints,
+                      nEdges, ttkUtils::GetPointer<T0>(sequenceArray),
+                      ttkUtils::GetPointer<T1>(branchArray))));
   }
 
   if(status != 1)

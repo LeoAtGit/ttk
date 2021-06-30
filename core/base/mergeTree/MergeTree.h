@@ -221,11 +221,8 @@ namespace ttk::mt {
 
       // add extremumIndex to queue
       {
-        const auto& extremumIndex = currentPropagation->criticalPoints[0];
-        queue->emplace(
-          orderArray[extremumIndex],
-          extremumIndex
-        );
+        const auto &extremumIndex = currentPropagation->criticalPoints[0];
+        queue->emplace(orderArray[extremumIndex], extremumIndex);
         queueMask[extremumIndex] = segmentationId;
       }
 
@@ -248,7 +245,7 @@ namespace ttk::mt {
 
         // get neighbors
         const IT nNeighbors = triangulation->getVertexNeighborNumber(v);
-        neighbors.resize(nNeighbors,0);
+        neighbors.resize(nNeighbors, 0);
 
         for(IT n = 0; n < nNeighbors; n++)
           triangulation->getVertexNeighbor(v, n, neighbors[n]);
@@ -298,10 +295,7 @@ namespace ttk::mt {
           // merge propagations
           for(IT n = 0; n < nNeighbors; n++) {
             currentPropagation = Propagation<IT>::unify(
-              currentPropagation,
-              propagationMask[neighbors[n]],
-              orderArray
-            );
+              currentPropagation, propagationMask[neighbors[n]], orderArray);
           }
 
           queue = &currentPropagation->queue;
@@ -320,7 +314,7 @@ namespace ttk::mt {
 #pragma omp atomic read
           nActivePropagations_ = nActivePropagations;
 
-          if(nActivePropagations_ == 1){
+          if(nActivePropagations_ == 1) {
             currentPropagation->interrupted = true;
             return 1;
           }
@@ -328,7 +322,7 @@ namespace ttk::mt {
       }
 
       // add global minimum (if not already added as saddle)
-      if(currentPropagation->criticalPoints.back()!=v)
+      if(currentPropagation->criticalPoints.back() != v)
         currentPropagation->criticalPoints.push_back(v);
 
       return 1;
@@ -389,8 +383,8 @@ namespace ttk::mt {
 
       const IT nVertices = triangulation->getNumberOfVertices();
 
-      // reconstruct sorted vertices
-      #pragma omp parallel for num_threads(this->threadNumber_)
+// reconstruct sorted vertices
+#pragma omp parallel for num_threads(this->threadNumber_)
       for(IT v = 0; v < nVertices; v++)
         mask[orderArray[v]] = v;
 
@@ -401,7 +395,7 @@ namespace ttk::mt {
 
       const IT nPropagations = propagations.size();
       for(IT p = 0; p < nPropagations; p++) {
-        if(propagations[p].interrupted){
+        if(propagations[p].interrupted) {
           currentPropagation = &propagations[p];
           segmentationId = currentPropagation->branchId;
           break;
@@ -434,9 +428,7 @@ namespace ttk::mt {
             triangulation->getVertexNeighbor(v, n, u);
 
             currentPropagation = Propagation<IT>::unify(
-              currentPropagation,
-              propagationMask[u],
-              orderArray,
+              currentPropagation, propagationMask[u], orderArray,
               false // not necessary to merge queues
             );
           }
@@ -449,7 +441,7 @@ namespace ttk::mt {
       }
 
       // add global minimum (if not already added as saddle)
-      if(currentPropagation->criticalPoints.back()!=mask[0])
+      if(currentPropagation->criticalPoints.back() != mask[0])
         currentPropagation->criticalPoints.push_back(mask[0]);
 
       std::stringstream vFraction;
@@ -582,4 +574,4 @@ namespace ttk::mt {
       return 1;
     }
   };
-} // namespace ttk
+} // namespace ttk::mt

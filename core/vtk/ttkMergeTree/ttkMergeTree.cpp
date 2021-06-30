@@ -102,8 +102,7 @@ int ttkMergeTree::RequestData(vtkInformation *request,
       return 0;
 
     ttkTypeMacroAT(
-      scalarArray->GetDataType(),
-      triangulation->getType(),
+      scalarArray->GetDataType(), triangulation->getType(),
       (status = this->finalizePropagations<T0, ttk::SimplexId, T1>(
          sortedPropagations,
          ttkUtils::GetPointer<ttk::SimplexId>(segmentationIds), propagations,

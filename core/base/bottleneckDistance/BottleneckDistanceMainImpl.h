@@ -11,7 +11,7 @@
 //      dataType            -- scalar value at vertex 2
 //      float, float, float -- vertex 2 coordinates
 template <typename dataType>
-int BottleneckDistance::computeBottleneck(
+int ttk::BottleneckDistance::computeBottleneck(
   const std::vector<diagramTuple> &d1,
   const std::vector<diagramTuple> &d2,
   std::vector<matchingTuple> &matchings,
@@ -262,7 +262,7 @@ int BottleneckDistance::computeBottleneck(
       }
       else /*if (matcher_ == 0)*/
       {
-        AssignmentAuction<dataType> solverMin;
+        AssignmentMunkres<dataType> solverMin;
         this->solvePWasserstein(minRowColMin, maxRowColMin, minMatrix, minMatchings, solverMin);
       }
       

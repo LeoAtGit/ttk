@@ -28,6 +28,7 @@ class TTKBLOCKAGGREGATOR_EXPORT ttkBlockAggregator : public ttkAlgorithm {
 private:
   bool ForceReset{false};
   bool FlattenInput{true};
+  bool Decompose{false};
   vtkSmartPointer<vtkMultiBlockDataSet> AggregatedMultiBlockDataSet;
 
 public:
@@ -35,6 +36,8 @@ public:
   vtkGetMacro(ForceReset, bool);
   vtkSetMacro(FlattenInput, bool);
   vtkGetMacro(FlattenInput, bool);
+  vtkSetMacro(Decompose, bool);
+  vtkGetMacro(Decompose, bool);
 
   static ttkBlockAggregator *New();
   vtkTypeMacro(ttkBlockAggregator, ttkAlgorithm);
@@ -51,4 +54,5 @@ protected:
                   vtkInformationVector **inputVector,
                   vtkInformationVector *outputVector) override;
   int AggregateBlock(vtkDataObject *dataObject);
+  int DecomposeDataSet(vtkDataObject *data, vtkMultiBlockDataSet *collection);
 };

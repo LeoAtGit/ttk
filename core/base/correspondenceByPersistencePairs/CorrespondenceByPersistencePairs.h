@@ -5,11 +5,11 @@
 /// \date 09.06.2021
 ///
 /// \brief Computes a correspondence matrix from persistence diagram matchings.
-/// 
-/// This module defines the CorrespondenceByPersistencePairs class that computes 
+///
+/// This module defines the CorrespondenceByPersistencePairs class that computes
 /// the correspondance matrix from the output of a Wasserstein-based matching
-/// between persistence diagrams. 1 row = 1 persistence pair in diagram 1, 
-/// 1 column = 1 persistence pair in diagram 2, 
+/// between persistence diagrams. 1 row = 1 persistence pair in diagram 1,
+/// 1 column = 1 persistence pair in diagram 2,
 /// value = 0 => no matching
 /// value > 0 => matching.
 ///
@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <Debug.h>
 #include <BottleneckDistance.h>
+#include <Debug.h>
 
 namespace ttk {
 
@@ -51,7 +51,7 @@ namespace ttk {
       //const std::string msg = "Computing Distance Matrix ("
       //                        + std::to_string(nPoints0) + "x"
       //                        + std::to_string(nPoints1) + ")";
-      //this->printMsg(
+      // this->printMsg(
       //  msg, 0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE);
 
       ttk::BottleneckDistance bottleneckDistance_;
@@ -71,7 +71,8 @@ namespace ttk {
       bottleneckDistance_.setCTDiagram2(&CTDiagram1);
       bottleneckDistance_.setOutputMatchings(&matchings);
       int status = bottleneckDistance_.execute<double>(false);
-      if (status < 0) return -1;
+      if(status < 0)
+        return -1;
 
       return 1;
     }

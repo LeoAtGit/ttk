@@ -1,16 +1,16 @@
 #include <ttkPersistencePairsRepresentatives.h>
 
+#include <vtkCellData.h>
 #include <vtkDataArray.h>
 #include <vtkInformation.h>
 #include <vtkObjectFactory.h>
 #include <vtkPointData.h>
 #include <vtkPointSet.h>
-#include <vtkCellData.h>
 #include <vtkPolyData.h>
 #include <vtkSmartPointer.h>
 
-#include <vtkFloatArray.h>
 #include <vtkDoubleArray.h>
+#include <vtkFloatArray.h>
 #include <vtkIntArray.h>
 
 #include <ttkMacros.h>
@@ -18,19 +18,16 @@
 
 vtkStandardNewMacro(ttkPersistencePairsRepresentatives);
 
-ttkPersistencePairsRepresentatives::ttkPersistencePairsRepresentatives()
-{
+ttkPersistencePairsRepresentatives::ttkPersistencePairsRepresentatives() {
   this->SetNumberOfInputPorts(1);
   this->SetNumberOfOutputPorts(1);
 }
 
-ttkPersistencePairsRepresentatives::~ttkPersistencePairsRepresentatives()
-{}
+ttkPersistencePairsRepresentatives::~ttkPersistencePairsRepresentatives() {
+}
 
 int ttkPersistencePairsRepresentatives::FillInputPortInformation(
-    int port,
-    vtkInformation *info)
-{
+  int port, vtkInformation *info) {
   if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkUnstructuredGrid");
     return 1;
@@ -39,9 +36,7 @@ int ttkPersistencePairsRepresentatives::FillInputPortInformation(
 }
 
 int ttkPersistencePairsRepresentatives::FillOutputPortInformation(
-    int port,
-    vtkInformation *info)
-{
+  int port, vtkInformation *info) {
   if(port == 0) {
     info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
     return 1;
@@ -50,10 +45,9 @@ int ttkPersistencePairsRepresentatives::FillOutputPortInformation(
 }
 
 int ttkPersistencePairsRepresentatives::RequestData(
-    vtkInformation *request,
-    vtkInformationVector **inputVector,
-    vtkInformationVector *outputVector)
-{
+  vtkInformation *request,
+  vtkInformationVector **inputVector,
+  vtkInformationVector *outputVector) {
   // Fetch Input Data
   auto inputDataSet = vtkUnstructuredGrid::GetData(inputVector[0]);
   if(!inputDataSet)
@@ -64,17 +58,19 @@ int ttkPersistencePairsRepresentatives::RequestData(
 
   // get and format persistence diagrams
   using dataType = double;
-  using dT = std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType,
-      int, dataType, float, float, float, dataType, float, float, float>;
+  using dT
+    = std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType, int,
+                 dataType, float, float, float, dataType, float, float, float>;
   using mT = std::tuple<int, int, double>;
   std::vector<dT> inputDiagram;
   using NodeType = ttk::CriticalType;
   auto LocalMax = ttk::CriticalType::Local_maximum;
   auto LocalMin = ttk::CriticalType::Local_minimum;
-  
-  const double spacing = 0; // 2d tracking -> height spacing parameter for 3d display
+
+  const double spacing
+    = 0; // 2d tracking -> height spacing parameter for 3d display
   auto status = getDiagram<double>(inputDiagram, inputDataSet, spacing, 0);
-  if (status < 0) {
+  if(status < 0) {
     this->printErr("Could not extract diagram from first input data-set");
     return 0;
   }
@@ -107,7 +103,7 @@ int ttkPersistencePairsRepresentatives::RequestData(
       auto pointsData = ttkUtils::GetPointer<float>(points->GetData());
       for(int i = 0, j = 0; i < nComponents; i++) {
         const auto &t = inputDiagram[i];
-        
+
         NodeType type1 = std::get<1>(t);
         NodeType type2 = std::get<3>(t);
         bool t11Min = type1 == LocalMin;
@@ -117,11 +113,19 @@ int ttkPersistencePairsRepresentatives::RequestData(
         bool t1Max = t11Max || t12Max;
         bool t1Min = !t1Max && (t11Min || t12Min);
 
-        float x1 = (float) (t1Max ? std::get<11>(t) : t1Min ? std::get<7>(t) : 0);
-        float y1 = (float) (t1Max ? std::get<12>(t) : t1Min ? std::get<8>(t) : 0);
-        float z1 = (float) (t1Max ? std::get<13>(t) : t1Min ? std::get<9>(t) : 0);
-          
-        float v1 = (float) (t1Max ? std::get<10> (t) : t1Min ? std::get<6>(t) : 0);
+        float x1 = (float)(t1Max   ? std::get<11>(t)
+                           : t1Min ? std::get<7>(t)
+                                   : 0);
+        float y1 = (float)(t1Max   ? std::get<12>(t)
+                           : t1Min ? std::get<8>(t)
+                                   : 0);
+        float z1 = (float)(t1Max   ? std::get<13>(t)
+                           : t1Min ? std::get<9>(t)
+                                   : 0);
+
+        float v1 = (float)(t1Max   ? std::get<10>(t)
+                           : t1Min ? std::get<6>(t)
+                                   : 0);
 
         pointsData[j++] = x1;
         pointsData[j++] = y1;
@@ -166,12 +170,23 @@ int ttkPersistencePairsRepresentatives::RequestData(
 
 template <typename dataType>
 int ttkPersistencePairsRepresentatives::getDiagram(
-  std::vector<std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType,
-      int, dataType, float, float, float, dataType, float, float, float> > &diagram,
+  std::vector<std::tuple<int,
+                         ttk::CriticalType,
+                         int,
+                         ttk::CriticalType,
+                         dataType,
+                         int,
+                         dataType,
+                         float,
+                         float,
+                         float,
+                         dataType,
+                         float,
+                         float,
+                         float>> &diagram,
   vtkUnstructuredGrid *CTPersistenceDiagram_,
   const double spacing,
-  const int diagramNumber)
-{
+  const int diagramNumber) {
   auto pointData = CTPersistenceDiagram_->GetPointData();
   auto cellData = CTPersistenceDiagram_->GetCellData();
 
@@ -181,15 +196,22 @@ int ttkPersistencePairsRepresentatives::getDiagram(
 
   auto vertexIdentifierScalars = ttkSimplexIdTypeArray::SafeDownCast(
     pointData->GetArray(ttk::VertexScalarFieldName));
-  auto nodeTypeScalars = vtkIntArray::SafeDownCast(pointData->GetArray("CriticalType"));
-  auto pairIdentifierScalars = ttkSimplexIdTypeArray::SafeDownCast(cellData->GetArray("PairIdentifier"));
-  auto extremumIndexScalars = vtkIntArray::SafeDownCast(cellData->GetArray("PairType"));
-  auto persistenceScalars = vtkDoubleArray::SafeDownCast(cellData->GetArray("Persistence"));
-  auto birthScalars = vtkDoubleArray::SafeDownCast(pointData->GetArray("Birth"));
-  auto deathScalars = vtkDoubleArray::SafeDownCast(pointData->GetArray("Death"));
+  auto nodeTypeScalars
+    = vtkIntArray::SafeDownCast(pointData->GetArray("CriticalType"));
+  auto pairIdentifierScalars
+    = ttkSimplexIdTypeArray::SafeDownCast(cellData->GetArray("PairIdentifier"));
+  auto extremumIndexScalars
+    = vtkIntArray::SafeDownCast(cellData->GetArray("PairType"));
+  auto persistenceScalars
+    = vtkDoubleArray::SafeDownCast(cellData->GetArray("Persistence"));
+  auto birthScalars
+    = vtkDoubleArray::SafeDownCast(pointData->GetArray("Birth"));
+  auto deathScalars
+    = vtkDoubleArray::SafeDownCast(pointData->GetArray("Death"));
 
   vtkPoints *points = CTPersistenceDiagram_->GetPoints();
-  if (!pairIdentifierScalars) return -2;
+  if(!pairIdentifierScalars)
+    return -2;
 
   auto pairingsSize = (int)pairIdentifierScalars->GetNumberOfTuples();
 
@@ -244,10 +266,10 @@ int ttkPersistencePairsRepresentatives::getDiagram(
                         : (dataType)deathScalars->GetValue(2 * i + 1);
 
     if(pairIdentifier != -1 && pairIdentifier < pairingsSize)
-      diagram.at(pairIdentifier)
-        = std::make_tuple(vertexId1, (ttk::CriticalType)nodeType1, vertexId2,
-                          (ttk::CriticalType)nodeType2, (dataType)persistence, pairType,
-                          value1, x1, y1, z1 + s, value2, x2, y2, z2 + s);
+      diagram.at(pairIdentifier) = std::make_tuple(
+        vertexId1, (ttk::CriticalType)nodeType1, vertexId2,
+        (ttk::CriticalType)nodeType2, (dataType)persistence, pairType, value1,
+        x1, y1, z1 + s, value2, x2, y2, z2 + s);
 
     if(pairIdentifier >= pairingsSize) {
       nbNonCompact++;
@@ -266,9 +288,10 @@ int ttkPersistencePairsRepresentatives::getDiagram(
         << std::endl;
     this->printWrn(msg.str());
   }
-  
-  using diagramTuple = std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType,
-      int, dataType, float, float, float, dataType, float, float, float>;
+
+  using diagramTuple
+    = std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, dataType, int,
+                 dataType, float, float, float, dataType, float, float, float>;
   sort(diagram.begin(), diagram.end(),
        [](const diagramTuple &a, const diagramTuple &b) -> bool {
          return std::get<6>(a) < std::get<6>(b);
