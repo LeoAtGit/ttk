@@ -18,6 +18,12 @@ public:
   static ttkCorrespondenceByPersistencePairs *New();
   vtkTypeMacro(ttkCorrespondenceByPersistencePairs, ttkCorrespondenceAlgorithm);
 
+  vtkSetMacro(Lifting, double);
+  vtkGetMacro(Lifting, double);
+
+  vtkSetMacro(MaxJump, double);
+  vtkGetMacro(MaxJump, double);
+
   vtkSetMacro(PX, double);
   vtkGetMacro(PX, double);
 
@@ -32,9 +38,6 @@ public:
 
   vtkSetMacro(PS, double);
   vtkGetMacro(PS, double);
-
-  vtkSetMacro(Alpha, double);
-  vtkGetMacro(Alpha, double);
 
   vtkSetMacro(PVAlgorithm, int);
   vtkGetMacro(PVAlgorithm, int);
@@ -65,14 +68,15 @@ protected:
 private:
 
   // Metric weights
-  double PX{1};
-  double PY{1};
-  double PZ{1};
-  double PE{1}; // extrema
-  double PS{1}; // saddles
+  double PX{0.};
+  double PY{0.};
+  double PZ{0.};
+  double PE{1.}; // extrema
+  double PS{1.}; // saddles
   // Metric config
-  double Alpha{1.0}; // power
-  std::string DistanceAlgorithm{"ttk"}; // distance between PPs
+  double MaxJump{0.1};
+  double Lifting{0.0};
+  std::string DistanceAlgorithm{"0"}; // distance between PPs
   std::string WassersteinMetric{"2"}; // wass vs inf (bottleneck)
   int PVAlgorithm{-1};
 };

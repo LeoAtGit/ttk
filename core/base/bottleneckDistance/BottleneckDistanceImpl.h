@@ -5,14 +5,16 @@ constexpr unsigned long long str2int(const char *str, int h = 0) {
 }
 
 template <typename dataType>
-int BottleneckDistance::execute(const bool usePersistenceMetric) {
+int BottleneckDistance::execute(const bool usePersistenceMetric)
+{
   Timer t;
 
   bool fromParaView = pvAlgorithm_ >= 0;
-  if(fromParaView) {
+  if (fromParaView) {
     switch(pvAlgorithm_) {
       case 0:
-        this->printMsg("Solving with the TTK approach");
+        matcher_ = 0;
+        this->printMsg("Solving with Sparse Munkres.");
         this->computeBottleneck<dataType>(
           *static_cast<const std::vector<diagramTuple> *>(outputCT1_),
           *static_cast<const std::vector<diagramTuple> *>(outputCT2_),
@@ -20,22 +22,13 @@ int BottleneckDistance::execute(const bool usePersistenceMetric) {
           usePersistenceMetric);
         break;
       case 1: {
-        std::stringstream msg;
-        this->printMsg("Solving with the legacy Dionysus exact approach.");
-        this->printErr("Not supported");
-      } break;
-      case 2: {
-        this->printMsg(
-          "Solving with the approximate Dionysus geometric approach.");
-        this->printErr("Not supported");
-      } break;
-      case 3: {
-        this->printMsg("Solving with the parallel TTK approach");
-        this->printErr("Not supported");
-      } break;
-      case 4: {
-        this->printMsg("Benchmarking");
-        this->printErr("Not supported");
+        matcher_ = 1;
+        this->printMsg("Solving with Auction.");
+        this->computeBottleneck<dataType>(
+          *static_cast<const std::vector<diagramTuple> *>(outputCT1_),
+          *static_cast<const std::vector<diagramTuple> *>(outputCT2_),
+          *static_cast<std::vector<matchingTuple> *>(matchings_),
+          usePersistenceMetric);
       } break;
       default: {
         this->printErr("You must specify a valid assignment algorithm.");
@@ -45,8 +38,9 @@ int BottleneckDistance::execute(const bool usePersistenceMetric) {
   } else {
     switch(str2int(algorithm_.c_str())) {
       case str2int("0"):
-      case str2int("ttk"):
-        this->printMsg("Solving with the TTK approach");
+      case str2int("munkres"):
+        matcher_ = 0;
+        this->printMsg("Solving with Sparse Munkres.");
         this->computeBottleneck<dataType>(
           *static_cast<const std::vector<diagramTuple> *>(outputCT1_),
           *static_cast<const std::vector<diagramTuple> *>(outputCT2_),
@@ -54,24 +48,14 @@ int BottleneckDistance::execute(const bool usePersistenceMetric) {
           usePersistenceMetric);
         break;
       case str2int("1"):
-      case str2int("legacy"): {
-        this->printMsg("Solving with the legacy Dionysus exact approach.");
-        this->printErr("Not supported");
-      } break;
-      case str2int("2"):
-      case str2int("geometric"): {
-        this->printMsg(
-          "Solving with the approximate Dionysus geometric approach.");
-        this->printErr("Not supported");
-      } break;
-      case str2int("3"):
-      case str2int("parallel"): {
-        this->printMsg("Solving with the parallel TTK approach");
-        this->printErr("Not supported");
-      } break;
-      case str2int("bench"): {
-        this->printMsg("Benchmarking");
-        this->printErr("Not supported");
+      case str2int("auction"): {
+        matcher_ = 1;
+        this->printMsg("Solving with Auction.");
+        this->computeBottleneck<dataType>(
+          *static_cast<const std::vector<diagramTuple> *>(outputCT1_),
+          *static_cast<const std::vector<diagramTuple> *>(outputCT2_),
+          *static_cast<std::vector<matchingTuple> *>(matchings_),
+          usePersistenceMetric);
       } break;
       default: {
         this->printErr("You must specify a valid assignment algorithm.");
@@ -89,7 +73,8 @@ double BottleneckDistance::computeGeometricalRange(
   const std::vector<diagramTuple> &CTDiagram1,
   const std::vector<diagramTuple> &CTDiagram2,
   const int d1Size,
-  const int d2Size) const {
+  const int d2Size) const
+{
   float minX1, maxX1, minY1, maxY1, minZ1, maxZ1;
   float minX2, maxX2, minY2, maxY2, minZ2, maxZ2;
   float minX, minY, minZ, maxX, maxY, maxZ;
@@ -393,7 +378,7 @@ void BottleneckDistance::solvePWasserstein(
   const int nbCol,
   std::vector<std::vector<dataType>> &matrix,
   std::vector<matchingTuple> &matchings,
-  AssignmentMunkres<dataType> &solver) {
+  AssignmentSolver<dataType> &solver) {
   solver.setInput(matrix);
   solver.run(matchings);
   solver.clearMatrix();
