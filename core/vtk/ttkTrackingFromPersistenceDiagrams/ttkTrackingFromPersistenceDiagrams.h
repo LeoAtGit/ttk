@@ -39,11 +39,14 @@ public:
 
   vtkTypeMacro(ttkTrackingFromPersistenceDiagrams, ttkAlgorithm);
 
+  vtkSetMacro(Lifting, double);
+  vtkGetMacro(Lifting, double);
+
+  vtkSetMacro(MaxJump, double);
+  vtkGetMacro(MaxJump, double);
+
   vtkSetMacro(Tolerance, double);
   vtkGetMacro(Tolerance, double);
-
-  vtkSetMacro(Alpha, double);
-  vtkGetMacro(Alpha, double);
 
   vtkSetMacro(PX, double);
   vtkGetMacro(PX, double);
@@ -138,13 +141,14 @@ private:
   bool DoPostProc{false};
   double PostProcThresh{0.0};
   double Spacing{1.0};
-  double Alpha{1.0};
   double Tolerance{1.0};
-  double PX{1};
-  double PY{1};
-  double PZ{1};
-  double PE{1};
-  double PS{1};
+  double PX{0.0};
+  double PY{0.0};
+  double PZ{0.0};
+  double PE{1.0};
+  double PS{1.0};
+  double MaxJump{0.1};
+  double Lifting{0.0};
   std::string DistanceAlgorithm{"ttk"};
   int PVAlgorithm{-1};
   std::string WassersteinMetric{"1"};

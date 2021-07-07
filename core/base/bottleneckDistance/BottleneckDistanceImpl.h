@@ -5,7 +5,7 @@ constexpr unsigned long long str2int(const char *str, int h = 0) {
 }
 
 template <typename dataType>
-int BottleneckDistance::execute(const bool usePersistenceMetric)
+int ttk::BottleneckDistance::execute(const bool usePersistenceMetric)
 {
   Timer t;
 
@@ -69,7 +69,7 @@ int BottleneckDistance::execute(const bool usePersistenceMetric)
 }
 
 template <typename dataType>
-double BottleneckDistance::computeGeometricalRange(
+double ttk::BottleneckDistance::computeGeometricalRange(
   const std::vector<diagramTuple> &CTDiagram1,
   const std::vector<diagramTuple> &CTDiagram2,
   const int d1Size,
@@ -119,7 +119,7 @@ double BottleneckDistance::computeGeometricalRange(
 }
 
 template <typename dataType>
-double BottleneckDistance::computeMinimumRelevantPersistence(
+double ttk::BottleneckDistance::computeMinimumRelevantPersistence(
   const std::vector<diagramTuple> &CTDiagram1,
   const std::vector<diagramTuple> &CTDiagram2,
   const int d1Size,
@@ -158,7 +158,7 @@ double BottleneckDistance::computeMinimumRelevantPersistence(
 }
 
 template <typename dataType>
-void BottleneckDistance::computeMinMaxSaddleNumberAndMapping(
+void ttk::BottleneckDistance::computeMinMaxSaddleNumberAndMapping(
   const std::vector<diagramTuple> &CTDiagram,
   int dSize,
   int &nbMin,
@@ -198,7 +198,7 @@ void BottleneckDistance::computeMinMaxSaddleNumberAndMapping(
 }
 
 template <typename dataType>
-void BottleneckDistance::buildCostMatrices(
+void ttk::BottleneckDistance::buildCostMatrices(
   const std::vector<diagramTuple> &CTDiagram1,
   const std::vector<diagramTuple> &CTDiagram2,
   const int d1Size,
@@ -373,7 +373,7 @@ void BottleneckDistance::buildCostMatrices(
 }
 
 template <typename dataType>
-void BottleneckDistance::solvePWasserstein(
+void ttk::BottleneckDistance::solvePWasserstein(
   const int nbRow,
   const int nbCol,
   std::vector<std::vector<dataType>> &matrix,
@@ -385,7 +385,7 @@ void BottleneckDistance::solvePWasserstein(
 }
 
 template <typename dataType>
-void BottleneckDistance::solveInfinityWasserstein(
+void ttk::BottleneckDistance::solveInfinityWasserstein(
   const int nbRow,
   const int nbCol,
   const int nbRowToCut,
@@ -408,7 +408,7 @@ void BottleneckDistance::solveInfinityWasserstein(
 }
 
 template <typename dataType>
-dataType BottleneckDistance::buildMappings(
+dataType ttk::BottleneckDistance::buildMappings(
   const std::vector<matchingTuple> &inputMatchings,
   const bool transposeGlobal,
   const bool transposeLocal,

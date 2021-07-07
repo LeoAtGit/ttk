@@ -29,6 +29,12 @@ public:
   vtkSetMacro(EndTimestep, int);
   vtkGetMacro(EndTimestep, int);
 
+  vtkSetMacro(Lifting, double);
+  vtkGetMacro(Lifting, double);
+
+  vtkSetMacro(MaxJump, double);
+  vtkGetMacro(MaxJump, double);
+
   vtkSetMacro(Tolerance, double);
   vtkGetMacro(Tolerance, double);
 
@@ -46,9 +52,6 @@ public:
 
   vtkSetMacro(PS, double);
   vtkGetMacro(PS, double);
-
-  vtkSetMacro(Alpha, double);
-  vtkGetMacro(Alpha, double);
 
   vtkSetMacro(WassersteinMetric, const std::string &);
   vtkGetMacro(WassersteinMetric, std::string);
@@ -86,19 +89,20 @@ private:
   int Sampling{1};
 
   // Filtering config.
-  double Tolerance{1};
-  double PX{1};
-  double PY{1};
-  double PZ{0};
-  double PE{0};
-  double PS{0};
+  double Tolerance{1.0};
+  double PX{0.0};
+  double PY{0.0};
+  double PZ{0.0};
+  double PE{1.0};
+  double PS{1.0};
+  double MaxJump{0.1};
+  double Lifting{0.0};
 
   // Bottleneck config.
   bool UseGeometricSpacing{false};
   bool DoPostProc{false};
   double PostProcThresh{0.0};
   double Spacing{1.0};
-  double Alpha{1.0};
   std::string DistanceAlgorithm{"ttk"};
   int PVAlgorithm{-1};
   std::string WassersteinMetric{"2"};

@@ -203,7 +203,7 @@ int ttk::BottleneckDistance::computeBottleneck(
     py * Geometry::pow(geometricalExtentY, ww) +
     pz * Geometry::pow(geometricalExtentZ, ww));
   if (fullExtent < 1e-16) fullExtent = 1;
-  double maxDiag = fullExtent * maxJumpPercentage / 2.;
+  double maxDiag = fullExtent * maxJumpPercentage / (2. * 100.);
   // / 2 because one pair accounts for half the distance between 2 pairs
 
   //maxJumpPercentage
@@ -258,6 +258,7 @@ int ttk::BottleneckDistance::computeBottleneck(
       if (matcher_ == 1) 
       {
         AssignmentAuction<dataType> solverMin;
+        solverMax.setEpsilon(0.03);
         this->solvePWasserstein(minRowColMin, maxRowColMin, minMatrix, minMatchings, solverMin);
       }
       else /*if (matcher_ == 0)*/
@@ -273,6 +274,7 @@ int ttk::BottleneckDistance::computeBottleneck(
       if (matcher_ == 1) 
       {
         AssignmentAuction<dataType> solverMax;
+        solverMax.setEpsilon(0.03);
         this->solvePWasserstein(minRowColMax, maxRowColMax, maxMatrix, maxMatchings, solverMax);
       }
       else /*if (matcher_ == 0)*/ 
@@ -287,6 +289,7 @@ int ttk::BottleneckDistance::computeBottleneck(
       if (matcher_ == 1) 
       {
         AssignmentAuction<dataType> solverSad;
+        solverMax.setEpsilon(0.03);
         this->solvePWasserstein(minRowColSad, maxRowColSad, sadMatrix, sadMatchings, solverSad);
       }
       else /*if (matcher_ == 0)*/ 
