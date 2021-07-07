@@ -194,7 +194,7 @@ int ttk::BottleneckDistance::computeBottleneck(
     py * Geometry::pow(geometricalExtentY, ww) +
     pz * Geometry::pow(geometricalExtentZ, ww));
   //if (fullExtent < 1e-16) fullExtent = 1;
-  double maxDiag = fullExtent * maxJumpPercentage / 50.;
+  double maxDiag = Geometry::pow(fullExtent, 1./ww) * maxJumpPercentage / 2.;
   // / 2 because one pair accounts for half the distance between 2 pairs
 
   //maxJumpPercentage
@@ -226,7 +226,7 @@ int ttk::BottleneckDistance::computeBottleneck(
                           + py * Geometry::pow(abs(y2 - y1), w)
                           + pz * Geometry::pow(abs(z2 - z1), w));
     
-    if (geoDistance > maxDiag) geoDistance = maxDiag;
+    if (Geometry::pow(geoDistance, 1./w) > maxDiag) geoDistance = Geometry::pow(maxDiag, w);
     double val = infDistance + geoDistance;
     return Geometry::pow(val, 1.0 / w);
   };
