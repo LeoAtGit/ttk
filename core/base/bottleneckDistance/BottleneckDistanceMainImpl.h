@@ -154,56 +154,47 @@ int ttk::BottleneckDistance::computeBottleneck(
   double geometricalMinX = doubleMax; double geometricalMaxX = doubleMin;
   double geometricalMinY = doubleMax; double geometricalMaxY = doubleMin;
   double geometricalMinZ = doubleMax; double geometricalMaxZ = doubleMin;
-  //double scalarMin = doubleMax;       double scalarMax = doubleMin;
   double geometricalExtentX = 0;
   double geometricalExtentY = 0;
   double geometricalExtentZ = 0;
-  double scalarExtent = 0;
   double fullExtent = 0;
   for (const auto& a: CTDiagram1)
   {
     double x1 = std::get<7>(a); double y1 = std::get<8>(a); double z1 = std::get<9>(a);
     double x2 = std::get<11>(a); double y2 = std::get<12>(a); double z2 = std::get<13>(a);
-    if (geometricalMinX > x1 || geometricalMinX > x2) geometricalMinX = std::min(x1, x2);
-    if (geometricalMinY > y1 || geometricalMinY > y2) geometricalMinY = std::min(y1, y2);
-    if (geometricalMinZ > z1 || geometricalMinZ > z2) geometricalMinZ = std::min(z1, z2);
-    if (geometricalMaxX < x1 || geometricalMaxX < x2) geometricalMaxX = std::max(x1, x2);
-    if (geometricalMaxY < y1 || geometricalMaxY < y2) geometricalMaxY = std::max(y1, y2);
-    if (geometricalMaxZ < z1 || geometricalMaxZ < z2) geometricalMaxZ = std::max(z1, z2);
-    //double rX = (double) std::get<6>(a);
-    //double rY = (double) std::get<10>(a);
-    //if (rX < scalarMin || rY < scalarMin) scalarMin = std::min(rX, rY);
-    //if (rX > scalarMax || rY > scalarMax) scalarMax = std::max(rX, rY);
+    double minX = x1 < x2 ? x1 : x2; double maxX = x1 < x2 ? x2 : x1;
+    double minY = y1 < y2 ? y1 : y2; double maxY = y1 < y2 ? y2 : y1;
+    double minZ = z1 < z2 ? z1 : z2; double maxZ = z1 < z2 ? z2 : z1;
+    if (geometricalMinX > minX) geometricalMinX = minX;
+    if (geometricalMinY > minY) geometricalMinY = minY;
+    if (geometricalMinZ > minZ) geometricalMinZ = minZ;
+    if (geometricalMaxX < maxX) geometricalMaxX = maxX;
+    if (geometricalMaxY < maxY) geometricalMaxY = maxY;
+    if (geometricalMaxZ < maxZ) geometricalMaxZ = maxZ;
   }
   for (const auto& a: CTDiagram2)
   {
     double x1 = std::get<7>(a); double y1 = std::get<8>(a); double z1 = std::get<9>(a);
     double x2 = std::get<11>(a); double y2 = std::get<12>(a); double z2 = std::get<13>(a);
-    if (geometricalMinX > x1 || geometricalMinX > x2) geometricalMinX = std::min(x1, x2);
-    if (geometricalMinY > y1 || geometricalMinY > y2) geometricalMinY = std::min(y1, y2);
-    if (geometricalMinZ > z1 || geometricalMinZ > z2) geometricalMinZ = std::min(z1, z2);
-    if (geometricalMaxX < x1 || geometricalMaxX < x2) geometricalMaxX = std::max(x1, x2);
-    if (geometricalMaxY < y1 || geometricalMaxY < y2) geometricalMaxY = std::max(y1, y2);
-    if (geometricalMaxZ < z1 || geometricalMaxZ < z2) geometricalMaxZ = std::max(z1, z2);
-    //double rX = (double) std::get<6>(a);
-    //double rY = (double) std::get<10>(a);
-    //if (rX < scalarMin || rY < scalarMin) scalarMin = std::min(rX, rY);
-    //if (rX > scalarMax || rY > scalarMax) scalarMax = std::max(rX, rY);
+    double minX = x1 < x2 ? x1 : x2; double maxX = x1 < x2 ? x2 : x1;
+    double minY = y1 < y2 ? y1 : y2; double maxY = y1 < y2 ? y2 : y1;
+    double minZ = z1 < z2 ? z1 : z2; double maxZ = z1 < z2 ? z2 : z1;
+    if (geometricalMinX > minX) geometricalMinX = minX;
+    if (geometricalMinY > minY) geometricalMinY = minY;
+    if (geometricalMinZ > minZ) geometricalMinZ = minZ;
+    if (geometricalMaxX < maxX) geometricalMaxX = maxX;
+    if (geometricalMaxY < maxY) geometricalMaxY = maxY;
+    if (geometricalMaxZ < maxZ) geometricalMaxZ = maxZ;
   }
   geometricalExtentX = abs(geometricalMaxX - geometricalMinX);
   geometricalExtentY = abs(geometricalMaxY - geometricalMinY);
   geometricalExtentZ = abs(geometricalMaxZ - geometricalMinZ);
-  //fullExtent = std::sqrt(
-      //geometricalExtentX * geometricalExtentX + 
-      //geometricalExtentY * geometricalExtentY + 
-      //geometricalExtentZ * geometricalExtentZ
-  //);
   const int ww = wasserstein > 1 ? wasserstein : 1;
   fullExtent = (px * Geometry::pow(geometricalExtentX, ww) +
     py * Geometry::pow(geometricalExtentY, ww) +
     pz * Geometry::pow(geometricalExtentZ, ww));
-  if (fullExtent < 1e-16) fullExtent = 1;
-  double maxDiag = fullExtent * maxJumpPercentage / (2. * 100.);
+  //if (fullExtent < 1e-16) fullExtent = 1;
+  double maxDiag = fullExtent * maxJumpPercentage / 50.;
   // / 2 because one pair accounts for half the distance between 2 pairs
 
   //maxJumpPercentage
@@ -211,7 +202,7 @@ int ttk::BottleneckDistance::computeBottleneck(
   //if (scalarExtent < 1e-8) scalarExtent = 1;
 
   std::function<dataType(const diagramTuple)> diagonalDistanceFunction
-    = [wasserstein, px, py, pz, ps, pe, scalarExtent, maxDiag]
+    = [wasserstein, px, py, pz, ps, pe, maxDiag]
         (const diagramTuple a) -> dataType
   {
     BNodeType ta1 = std::get<1>(a);
@@ -234,8 +225,8 @@ int ttk::BottleneckDistance::computeBottleneck(
     double geoDistance = (px * Geometry::pow(abs(x2 - x1), w)
                           + py * Geometry::pow(abs(y2 - y1), w)
                           + pz * Geometry::pow(abs(z2 - z1), w));
-    geoDistance = std::min(maxDiag, geoDistance);
-    //geoDistance = abs_diff<dataType>(rX, rY) * fullExtent / scalarExtent;
+    
+    if (geoDistance > maxDiag) geoDistance = maxDiag;
     double val = infDistance + geoDistance;
     return Geometry::pow(val, 1.0 / w);
   };
@@ -258,7 +249,7 @@ int ttk::BottleneckDistance::computeBottleneck(
       if (matcher_ == 1) 
       {
         AssignmentAuction<dataType> solverMin;
-        solverMax.setEpsilon(0.03);
+        solverMin.setEpsilon(0.03);
         this->solvePWasserstein(minRowColMin, maxRowColMin, minMatrix, minMatchings, solverMin);
       }
       else /*if (matcher_ == 0)*/
@@ -289,7 +280,7 @@ int ttk::BottleneckDistance::computeBottleneck(
       if (matcher_ == 1) 
       {
         AssignmentAuction<dataType> solverSad;
-        solverMax.setEpsilon(0.03);
+        solverSad.setEpsilon(0.03);
         this->solvePWasserstein(minRowColSad, maxRowColSad, sadMatrix, sadMatchings, solverSad);
       }
       else /*if (matcher_ == 0)*/ 

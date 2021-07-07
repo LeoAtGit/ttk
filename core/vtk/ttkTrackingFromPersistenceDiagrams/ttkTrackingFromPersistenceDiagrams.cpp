@@ -64,7 +64,6 @@ int ttkTrackingFromPersistenceDiagrams::RequestData(
   // Input parameters.
   double spacing = Spacing;
   std::string algorithm = DistanceAlgorithm;
-  double tolerance = Tolerance;
   bool is3D = Is3D;
   std::string wasserstein = WassersteinMetric;
 

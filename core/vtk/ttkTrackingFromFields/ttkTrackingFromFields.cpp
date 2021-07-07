@@ -56,8 +56,6 @@ int ttkTrackingFromFields::trackWithPersistenceMatching(
 
   double spacing = Spacing;
   std::string algorithm = DistanceAlgorithm;
-  double alpha = Alpha;
-  double tolerance = Tolerance;
   bool is3D = true; // Is3D;
   std::string wasserstein = WassersteinMetric;
 
