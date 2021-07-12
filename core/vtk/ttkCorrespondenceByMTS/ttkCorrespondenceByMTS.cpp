@@ -83,18 +83,18 @@ int ttkCorrespondenceByMTS::ComputeCorrespondences(
   if(!status)
     return 0;
 
-  // add index label maps
-  int a = 0;
-  auto fd = correspondenceMatrix->GetFieldData();
-  for(auto &it : std::vector<vtkDataSet *>({m0, m1})) {
-    auto labels = this->GetInputArrayToProcess(1, it);
-    if(!labels)
-      return !this->printErr("Unable to retrieve labels.");
-    auto array = vtkSmartPointer<vtkDataArray>::Take(labels->NewInstance());
-    array->ShallowCopy(labels);
-    array->SetName(("IndexLabelMap" + std::to_string(a++)).data());
-    fd->AddArray(array);
-  }
+  // // add index label maps
+  // int a = 0;
+  // auto fd = correspondenceMatrix->GetFieldData();
+  // for(auto &it : std::vector<vtkDataSet *>({m0, m1})) {
+  //   auto labels = this->GetInputArrayToProcess(1, it);
+  //   if(!labels)
+  //     return !this->printErr("Unable to retrieve labels.");
+  //   auto array = vtkSmartPointer<vtkDataArray>::Take(labels->NewInstance());
+  //   array->ShallowCopy(labels);
+  //   array->SetName(("IndexLabelMap" + std::to_string(a++)).data());
+  //   fd->AddArray(array);
+  // }
 
   return 1;
 }
