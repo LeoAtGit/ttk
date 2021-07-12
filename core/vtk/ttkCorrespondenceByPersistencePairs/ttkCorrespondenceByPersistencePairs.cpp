@@ -89,20 +89,44 @@ int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
   // get metric parameters
   const std::string algorithm = DistanceAlgorithm;
   const std::string wasserstein = WassersteinMetric;
-  const double alpha = Alpha;
   const int pvAlgorithm = PVAlgorithm;
-  const double px = PX;
-  const double py = PY;
-  const double pz = PZ;
-  const double ps = PS;
-  const double pe = PE;
+  double px;
+  double py;
+  double pz;
+  double ps;
+  double pe;
+  const double maxJump = MaxJump;
 
+  // Using advanced parameters if the user has tweaked them.
+  if (PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.)
+  {
+    px = PX;
+    py = PY;
+    pz = PZ;
+    pe = PE;
+    ps = PS;    
+  }
+  else // Using lifting parameter instead.
+  {
+    // 0 -> persistence; 1 -> geometry
+    double geometricalLift = Lifting / 100.0;
+    double persistenceLift = 1.0 - geometricalLift;
+    px = geometricalLift;
+    py = geometricalLift;
+    pz = geometricalLift;
+    pe = persistenceLift;
+    ps = persistenceLift;
+  }
+  
   // compute correspondences in basecode
   std::vector<mT> matchings;
-  switch(coords0->GetDataType()) {
-    vtkTemplateMacro(status = this->computeDistanceMatrix<double>(
-                       CTDiagram0, CTDiagram1, matchings, px, py, pz, ps, pe,
-                       algorithm, wasserstein, alpha, pvAlgorithm));
+  switch (coords0->GetDataType()) {
+    vtkTemplateMacro(
+      status = this->computeDistanceMatrix<double>(
+      CTDiagram0,
+      CTDiagram1,
+      matchings,
+      px, py, pz, ps, pe, algorithm, wasserstein, pvAlgorithm, maxJump));
   }
   if(status < 0) {
     this->printErr("Error computing distance matrix.");

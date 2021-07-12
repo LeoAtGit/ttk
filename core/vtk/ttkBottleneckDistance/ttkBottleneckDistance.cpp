@@ -44,91 +44,6 @@ int ttkBottleneckDistance::FillOutputPortInformation(int port,
   return 0;
 }
 
-template <typename dataType>
-int ttkBottleneckDistance::generatePersistenceDiagram(
-  std::vector<diagramTuple> &diagram, const int size) {
-  // srand(time(NULL));
-  int vertexId1 = 1;
-  int vertexId2 = 2;
-
-  // diagram.resize(size);
-  // diagram.push_back(std::make_tuple(
-  //    0, BLocalMin,
-  //    1, BLocalMax,
-  //    1.0,
-  //    2,
-  //    0.0, 0.0001, 0.0001, 0.0,
-  //    1.0, 0.0001, 1.0, 0.0
-  //));
-
-  std::default_random_engine generator1(1998985);
-  std::default_random_engine generator2(8584584);
-  std::uniform_real_distribution<> dis1(0.0, 1.0);
-  std::uniform_real_distribution<> dis2(0.0, 1.0);
-
-  for(int i = 1; i < size; ++i) {
-    int r0 = 2; // (rand() % 3);
-    float r1
-      = 0.001f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-    // (float) dis1(generator1); // static_cast <float> (rand()) / static_cast
-    // <float> (RAND_MAX);
-    float r2
-      = 0.001f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-    // (float) dis2(generator2); // static_cast <float> (rand()) / static_cast
-    // <float> (RAND_MAX); r2 *= 0.1f;
-
-    // BLocalMin BSaddle1 BSaddle2 BLocalMax
-    int pairType = r0; // (0/min, 1/saddle, 2/max)
-    BNodeType nodeType1; //
-    BNodeType nodeType2; //
-    switch(pairType) {
-      // case 0:
-      //   nodeType1 = BLocalMin;
-      //   nodeType2 = BSaddle1;
-      //   break;
-      // case 1:
-      //   nodeType1 = BSaddle1;
-      //   nodeType2 = BSaddle2;
-      //   break;
-      case 2:
-      default:
-        nodeType1 = BSaddle2;
-        nodeType2 = BLocalMax;
-        break;
-        // default:
-        //   nodeType1 = (BNodeType) -1;
-        //   nodeType2 = (BNodeType) -1;
-    }
-
-    float x1 = 0.5f * r1;
-    float y1 = x1;
-    float z1 = 0.f;
-
-    float x2 = x1;
-    float y2 = x1 + 0.5f * r2; // x1 + rand(0.5)
-    float z2 = 0.f; // 0
-
-    auto value1 = (dataType)x1;
-    auto value2 = (dataType)y2;
-
-    dataType persistence = y2 - x1;
-
-    diagram.push_back(std::make_tuple(vertexId1, nodeType1, vertexId2,
-                                      nodeType2, persistence, pairType, value1,
-                                      x1, y1, z1, value2, x2, y2, z2));
-
-    vertexId1++;
-    vertexId2++;
-  }
-
-  sort(diagram.begin(), diagram.end(),
-       [](const diagramTuple &a, const diagramTuple &b) -> bool {
-         return std::get<6>(a) < std::get<6>(b);
-       });
-
-  return 1;
-}
-
 // Warn: this is duplicated in ttkTrackingFromPersistenceDiagrams
 template <typename dataType>
 int ttkBottleneckDistance::getPersistenceDiagram(
@@ -467,60 +382,12 @@ int ttkBottleneckDistance::getMatchingMesh(
   return 1;
 }
 
-int ttkBottleneckDistance::doBenchmark() {
+int ttkBottleneckDistance::RequestData(
+  vtkInformation * /*request*/,
+  vtkInformationVector **inputVector,
+  vtkInformationVector *outputVector)
+{
   using dataType = double;
-
-  std::vector<diagramTuple> CTDiagram1;
-  std::vector<diagramTuple> CTDiagram2;
-
-  int benchmarkSize = BenchmarkSize;
-  int status = 0;
-  status = generatePersistenceDiagram<double>(CTDiagram1, benchmarkSize);
-  if(status < 0)
-    return status;
-  status = generatePersistenceDiagram<double>(CTDiagram2, 4 * benchmarkSize);
-  if(status < 0)
-    return status;
-
-  this->setPersistencePercentThreshold(Tolerance);
-  this->setPX(PX);
-  this->setPY(PY);
-  this->setPZ(PZ);
-  this->setPE(PE);
-  this->setPS(PS);
-  this->setCTDiagram1(&CTDiagram1);
-  this->setCTDiagram2(&CTDiagram2);
-
-  std::string wassersteinMetric = WassersteinMetric;
-  this->setWasserstein(wassersteinMetric);
-  std::string algorithm = DistanceAlgorithm;
-  this->setAlgorithm(algorithm);
-  int pvAlgorithm = PVAlgorithm;
-  this->setPVAlgorithm(pvAlgorithm);
-  // this->setThreadNumber(thread);
-
-  // Empty matchings.
-  auto matchings
-    = new std::vector<diagramTuple>(); // TODO isn’t it matchingTuple instead?
-  this->setOutputMatchings(matchings);
-
-  // Exec.
-  bool usePersistenceMetric = UsePersistenceMetric;
-  status = this->execute<dataType>(usePersistenceMetric);
-
-  return status;
-}
-
-int ttkBottleneckDistance::RequestData(vtkInformation * /*request*/,
-                                       vtkInformationVector **inputVector,
-                                       vtkInformationVector *outputVector) {
-  using dataType = double;
-
-  int benchmarkSize = BenchmarkSize;
-  bool benchmark = benchmarkSize > 0;
-  if(benchmark) {
-    return doBenchmark();
-  }
 
   auto outputCT1 = vtkUnstructuredGrid::GetData(outputVector, 0);
   auto outputCT2 = vtkUnstructuredGrid::GetData(outputVector, 1);
@@ -529,11 +396,28 @@ int ttkBottleneckDistance::RequestData(vtkInformation * /*request*/,
   // Wrap
   // this->setWrapper(this);
   this->setPersistencePercentThreshold(Tolerance);
-  this->setPX(PX);
-  this->setPY(PY);
-  this->setPZ(PZ);
-  this->setPE(PE);
-  this->setPS(PS);
+  this->setPercentMaxJump(MaxJump);
+
+  // Using advanced parameters if the user has tweaked them.
+  if (PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.)
+  {
+    this->setPX(PX);
+    this->setPY(PY);
+    this->setPZ(PZ);
+    this->setPE(PE);
+    this->setPS(PS);    
+  }
+  else // Using lifting parameter instead.
+  {
+    // 0 -> persistence; 1 -> geometry
+    double geometricalLift = Lifting / 100.0;
+    double persistenceLift = 1.0 - geometricalLift;
+    this->setPX(geometricalLift);
+    this->setPY(geometricalLift);
+    this->setPZ(geometricalLift);
+    this->setPE(persistenceLift);
+    this->setPS(persistenceLift);
+  }
 
   auto CTPersistenceDiagram1 = vtkUnstructuredGrid::GetData(inputVector[0]);
   auto CTPersistenceDiagram2 = vtkUnstructuredGrid::GetData(inputVector[1]);
@@ -564,8 +448,8 @@ int ttkBottleneckDistance::RequestData(vtkInformation * /*request*/,
     CTPersistenceDiagram2->GetPointData()->GetArray("Death"));
   bool is2D1 = !deathScalars1 && !birthScalars1;
   bool is2D2 = !deathScalars2 && !birthScalars2;
-  if(is2D1 != is2D2) {
-    this->printErr("Diagrams should not be embedded");
+  if (is2D1 != is2D2) {
+    this->printErr("Diagrams should have the same embedding type and hold double values.");
     return 0;
   }
   bool is2D = is2D1;
@@ -575,7 +459,6 @@ int ttkBottleneckDistance::RequestData(vtkInformation * /*request*/,
 
   //  switch (dataType1) {
   //    vtkTemplateMacro(({
-  // TODO template my methods
   std::vector<diagramTuple> CTDiagram1;
   std::vector<diagramTuple> CTDiagram2;
 

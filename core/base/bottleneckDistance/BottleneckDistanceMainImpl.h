@@ -11,10 +11,12 @@
 //      dataType            -- scalar value at vertex 2
 //      float, float, float -- vertex 2 coordinates
 template <typename dataType>
-int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
-                                          const std::vector<diagramTuple> &d2,
-                                          std::vector<matchingTuple> &matchings,
-                                          const bool usePersistenceMetric) {
+int ttk::BottleneckDistance::computeBottleneck(
+  const std::vector<diagramTuple> &d1,
+  const std::vector<diagramTuple> &d2,
+  std::vector<matchingTuple> &matchings,
+  const bool usePersistenceMetric)
+{
   auto d1Size = (int)d1.size();
   auto d2Size = (int)d2.size();
 
@@ -38,8 +40,9 @@ int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
     return -4;
 
   // Needed to limit computation time.
-  const dataType zeroThresh = this->computeMinimumRelevantPersistence<dataType>(
-    CTDiagram1, CTDiagram2, d1Size, d2Size);
+  const dataType zeroThresh = 
+      this->computeMinimumRelevantPersistence<dataType>(
+        CTDiagram1, CTDiagram2, d1Size, d2Size);
 
   // Initialize solvers.
   std::vector<matchingTuple> minMatchings;
@@ -62,12 +65,14 @@ int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
   std::vector<int> sadMap1;
   std::vector<int> sadMap2;
 
-  this->computeMinMaxSaddleNumberAndMapping(CTDiagram1, d1Size, nbRowMin,
-                                            nbRowMax, nbRowSad, minMap1,
-                                            maxMap1, sadMap1, zeroThresh);
-  this->computeMinMaxSaddleNumberAndMapping(CTDiagram2, d2Size, nbColMin,
-                                            nbColMax, nbColSad, minMap2,
-                                            maxMap2, sadMap2, zeroThresh);
+  this->computeMinMaxSaddleNumberAndMapping(
+    CTDiagram1, d1Size, nbRowMin,
+    nbRowMax, nbRowSad, minMap1,
+    maxMap1, sadMap1, zeroThresh);
+  this->computeMinMaxSaddleNumberAndMapping(
+    CTDiagram2, d2Size, nbColMin,
+    nbColMax, nbColSad, minMap2,
+    maxMap2, sadMap2, zeroThresh);
 
   // Automatically transpose if nb rows > nb cols
   maxRowColMin = std::max(nbRowMin + 1, nbColMin + 1);
@@ -90,6 +95,7 @@ int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
   double pz = pz_;
   double pe = pe_;
   double ps = ps_;
+  double maxJumpPercentage = maxGeometricalJump_;
 
   std::function<dataType(const diagramTuple, const diagramTuple)>
     distanceFunction
@@ -142,9 +148,63 @@ int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
     val = Geometry::pow(val, 1.0 / w);
     return val;
   };
+  
+  auto doubleMax = std::numeric_limits<double>::max();
+  auto doubleMin = std::numeric_limits<double>::min();
+  double geometricalMinX = doubleMax; double geometricalMaxX = doubleMin;
+  double geometricalMinY = doubleMax; double geometricalMaxY = doubleMin;
+  double geometricalMinZ = doubleMax; double geometricalMaxZ = doubleMin;
+  double geometricalExtentX = 0;
+  double geometricalExtentY = 0;
+  double geometricalExtentZ = 0;
+  double fullExtent = 0;
+  for (const auto& a: CTDiagram1)
+  {
+    double x1 = std::get<7>(a); double y1 = std::get<8>(a); double z1 = std::get<9>(a);
+    double x2 = std::get<11>(a); double y2 = std::get<12>(a); double z2 = std::get<13>(a);
+    double minX = x1 < x2 ? x1 : x2; double maxX = x1 < x2 ? x2 : x1;
+    double minY = y1 < y2 ? y1 : y2; double maxY = y1 < y2 ? y2 : y1;
+    double minZ = z1 < z2 ? z1 : z2; double maxZ = z1 < z2 ? z2 : z1;
+    if (geometricalMinX > minX) geometricalMinX = minX;
+    if (geometricalMinY > minY) geometricalMinY = minY;
+    if (geometricalMinZ > minZ) geometricalMinZ = minZ;
+    if (geometricalMaxX < maxX) geometricalMaxX = maxX;
+    if (geometricalMaxY < maxY) geometricalMaxY = maxY;
+    if (geometricalMaxZ < maxZ) geometricalMaxZ = maxZ;
+  }
+  for (const auto& a: CTDiagram2)
+  {
+    double x1 = std::get<7>(a); double y1 = std::get<8>(a); double z1 = std::get<9>(a);
+    double x2 = std::get<11>(a); double y2 = std::get<12>(a); double z2 = std::get<13>(a);
+    double minX = x1 < x2 ? x1 : x2; double maxX = x1 < x2 ? x2 : x1;
+    double minY = y1 < y2 ? y1 : y2; double maxY = y1 < y2 ? y2 : y1;
+    double minZ = z1 < z2 ? z1 : z2; double maxZ = z1 < z2 ? z2 : z1;
+    if (geometricalMinX > minX) geometricalMinX = minX;
+    if (geometricalMinY > minY) geometricalMinY = minY;
+    if (geometricalMinZ > minZ) geometricalMinZ = minZ;
+    if (geometricalMaxX < maxX) geometricalMaxX = maxX;
+    if (geometricalMaxY < maxY) geometricalMaxY = maxY;
+    if (geometricalMaxZ < maxZ) geometricalMaxZ = maxZ;
+  }
+  geometricalExtentX = abs(geometricalMaxX - geometricalMinX);
+  geometricalExtentY = abs(geometricalMaxY - geometricalMinY);
+  geometricalExtentZ = abs(geometricalMaxZ - geometricalMinZ);
+  const int ww = wasserstein > 1 ? wasserstein : 1;
+  fullExtent = (px * Geometry::pow(geometricalExtentX, ww) +
+    py * Geometry::pow(geometricalExtentY, ww) +
+    pz * Geometry::pow(geometricalExtentZ, ww));
+  //if (fullExtent < 1e-16) fullExtent = 1;
+  double maxDiag = Geometry::pow(fullExtent, 1./ww) * maxJumpPercentage / 2.;
+  // / 2 because one pair accounts for half the distance between 2 pairs
+
+  //maxJumpPercentage
+  //scalarExtent = std::abs(scalarMax - scalarMin);
+  //if (scalarExtent < 1e-8) scalarExtent = 1;
 
   std::function<dataType(const diagramTuple)> diagonalDistanceFunction
-    = [wasserstein, px, py, pz, ps, pe](const diagramTuple a) -> dataType {
+    = [wasserstein, px, py, pz, ps, pe, maxDiag]
+        (const diagramTuple a) -> dataType
+  {
     BNodeType ta1 = std::get<1>(a);
     BNodeType ta2 = std::get<3>(a);
     const int w = wasserstein > 1 ? wasserstein : 1;
@@ -165,6 +225,8 @@ int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
     double geoDistance = (px * Geometry::pow(abs(x2 - x1), w)
                           + py * Geometry::pow(abs(y2 - y1), w)
                           + pz * Geometry::pow(abs(z2 - z1), w));
+    
+    if (Geometry::pow(geoDistance, 1./w) > maxDiag) geoDistance = Geometry::pow(maxDiag, w);
     double val = infDistance + geoDistance;
     return Geometry::pow(val, 1.0 / w);
   };
@@ -180,56 +242,84 @@ int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
     diagonalDistanceFunction, zeroThresh, minMatrix, maxMatrix, sadMatrix,
     transposeMin, transposeMax, transposeSad, wasserstein);
 
-  if(wasserstein > 0) {
+  if (wasserstein > 0) {
 
-    if(nbRowMin > 0 && nbColMin > 0) {
-      AssignmentMunkres<dataType> solverMin;
-      this->printMsg("Affecting minima...");
-      this->solvePWasserstein(
-        minRowColMin, maxRowColMin, minMatrix, minMatchings, solverMin);
+    if (nbRowMin > 0 && nbColMin > 0) {
+      this->printMsg("Assigning minima...");
+      if (matcher_ == 1) 
+      {
+        AssignmentAuction<dataType> solverMin;
+        solverMin.setEpsilon(0.03);
+        this->solvePWasserstein(minRowColMin, maxRowColMin, minMatrix, minMatchings, solverMin);
+      }
+      else /*if (matcher_ == 0)*/
+      {
+        AssignmentMunkres<dataType> solverMin;
+        this->solvePWasserstein(minRowColMin, maxRowColMin, minMatrix, minMatchings, solverMin);
+      }
+      
     }
 
-    if(nbRowMax > 0 && nbColMax > 0) {
-      AssignmentMunkres<dataType> solverMax;
-      this->printMsg("Affecting maxima...");
-      this->solvePWasserstein(
-        minRowColMax, maxRowColMax, maxMatrix, maxMatchings, solverMax);
+    if (nbRowMax > 0 && nbColMax > 0) {
+      this->printMsg("Assigning maxima...");
+      if (matcher_ == 1) 
+      {
+        AssignmentAuction<dataType> solverMax;
+        solverMax.setEpsilon(0.03);
+        this->solvePWasserstein(minRowColMax, maxRowColMax, maxMatrix, maxMatchings, solverMax);
+      }
+      else /*if (matcher_ == 0)*/ 
+      {
+        AssignmentMunkres<dataType> solverMax;
+        this->solvePWasserstein(minRowColMax, maxRowColMax, maxMatrix, maxMatchings, solverMax);
+      }
     }
 
-    if(nbRowSad > 0 && nbColSad > 0) {
-      AssignmentMunkres<dataType> solverSad;
-      this->printMsg("Affecting saddles...");
-      this->solvePWasserstein(
-        minRowColSad, maxRowColSad, sadMatrix, sadMatchings, solverSad);
+    if (nbRowSad > 0 && nbColSad > 0) {
+      this->printMsg("Assigning saddles...");
+      if (matcher_ == 1) 
+      {
+        AssignmentAuction<dataType> solverSad;
+        solverSad.setEpsilon(0.03);
+        this->solvePWasserstein(minRowColSad, maxRowColSad, sadMatrix, sadMatchings, solverSad);
+      }
+      else /*if (matcher_ == 0)*/ 
+      {
+        AssignmentMunkres<dataType> solverSad;
+        this->solvePWasserstein(minRowColSad, maxRowColSad, sadMatrix, sadMatchings, solverSad);
+      }
     }
 
   } else {
 
     // Launch solving for minima.
-    if(nbRowMin > 0 && nbColMin > 0) {
+    if (nbRowMin > 0 && nbColMin > 0) {
       GabowTarjan solverMin;
-      this->printMsg("Affecting minima...");
-      this->solveInfinityWasserstein(minRowColMin, maxRowColMin, nbRowMin,
-                                     nbColMin, minMatrix, minMatchings,
-                                     solverMin);
+      this->printMsg("Assigning minima...");
+      this->solveInfinityWasserstein(
+        minRowColMin, maxRowColMin, nbRowMin,
+        nbColMin, minMatrix, minMatchings,
+        solverMin);
     }
 
     // Launch solving for maxima.
-    if(nbRowMax > 0 && nbColMax > 0) {
+    if (nbRowMax > 0 && nbColMax > 0) {
       GabowTarjan solverMax;
-      this->printMsg("Affecting maxima...");
-      this->solveInfinityWasserstein(minRowColMax, maxRowColMax, nbRowMax,
-                                     nbColMax, maxMatrix, maxMatchings,
-                                     solverMax);
+      this->printMsg("Assigning maxima...");
+      this->solveInfinityWasserstein(
+        minRowColMax, maxRowColMax, nbRowMax,
+        nbColMax, maxMatrix, maxMatchings,
+        solverMax);
     }
 
     // Launch solving for saddles.
-    if(nbRowSad > 0 && nbColSad > 0) {
+    if (nbRowSad > 0 && nbColSad > 0) {
       GabowTarjan solverSad;
-      this->printMsg("Affecting saddles...");
-      this->solveInfinityWasserstein(minRowColSad, maxRowColSad, nbRowSad,
-                                     nbColSad, sadMatrix, sadMatchings,
-                                     solverSad);
+      this->printMsg("Assigning saddles...");
+      this->solveInfinityWasserstein(
+        minRowColSad, maxRowColSad, nbRowSad,
+        nbColSad, sadMatrix, sadMatchings,
+        solverSad);
     }
   }
 
@@ -257,13 +347,13 @@ int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
   dataType d = 0;
   std::vector<bool> paired1(d1Size);
   std::vector<bool> paired2(d2Size);
-  for(int b = 0; b < d1Size; ++b)
+  for (int b = 0; b < d1Size; ++b)
     paired1[b] = false;
-  for(int b = 0; b < d2Size; ++b)
+  for (int b = 0; b < d2Size; ++b)
     paired2[b] = false;
 
   int numberOfMismatches = 0;
-  for(int m = 0, ms = (int)matchings.size(); m < ms; ++m) {
+  for (int m = 0, ms = (int)matchings.size(); m < ms; ++m) {
     matchingTuple mt = matchings[m];
     int i = transposeOriginal ? std::get<1>(mt) : std::get<0>(mt);
     int j = transposeOriginal ? std::get<0>(mt) : std::get<1>(mt);
@@ -285,13 +375,13 @@ int BottleneckDistance::computeBottleneck(const std::vector<diagramTuple> &d1,
     dataType partialDistance = distanceFunction(t1, t2);
     // wasserstein > 0 ? pow(lInf, wasserstein) : std::max(d, lInf);
 
-    if(wasserstein > 0)
+    if (wasserstein > 0)
       d += partialDistance;
     else
       d = partialDistance;
   }
 
-  if(numberOfMismatches > 0) {
+  if (numberOfMismatches > 0) {
     this->printWrn("Distance mismatch when rebuilding "
                    + std::to_string(numberOfMismatches) + " matchings");
   }

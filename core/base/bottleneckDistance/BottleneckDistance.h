@@ -23,7 +23,9 @@
 #endif
 
 // base code includes
+#include <AssignmentSolver.h>
 #include <AssignmentMunkres.h>
+#include <AssignmentAuction.h>
 #include <GabowTarjan.h>
 #include <Triangulation.h>
 
@@ -39,8 +41,11 @@ namespace ttk {
 
   public:
     BottleneckDistance()
-      : distance_(-1), wasserstein_("inf"), pvAlgorithm_(-1), zeroThreshold_(0),
-        px_(0), py_(0), pz_(0), pe_(0), ps_(0) {
+      : distance_(-1), wasserstein_("inf"),
+        pvAlgorithm_(-1), zeroThreshold_(0),
+        px_(0), py_(0), pz_(0), pe_(1), ps_(1),
+        maxGeometricalJump_(0.1), matcher_(0)
+    {
       this->setDebugMsgPrefix("BottleneckDistance");
     }
 
@@ -72,6 +77,11 @@ namespace ttk {
     }
     inline int setPS(double ps) {
       ps_ = ps;
+      return 0;
+    }
+    inline int setPercentMaxJump(double p)
+    {
+      maxGeometricalJump_ = p / 100.0;
       return 0;
     }
 
@@ -140,6 +150,8 @@ namespace ttk {
     double pz_;
     double pe_;
     double ps_;
+    double maxGeometricalJump_; // % of geometrical range
+    int matcher_;
 
   private:
     template <typename dataType>
@@ -196,7 +208,7 @@ namespace ttk {
                            int nbCol,
                            std::vector<std::vector<dataType>> &matrix,
                            std::vector<matchingTuple> &matchings,
-                           AssignmentMunkres<dataType> &solver);
+                           AssignmentSolver<dataType> &solver);
 
     template <typename dataType>
     void solveInfinityWasserstein(int nbRow,
