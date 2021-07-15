@@ -93,11 +93,11 @@ int ttkMergeTree::RequestData(
         ttkTypeMacroT(
             triangulation->getType(),
             (
-                status = this->computeMergeTreeSegmentation<ttk::SimplexId, TT>(
+                status = this->computeMergeTreeSegmentation<ttk::SimplexId, T0>(
                     ttkUtils::GetPointer<ttk::SimplexId>(segmentationIds),
                     propagations,
 
-                    static_cast<TT*>(triangulation->getData()),
+                    static_cast<T0*>(triangulation->getData()),
                     orderArrayData,
                     this->GetType()
                 )

@@ -22,7 +22,7 @@ int ttk::PlanarGraphLayout::computeDotLayout(
 #ifdef TTK_ENABLE_GRAPHVIZ
   Timer t;
 
-  this->printMsg("Computing layout", 0, debug::LineMode::REPLACE);
+  this->printMsg("Computing Graph Layout", 0, debug::LineMode::REPLACE);
 
   // ---------------------------------------------------------
   // Init GraphViz
@@ -51,7 +51,7 @@ int ttk::PlanarGraphLayout::computeDotLayout(
   agclose(G);
   gvFreeContext(gvc);
 
-  this->printMsg("Computing layout", 1, t.getElapsedTime());
+  this->printMsg("Computing Graph Layout", 1, t.getElapsedTime());
 
   return 1;
 #else

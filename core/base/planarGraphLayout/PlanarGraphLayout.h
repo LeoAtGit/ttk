@@ -1,5 +1,5 @@
 /// \ingroup base
-/// \class ttk::PlanarGraphLayout
+/// \typename ttk::PlanarGraphLayout
 /// \author Jonas Lukasczyk (jl@jluk.de)
 /// \date 01.12.2018
 ///
@@ -24,13 +24,31 @@
 ///
 
 #pragma once
-
+#include <iterator>
+#include <limits>
 #include <map>
-
+#include <set>
 // base code includes
 #include <Debug.h>
 
 namespace ttk {
+
+  template <typename DT, typename IT>
+  struct Branch {
+
+    ttk::LongSimplexId leaf, saddlePoint;
+    int currentX;
+    std::vector<IT> branchPoints;
+    std::set<ttk::LongSimplexId> vertices;
+    bool rendered;
+
+    Branch() {
+      leaf = -1;
+      saddlePoint = -1;
+      currentX = -1;
+      rendered = false;
+    }
+  };
 
   class PlanarGraphLayout : virtual public Debug {
 
@@ -38,8 +56,10 @@ namespace ttk {
     PlanarGraphLayout();
     ~PlanarGraphLayout();
 
-    template <class idType, class dataType>
-    int execute(
+    enum class ALGORITHM { DOT = 0, MERGE_TREE_OPTIMIZATION = 1 };
+
+    template <typename DT, typename IT>
+    int computeGraphLayout(
       // Output
       float *layout,
 
@@ -47,12 +67,31 @@ namespace ttk {
       const LongSimplexId *connectivityList,
       const size_t &nPoints,
       const size_t &nEdges,
-      const dataType *pointSequences,
-      const float *sizes,
-      const idType *branches,
-      const idType *levels) const;
+      const DT *pointSequences = nullptr,
+      const float *sizes = nullptr,
+      const IT *branches = nullptr,
+      const IT *levels = nullptr) const;
 
-    template <class idType>
+    template <typename DT, typename IT>
+    int GenerateLayout(IT b,
+                       float *layout,
+                       std::vector<Branch<DT, IT>> &branchList,
+                       const DT *pointSequences,
+                       const IT *branches) const;
+
+    template <typename DT, typename IT>
+    int computeMergeTreeLayout(
+      // Output
+      float *layout,
+
+      // Input
+      const LongSimplexId *connectivityList,
+      const size_t &nPoints,
+      const size_t &nEdges,
+      const DT *pointSequences,
+      const IT *branches) const;
+
+    template <typename IT>
     int extractLevel(
       // Output
       std::vector<size_t> &nodeIndicies,
@@ -62,24 +101,24 @@ namespace ttk {
       const LongSimplexId *connectivityList,
       const size_t &nPoints,
       const size_t &nEdges,
-      const idType &level,
-      const idType *levels) const;
+      const IT &level,
+      const IT *levels) const;
 
-    template <class idType, class dataType>
+    template <typename IT, typename DT>
     int computeDotString(
       // Output
       std::string &dotString,
 
       // Input
       const LongSimplexId *connectivityList,
-      const dataType *pointSequences,
+      const DT *pointSequences,
       const float *sizes,
-      const idType *branches,
+      const IT *branches,
       const std::vector<size_t> &nodeIndicies,
       const std::vector<size_t> &edgeIndicies,
-      const std::map<dataType, size_t> &sequenceValueToIndexMap) const;
+      const std::map<DT, size_t> &sequenceValueToIndexMap) const;
 
-    template <class idType>
+    template <typename IT>
     int computeSlots(
       // Output
       float *layout,
@@ -89,8 +128,8 @@ namespace ttk {
       const size_t &nPoints,
       const size_t &nEdges,
       const float *sizes,
-      const idType *levels,
-      const idType &nLevels) const;
+      const IT *levels,
+      const IT &nLevels) const;
 
     // Compute Dot Layout
     int computeDotLayout(
@@ -106,7 +145,7 @@ namespace ttk {
 // =============================================================================
 // Extract Level
 // =============================================================================
-template <class idType>
+template <typename IT>
 int ttk::PlanarGraphLayout::extractLevel(
   // Output
   std::vector<size_t> &nodeIndicies,
@@ -116,8 +155,8 @@ int ttk::PlanarGraphLayout::extractLevel(
   const LongSimplexId *connectivityList,
   const size_t &nPoints,
   const size_t &nEdges,
-  const idType &level,
-  const idType *levels) const {
+  const IT &level,
+  const IT *levels) const {
 
   // If levels==nullptr then return all points and edges
   if(levels == nullptr) {
@@ -152,19 +191,19 @@ int ttk::PlanarGraphLayout::extractLevel(
 // =============================================================================
 // Compute Dot String
 // =============================================================================
-template <class idType, class dataType>
+template <typename IT, typename DT>
 int ttk::PlanarGraphLayout::computeDotString(
   // Output
   std::string &dotString,
 
   // Input
   const LongSimplexId *connectivityList,
-  const dataType *pointSequences,
+  const DT *pointSequences,
   const float *sizes,
-  const idType *branches,
+  const IT *branches,
   const std::vector<size_t> &nodeIndicies,
   const std::vector<size_t> &edgeIndicies,
-  const std::map<dataType, size_t> &sequenceValueToIndexMap) const {
+  const std::map<DT, size_t> &sequenceValueToIndexMap) const {
 
   Timer t;
 
@@ -258,7 +297,7 @@ int ttk::PlanarGraphLayout::computeDotString(
   { dotString = headString + nodeString + edgeString + rankString + "}"; }
 
   // Print Status
-  this->printMsg("Generating DOT string", 1, t.getElapsedTime());
+  this->printMsg("Generating DOT String", 1, t.getElapsedTime());
   this->printMsg("\n" + dotString + "\n", debug::Priority::VERBOSE);
 
   return 1;
@@ -267,7 +306,7 @@ int ttk::PlanarGraphLayout::computeDotString(
 // =============================================================================
 // Compute Slots
 // =============================================================================
-template <class idType>
+template <typename IT>
 int ttk::PlanarGraphLayout::computeSlots(
   // Output
   float *layout,
@@ -277,8 +316,8 @@ int ttk::PlanarGraphLayout::computeSlots(
   const size_t &nPoints,
   const size_t &nEdges,
   const float *sizes,
-  const idType *levels,
-  const idType &nLevels) const {
+  const IT *levels,
+  const IT &nLevels) const {
 
 #ifndef TTK_ENABLE_KAMIKAZE
   if(sizes == nullptr || levels == nullptr) {
@@ -287,7 +326,7 @@ int ttk::PlanarGraphLayout::computeSlots(
 #endif // TTK_ENABLE_KAMIKAZE
 
   Timer t;
-  this->printMsg("Computing slots", 0, debug::LineMode::REPLACE);
+  this->printMsg("Computing Slots", 0, debug::LineMode::REPLACE);
 
   // Comparator that sorts children based on layout.y
   struct ChildrenComparator {
@@ -318,12 +357,12 @@ int ttk::PlanarGraphLayout::computeSlots(
   // ---------------------------------------------------------------------------
   // Adjust positions from bottom to top (skip last level)
   // ---------------------------------------------------------------------------
-  for(idType l = 0; l < nLevels - 1; l++) {
+  for(IT l = 0; l < nLevels - 1; l++) {
     std::vector<size_t> nodeIndicies;
     std::vector<size_t> edgeIndicies;
 
     // get nodes at current level (parents)
-    this->extractLevel<idType>(
+    this->extractLevel<IT>(
       // Output
       nodeIndicies, edgeIndicies,
 
@@ -361,16 +400,16 @@ int ttk::PlanarGraphLayout::computeSlots(
     }
   }
 
-  this->printMsg("Computing slots", 1, t.getElapsedTime());
+  this->printMsg("Computing Slots", 1, t.getElapsedTime());
 
   return 1;
 }
 
 // =============================================================================
-// Execute
+// Compute Layout
 // =============================================================================
-template <class idType, class dataType>
-int ttk::PlanarGraphLayout::execute(
+template <typename DT, typename IT>
+int ttk::PlanarGraphLayout::computeGraphLayout(
   // Output
   float *layout,
 
@@ -378,10 +417,10 @@ int ttk::PlanarGraphLayout::execute(
   const LongSimplexId *connectivityList,
   const size_t &nPoints,
   const size_t &nEdges,
-  const dataType *pointSequences,
+  const DT *pointSequences,
   const float *sizes,
-  const idType *branches,
-  const idType *levels) const {
+  const IT *branches,
+  const IT *levels) const {
 
   Timer t;
 
@@ -416,7 +455,7 @@ int ttk::PlanarGraphLayout::execute(
   }
 
   // Global SequenceValue to SequenceIndex map
-  std::map<dataType, size_t> sequenceValueToIndexMap;
+  std::map<DT, size_t> sequenceValueToIndexMap;
   if(useSequences) {
     for(size_t i = 0; i < nPoints; i++)
       sequenceValueToIndexMap[pointSequences[i]] = 0;
@@ -426,7 +465,7 @@ int ttk::PlanarGraphLayout::execute(
   }
 
   // Get number of levels
-  idType nLevels = 1;
+  IT nLevels = 1;
   if(useLevels) {
     for(size_t i = 0; i < nPoints; i++)
       if(nLevels < levels[i])
@@ -437,13 +476,13 @@ int ttk::PlanarGraphLayout::execute(
   // ---------------------------------------------------------------------------
   // Compute initial layout for each level
   // ---------------------------------------------------------------------------
-  for(idType l = 0; l < nLevels; l++) {
+  for(IT l = 0; l < nLevels; l++) {
     std::vector<size_t> nodeIndicies;
     std::vector<size_t> edgeIndicies;
 
     // Extract nodes and edges at certain level
     {
-      int status = this->extractLevel<idType>(
+      int status = this->extractLevel<IT>(
         // Output
         nodeIndicies, edgeIndicies,
 
@@ -456,7 +495,7 @@ int ttk::PlanarGraphLayout::execute(
     // Compute Dot String
     std::string dotString;
     {
-      int status = this->computeDotString<idType, dataType>(
+      int status = this->computeDotString<IT, DT>(
         // Output
         dotString,
 
@@ -479,7 +518,7 @@ int ttk::PlanarGraphLayout::execute(
   // If nLevels>1 then compute slots
   // ---------------------------------------------------------------------------
   if(nLevels > 1) {
-    this->computeSlots<idType>(
+    this->computeSlots<IT>(
       // Output
       layout,
 
@@ -493,6 +532,191 @@ int ttk::PlanarGraphLayout::execute(
   this->printMsg(debug::Separator::L2);
   this->printMsg("Complete", 1, t.getElapsedTime());
   this->printMsg(debug::Separator::L1);
+
+  return 1;
+}
+
+template <typename DT, typename IT>
+int ttk::PlanarGraphLayout::GenerateLayout(
+  IT b,
+  float *layout,
+  std::vector<Branch<DT, IT>> &branchList,
+  const DT *pointSequences,
+  const IT *branches) const {
+
+  Branch<DT, IT> *curr_branch = &branchList[b];
+
+  IT lastB = b;
+  IT newB = b;
+
+  // only root branch has a -1 connection
+  if(curr_branch->saddlePoint != -1) {
+
+    IT root_branch_id = branches[curr_branch->saddlePoint];
+    const Branch<DT, IT> *root_branch = &branchList[root_branch_id];
+
+    lastB = root_branch->currentX + 1;
+    newB = lastB;
+
+    DT branchLine[4]
+      = {(DT)root_branch->currentX, pointSequences[curr_branch->saddlePoint],
+         (DT)newB, pointSequences[curr_branch->leaf]};
+
+    bool safe = false;
+
+    while(!safe) {
+      // start with 1 to skip intersection test with root branch
+      for(size_t i = 1; i < branchList.size(); i++) {
+
+        if((IT)i != b && (IT)i != root_branch_id) {
+          Branch<DT, IT> *next_branch = &branchList[i];
+          IT nroot_branch_id = branches[next_branch->saddlePoint];
+          Branch<DT, IT> *nroot_branch = &branchList[nroot_branch_id];
+
+          if(next_branch->rendered) {
+            DT bBox[4]
+              = {(DT)nroot_branch->currentX,
+                 pointSequences[next_branch->saddlePoint],
+                 (DT)next_branch->currentX, pointSequences[next_branch->leaf]};
+
+            if((branchLine[0] <= bBox[2] && branchLine[2] >= bBox[0]
+                && branchLine[1] <= bBox[3] && branchLine[3] >= bBox[1])) {
+              // always move new branch to one past the furthest conflicting
+              // branch
+              if(next_branch->currentX + 1 > newB) {
+                newB = next_branch->currentX + 1;
+              }
+
+              branchLine[2] = (DT)newB;
+            }
+          }
+
+          if(lastB == newB) {
+            safe = true;
+          }
+          lastB = newB;
+        }
+      }
+    }
+  }
+
+  curr_branch->rendered = true;
+  curr_branch->currentX = newB;
+
+  for(ttk::LongSimplexId v : curr_branch->vertices) {
+    layout[v * 2] = (float)newB;
+    layout[v * 2 + 1] = (float)pointSequences[v];
+  }
+
+  std::vector<std::pair<IT, DT>> branchOrder;
+
+  for(IT bp : curr_branch->branchPoints) {
+    const Branch<DT, IT> *this_branch = &branchList[bp];
+    branchOrder.push_back(
+      std::pair<IT, DT>(bp, pointSequences[this_branch->saddlePoint]));
+  }
+
+  std::sort(branchOrder.begin(), branchOrder.end(),
+            [](const std::pair<IT, DT> &left, const std::pair<IT, DT> &right) {
+              return left.second > right.second;
+            });
+
+  for(auto bo : branchOrder) {
+    GenerateLayout(bo.first, layout, branchList, pointSequences, branches);
+  }
+
+  return 1;
+}
+
+template <typename DT, typename IT>
+int ttk::PlanarGraphLayout::computeMergeTreeLayout(
+  // Output
+  float *layout,
+
+  // Input
+  const ttk::LongSimplexId *connectivityList,
+  const size_t &nPoints,
+  const size_t &nEdges,
+  const DT *pointSequences,
+  const IT *branches) const {
+
+  Timer timer;
+
+  const std::string msg = "Computing Merge Tree Layout";
+
+  this->printMsg(msg, 0, 0, this->threadNumber_, debug::LineMode::REPLACE);
+
+  // get number of unique branches
+  std::set<IT> branchNumbers;
+
+  for(size_t i = 0; i < nPoints; i++) {
+    branchNumbers.insert(branches[i]);
+  }
+
+  std::vector<Branch<DT, IT>> branchList(branchNumbers.size());
+
+  for(size_t i = 0; i < branchNumbers.size(); i++) {
+    Branch<DT, IT> *b = &branchList[i];
+    b->currentX = i;
+  }
+
+  for(size_t i = 0; i < nEdges; i++) {
+    // i*3 gives you number of vertices, always 2 in this case
+    ttk::LongSimplexId v1 = connectivityList[i * 3 + 1];
+    ttk::LongSimplexId v2 = connectivityList[i * 3 + 2];
+
+    // scalar values of vertices
+    DT s1 = pointSequences[v1];
+    DT s2 = pointSequences[v2];
+
+    // branchId of vertices
+    IT b1 = branches[v1];
+    IT b2 = branches[v2];
+
+    if(b1 == b2) {
+      Branch<DT, IT> *b = &branchList[b1];
+
+      if(b->leaf != -1) {
+        if(s1 > s2) {
+          b->leaf = (s1 > pointSequences[(int)b->leaf]) ? v1 : b->leaf;
+        }
+        if(s2 > s1) {
+          b->leaf = (s2 > pointSequences[(int)b->leaf]) ? v2 : b->leaf;
+        }
+      } else {
+        b->leaf = (s1 > s2) ? v1 : v2;
+      }
+
+      b->vertices.insert(v1);
+      b->vertices.insert(v2);
+
+    } else {
+      Branch<DT, IT> *branch1 = &branchList[b1];
+      Branch<DT, IT> *branch2 = &branchList[b2];
+
+      if(s2 >= s1) {
+        branch1->branchPoints.push_back(b2);
+        branch2->saddlePoint = v1;
+        // handles edge case of leaf not existing
+        if(branch2->leaf == -1) {
+          branch2->leaf = v2;
+        }
+      } else {
+        branch2->branchPoints.push_back(b1);
+        branch1->saddlePoint = v2;
+        if(branch1->leaf == -1) {
+          branch1->leaf = v1;
+        }
+      }
+
+      branch1->vertices.insert(v1);
+      branch2->vertices.insert(v2);
+    }
+  }
+
+  GenerateLayout((IT)0, layout, branchList, pointSequences, branches);
+
+  this->printMsg(msg, 1, timer.getElapsedTime());
 
   return 1;
 }
