@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="ttkBranchDecomposition" class="ttkBranchDecomposition" label="TTK BranchDecomposition">
+      <Documentation long_help="BranchDecomposition Long" short_help="BranchDecomposition Short">This filter is a well documented ttk example filter that computes for each vertex of a vtkDataSet the average scalar value of itself and its neighbors.</Documentation>
+
+      <InputProperty name="TrackingGraph" command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources" />
+          <Group name="filters" />
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkPointSet" />
+        </DataTypeDomain>
+        <InputArrayDomain name="input_array" attribute_type="point" number_of_components="1" />
+        <Documentation>Tracking Graph.</Documentation>
+      </InputProperty>
+
+      <StringVectorProperty name="Time" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
+        <ArrayListDomain attribute_type="Scalars" name="array_list">
+          <RequiredProperties>
+            <Property function="Input" name="TrackingGraph" />
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>The scalar array that records the time index of every node.</Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty name="Attribute" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
+        <ArrayListDomain attribute_type="Scalars" name="array_list">
+          <RequiredProperties>
+            <Property function="Input" name="TrackingGraph" />
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>The attribute that will be used to determine branch continuity.</Documentation>
+      </StringVectorProperty>
+
+      <!-- DEBUG -->
+      ${DEBUG_WIDGETS}
+
+      <!-- MENU CATEGORY -->
+      <Hints>
+        <ShowInMenu category="TTK - Misc" />
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>

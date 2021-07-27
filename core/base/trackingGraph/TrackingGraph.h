@@ -22,109 +22,88 @@
 #include <Debug.h>
 #include <Triangulation.h>
 
+#include <unordered_map>
+#include <unordered_set>
+
 namespace ttk {
 
-  /**
-   * The TrackingGraph class provides methods to compute for each vertex of a
-   * triangulation the average scalar value of itself and its direct neighbors.
-   */
   class TrackingGraph : virtual public Debug {
 
   public:
+    std::vector<std::vector<int>> prevNodes;
+    std::vector<std::vector<int>> nextNodes;
+
+    std::unordered_map<int,std::unordered_map<int,std::unordered_set<int>>> prevNodesByTime;
+    std::unordered_map<int,std::unordered_map<int,std::unordered_set<int>>> nextNodesByTime;
+
     TrackingGraph();
 
-    /**
-     * TODO 2: This method preconditions the triangulation for all operations
-     *         the algorithm of this module requires. For instance,
-     *         preconditionVertexNeighbors, preconditionBoundaryEdges, ...
-     *
-     *         Note: If the algorithm does not require a triangulation then
-     *               this method can be deleted.
-     */
-    int preconditionTriangulation(
-      ttk::AbstractTriangulation *triangulation) const {
-      return triangulation->preconditionVertexNeighbors();
-    };
+    template<typename IT>
+    int preconditionPrevAndNextNodes(
+      const int nNodes,
+      const int nEdges,
+      const IT* connectivityList
+    ) {
+      ttk::Timer timer;
+      const std::string msg("Building Tracking Graph Structure");
+      this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
 
-    /**
-     * TODO 3: Implmentation of the algorithm.
-     *
-     *         Note: If the algorithm requires a triangulation then this
-     *               method must be called after the triangulation has been
-     *               preconditioned for the upcoming operations.
-     */
-    template <class dataType,
-              class triangulationType = ttk::AbstractTriangulation>
-    int computeAverages(dataType *outputData,
-                        const dataType *inputData,
-                        const triangulationType *triangulation) const {
-      // start global timer
-      ttk::Timer globalTimer;
+      std::vector<std::unordered_set<int>> nextNodesTemp;
+      std::vector<std::unordered_set<int>> prevNodesTemp;
+      nextNodesTemp.resize(nNodes);
+      prevNodesTemp.resize(nNodes);
 
-      // print horizontal separator
-      this->printMsg(ttk::debug::Separator::L1); // L1 is the '=' separator
+      for(int i=0; i<nEdges; i++){
+        const int u = connectivityList[i*2+0];
+        const int v = connectivityList[i*2+1];
 
-      // print input parameters in table format
-      this->printMsg({
-        {"#Threads", std::to_string(this->threadNumber_)},
-        {"#Vertices", std::to_string(triangulation->getNumberOfVertices())},
-      });
-      this->printMsg(ttk::debug::Separator::L1);
-
-      // -----------------------------------------------------------------------
-      // Compute Vertex Averages
-      // -----------------------------------------------------------------------
-      {
-        // start a local timer for this subprocedure
-        ttk::Timer localTimer;
-
-        // print the progress of the current subprocedure (currently 0%)
-        this->printMsg("Computing Averages",
-                       0, // progress form 0-1
-                       0, // elapsed time so far
-                       this->threadNumber_, ttk::debug::LineMode::REPLACE);
-
-        // compute the average of each vertex in parallel
-        size_t nVertices = triangulation->getNumberOfVertices();
-#ifdef TTK_ENABLE_OPENMP
-#pragma omp parallel for num_threads(this->threadNumber_)
-#endif
-        for(size_t i = 0; i < nVertices; i++) {
-          // initialize average
-          outputData[i] = inputData[i];
-
-          // add neighbor values to average
-          size_t nNeighbors = triangulation->getVertexNeighborNumber(i);
-          ttk::SimplexId neighborId;
-          for(size_t j = 0; j < nNeighbors; j++) {
-            triangulation->getVertexNeighbor(i, j, neighborId);
-            outputData[i] += inputData[neighborId];
-          }
-
-          // devide by neighbor number
-          outputData[i] /= (nNeighbors + 1);
-        }
-
-        // print the progress of the current subprocedure with elapsed time
-        this->printMsg("Computing Averages",
-                       1, // progress
-                       localTimer.getElapsedTime(), this->threadNumber_);
+        nextNodesTemp[u].insert(v);
+        prevNodesTemp[v].insert(u);
       }
 
-      // ---------------------------------------------------------------------
-      // print global performance
-      // ---------------------------------------------------------------------
-      {
-        this->printMsg(ttk::debug::Separator::L2); // horizontal '-' separator
-        this->printMsg(
-          "Complete", 1, globalTimer.getElapsedTime() // global progress, time
-        );
-        this->printMsg(ttk::debug::Separator::L1); // horizontal '=' separator
+      this->nextNodes.clear();
+      this->prevNodes.clear();
+      this->nextNodes.resize(nNodes);
+      this->prevNodes.resize(nNodes);
+
+      for(int i=0; i<nNodes; i++){
+        this->nextNodes[i].insert(this->nextNodes[i].begin(),nextNodesTemp[i].begin(),nextNodesTemp[i].end());
+        this->prevNodes[i].insert(this->prevNodes[i].begin(),prevNodesTemp[i].begin(),prevNodesTemp[i].end());
       }
 
-      return 1; // return success
+      this->printMsg(msg,1,timer.getElapsedTime(),1);
+      return 1;
     }
 
+    // template<typename IT>
+    // int preconditionPrevAndNextNodesByTime(
+    //   const int nNodes,
+    //   const int nEdges,
+    //   const IT* connectivityList,
+    //   const int* time
+    // ) {
+    //   ttk::Timer timer;
+    //   const std::string msg("Building Tracking Graph Structure");
+    //   this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
+
+    //   this->prevNodesByTime.clear();
+    //   this->nextNodesByTime.clear();
+
+    //   for(int i=0; i<nNodes; i++){
+    //     this->prevNodesByTime.insert({time[i],std::unordered_map<int,std::unordered_set<int>>()});
+    //     this->nextNodesByTime.insert({time[i],std::unordered_map<int,std::unordered_set<int>>()});
+    //   }
+
+    //   for(int i=0; i<nEdges; i++){
+    //     const int u = connectivityList[i*2+0];
+    //     const int v = connectivityList[i*2+1];
+    //     this->nextNodesByTime.find(time[u])->second.find(u)->second.insert(v);
+    //     this->prevNodesByTime.find(time[v])->second.find(v)->second.insert(u);
+    //   }
+
+    //   this->printMsg(msg,1,timer.getElapsedTime(),1);
+    //   return 1;
+    // }
   }; // TrackingGraph class
 
 } // namespace ttk

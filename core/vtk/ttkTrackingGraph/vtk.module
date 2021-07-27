@@ -1,4 +1,5 @@
 NAME
   ttkTrackingGraph
 DEPENDS
+  ttkCorrespondenceAlgorithm
   ttkAlgorithm

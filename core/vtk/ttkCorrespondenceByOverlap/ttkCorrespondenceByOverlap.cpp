@@ -51,11 +51,11 @@ int ttkCorrespondenceByOverlap::ComputeCorrespondences(
   const int nVertices = labels0->GetNumberOfTuples();
 
   // extract unique labels from volume
-  ttk::CorrespondenceByOverlap::LabelIndexMap labelsIndexMap0;
-  ttk::CorrespondenceByOverlap::LabelIndexMap labelsIndexMap1;
+  ttk::CorrespondenceByOverlap::LabelIndexMap labelIndexMap0;
+  ttk::CorrespondenceByOverlap::LabelIndexMap labelIndexMap1;
   int status = 0;
   for(auto &it : std::vector<std::pair<vtkDataArray *, LabelIndexMap *>>(
-        {{labels0, &labelsIndexMap0}, {labels1, &labelsIndexMap1}})) {
+        {{labels0, &labelIndexMap0}, {labels1, &labelIndexMap1}})) {
     switch(labels0->GetDataType()) {
       vtkTemplateMacro(
         status = this->computeLabelIndexMap<VTK_TT>(
@@ -65,8 +65,8 @@ int ttkCorrespondenceByOverlap::ComputeCorrespondences(
     }
   }
 
-  const int nLabels0 = labelsIndexMap0.size();
-  const int nLabels1 = labelsIndexMap1.size();
+  const int nLabels0 = labelIndexMap0.size();
+  const int nLabels1 = labelIndexMap1.size();
 
   // initialize correspondence matrix
   correspondenceMatrix->SetDimensions(nLabels0, nLabels1, 1);
@@ -80,7 +80,7 @@ int ttkCorrespondenceByOverlap::ComputeCorrespondences(
                        ttkUtils::GetPointer<int>(matrixData),
                        ttkUtils::GetPointer<const VTK_TT>(labels0),
                        ttkUtils::GetPointer<const VTK_TT>(labels1), nVertices,
-                       labelsIndexMap0, labelsIndexMap1));
+                       labelIndexMap0, labelIndexMap1));
   }
   if(!status)
     return 0;
@@ -88,7 +88,7 @@ int ttkCorrespondenceByOverlap::ComputeCorrespondences(
   // add index label maps
   int a = 0;
   for(const auto it :
-      std::vector<LabelIndexMap *>({&labelsIndexMap0, &labelsIndexMap1})) {
+      std::vector<LabelIndexMap *>({&labelIndexMap0, &labelIndexMap1})) {
     auto array = vtkSmartPointer<vtkIntArray>::New();
     array->SetName(std::string("IndexLabelMap" + std::to_string(a++)).data());
     array->SetNumberOfTuples(it->size());
