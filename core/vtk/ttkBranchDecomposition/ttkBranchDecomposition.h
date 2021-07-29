@@ -1,37 +1,34 @@
-/// TODO 4: Provide your information and **update** the documentation (in
-/// particular regarding the order convention if input arrays need to be
-/// specified with the standard VTK call SetInputArrayToProcess()).
-///
 /// \ingroup vtk
 /// \class ttkBranchDecomposition
-/// \author Your Name Here <Your Email Address Here>
-/// \date The Date Here.
+/// \author Jonas Lukasczyk <jl@jluk.de>
+/// \date 29.07.2021
 ///
-/// \brief TTK VTK-filter that wraps the ttk::BranchDecomposition module.
+/// \brief This module assigns to each vertex of a tracking graph a branch id based on a given attribute.
 ///
-/// This VTK filter uses the ttk::BranchDecomposition module to compute an averaging of
-/// the data values of an input point data array defined on the input
-/// vtkDataSet.
+/// This module assigns to each vertex of a tracking graph a branch id based on a given attribute. First, all birth nodes are assigned a unique branch id, and then the algorithm iterates over every vertex in order of time and then either inherits the branch id of its largest predecessor (but only if the current vertex is also the largest successor of this predecessor), or the vertex gets assinged a new unique branch id.
 ///
-/// \param Input vtkDataSet.
-/// \param Output vtkDataSet.
+/// \param Input vtkPolyData or vtkUnstructuredGrid representing a tracking graph.
+/// \param Output A shallow copy of the input data object augmented with a BranchId point data array.
 ///
 /// This filter can be used as any other VTK filter (for instance, by using the
 /// sequence of calls SetInputData(), Update(), GetOutputDataObject()).
 ///
-/// The input data array needs to be specified via the standard VTK call
-/// vtkAlgorithm::SetInputArrayToProcess() with the following parameters:
-/// \param idx 0 (FIXED: the first array the algorithm requires)
+/// This module requires two scalars fields (time and attribute) that need to be specified via the standard VTK call
+/// vtkAlgorithm::SetInputArrayToProcess().
+///
+/// The time array needs the following parameters:
+/// \param idx 0 (FIXED: the first array the algorithm requires (time))
 /// \param port 0 (FIXED: first port)
 /// \param connection 0 (FIXED: first connection)
 /// \param fieldAssociation 0 (FIXED: point data)
-/// \param arrayName (DYNAMIC: string identifier of the input array)
+/// \param arrayName (DYNAMIC: string identifier of the time array)
 ///
-/// See the corresponding standalone program for a usage example:
-///   - standalone/BranchDecomposition/main.cpp
-///
-/// See the related ParaView example state files for usage examples within a
-/// VTK pipeline.
+/// The attribute array needs the following parameters:
+/// \param idx 1 (FIXED: the second array the algorithm requires (attribute))
+/// \param port 0 (FIXED: first port)
+/// \param connection 0 (FIXED: first connection)
+/// \param fieldAssociation 0 or 1 (DYNAMIC: either point or cell data)
+/// \param arrayName (DYNAMIC: string identifier of the attribute array)
 ///
 /// \sa ttk::BranchDecomposition
 /// \sa ttkAlgorithm
@@ -48,14 +45,9 @@
 #include <BranchDecomposition.h>
 
 class TTKBRANCHDECOMPOSITION_EXPORT ttkBranchDecomposition
-  : public ttkAlgorithm // we inherit from the generic ttkAlgorithm class
-  ,
-    protected ttk::BranchDecomposition // and we inherit from the base class
+  : public ttkAlgorithm, protected ttk::BranchDecomposition
 {
-private:
-
 public:
-
   static ttkBranchDecomposition *New();
   vtkTypeMacro(ttkBranchDecomposition, ttkAlgorithm);
 

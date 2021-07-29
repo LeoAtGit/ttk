@@ -1,6 +1,4 @@
-ttk_add_base_library(branchDecomposition
-  SOURCES
-    BranchDecomposition.cpp
+ttk_add_base_template_library(branchDecomposition
   HEADERS
     BranchDecomposition.h
   DEPENDS

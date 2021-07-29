@@ -30,16 +30,20 @@ namespace ttk {
   class TrackingGraph : virtual public Debug {
 
   public:
-    std::vector<std::vector<int>> prevNodes;
-    std::vector<std::vector<int>> nextNodes;
 
-    std::unordered_map<int,std::unordered_map<int,std::unordered_set<int>>> prevNodesByTime;
-    std::unordered_map<int,std::unordered_map<int,std::unordered_set<int>>> nextNodesByTime;
+    struct Edge {
+      int u;
+      int v;
+      int e;
+    };
+
+    std::vector<std::vector<Edge>> inEdges;
+    std::vector<std::vector<Edge>> outEdges;
 
     TrackingGraph();
 
     template<typename IT>
-    int preconditionPrevAndNextNodes(
+    int preconditionInOutEdges(
       const int nNodes,
       const int nEdges,
       const IT* connectivityList
@@ -48,28 +52,28 @@ namespace ttk {
       const std::string msg("Building Tracking Graph Structure");
       this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
 
-      std::vector<std::unordered_set<int>> nextNodesTemp;
-      std::vector<std::unordered_set<int>> prevNodesTemp;
-      nextNodesTemp.resize(nNodes);
-      prevNodesTemp.resize(nNodes);
+      this->outEdges.clear();
+      this->outEdges.resize(nNodes);
+      this->inEdges.clear();
+      this->inEdges.resize(nNodes);
+
+      // std::vector<std::unordered_set<int>> nextNodesTemp;
+      // std::vector<std::unordered_set<int>> prevNodesTemp;
+      // nextNodesTemp.resize(nNodes);
+      // prevNodesTemp.resize(nNodes);
 
       for(int i=0; i<nEdges; i++){
         const int u = connectivityList[i*2+0];
         const int v = connectivityList[i*2+1];
 
-        nextNodesTemp[u].insert(v);
-        prevNodesTemp[v].insert(u);
+        this->outEdges[u].push_back({u,v,i});
+        this->inEdges[v].push_back({u,v,i});
       }
 
-      this->nextNodes.clear();
-      this->prevNodes.clear();
-      this->nextNodes.resize(nNodes);
-      this->prevNodes.resize(nNodes);
-
-      for(int i=0; i<nNodes; i++){
-        this->nextNodes[i].insert(this->nextNodes[i].begin(),nextNodesTemp[i].begin(),nextNodesTemp[i].end());
-        this->prevNodes[i].insert(this->prevNodes[i].begin(),prevNodesTemp[i].begin(),prevNodesTemp[i].end());
-      }
+      // for(int i=0; i<nNodes; i++){
+      //   this->nextNodes[i].insert(this->nextNodes[i].begin(),nextNodesTemp[i].begin(),nextNodesTemp[i].end());
+      //   this->prevNodes[i].insert(this->prevNodes[i].begin(),prevNodesTemp[i].begin(),prevNodesTemp[i].end());
+      // }
 
       this->printMsg(msg,1,timer.getElapsedTime(),1);
       return 1;
