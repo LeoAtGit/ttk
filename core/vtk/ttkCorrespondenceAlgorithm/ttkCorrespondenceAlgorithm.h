@@ -35,12 +35,12 @@ public:
   static ttkCorrespondenceAlgorithm *New();
   vtkTypeMacro(ttkCorrespondenceAlgorithm, ttkAlgorithm);
 
-  static int BuildLabelIndexMap(std::unordered_map<int,int>& map, const vtkDataArray* indexLabelMap);
+  static int BuildLabelIndexMap(std::unordered_map<int, int> &map,
+                                const vtkDataArray *indexLabelMap);
 
 protected:
   ttkCorrespondenceAlgorithm();
   ~ttkCorrespondenceAlgorithm();
-
 
   int FillInputPortInformation(int port, vtkInformation *info) override;
   int FillOutputPortInformation(int port, vtkInformation *info) override;

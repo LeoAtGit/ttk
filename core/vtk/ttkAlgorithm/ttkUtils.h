@@ -62,8 +62,10 @@ public:
   };
 
   template <typename DT>
-  static const DT *GetConstPointer(const vtkDataArray *array, vtkIdType start = 0) {
-    return static_cast<const DT *>(ttkUtils::GetVoidPointer(const_cast<vtkDataArray*>(array), start));
+  static const DT *GetConstPointer(const vtkDataArray *array,
+                                   vtkIdType start = 0) {
+    return static_cast<const DT *>(
+      ttkUtils::GetVoidPointer(const_cast<vtkDataArray *>(array), start));
   };
 
   static void *

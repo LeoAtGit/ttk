@@ -50,14 +50,23 @@ public:
   vtkGetMacro(DistanceAlgorithm, std::string);
 
   template <typename dataType>
-  int getDiagram(std::vector<std::tuple<
-    int, ttk::CriticalType, int, ttk::CriticalType,
-    dataType, int,
-    dataType, float, float, float,
-    dataType, float, float, float> > &diagram,
-    vtkUnstructuredGrid *CTPersistenceDiagram_,
-    const double spacing,
-    const int diagramNumber);
+  int getDiagram(std::vector<std::tuple<int,
+                                        ttk::CriticalType,
+                                        int,
+                                        ttk::CriticalType,
+                                        dataType,
+                                        int,
+                                        dataType,
+                                        float,
+                                        float,
+                                        float,
+                                        dataType,
+                                        float,
+                                        float,
+                                        float>> &diagram,
+                 vtkUnstructuredGrid *CTPersistenceDiagram_,
+                 const double spacing,
+                 const int diagramNumber);
 
 protected:
   ttkCorrespondenceByPersistencePairs();

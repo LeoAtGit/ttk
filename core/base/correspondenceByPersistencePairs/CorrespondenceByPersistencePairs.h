@@ -33,22 +33,47 @@ namespace ttk {
 
     template <class DT>
     int computeDistanceMatrix(
-        std::vector< std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, DT,
-            int, DT, float, float, float, DT, float, float, float> > &CTDiagram0,
-        std::vector< std::tuple<int, ttk::CriticalType, int, ttk::CriticalType, DT,
-            int, DT, float, float, float, DT, float, float, float> > &CTDiagram1,
-        std::vector< std::tuple<int, int, double> > &matchings,
-        double px, double py, double pz, 
-        double ps, double pe,
-        const std::string algorithm,
-        const std::string wasserstein,
-        const int pvAlgorithm,
-        const double maxJump
-        ) const
-    {
+      std::vector<std::tuple<int,
+                             ttk::CriticalType,
+                             int,
+                             ttk::CriticalType,
+                             DT,
+                             int,
+                             DT,
+                             float,
+                             float,
+                             float,
+                             DT,
+                             float,
+                             float,
+                             float>> &CTDiagram0,
+      std::vector<std::tuple<int,
+                             ttk::CriticalType,
+                             int,
+                             ttk::CriticalType,
+                             DT,
+                             int,
+                             DT,
+                             float,
+                             float,
+                             float,
+                             DT,
+                             float,
+                             float,
+                             float>> &CTDiagram1,
+      std::vector<std::tuple<int, int, double>> &matchings,
+      double px,
+      double py,
+      double pz,
+      double ps,
+      double pe,
+      const std::string algorithm,
+      const std::string wasserstein,
+      const int pvAlgorithm,
+      const double maxJump) const {
       ttk::Timer timer;
 
-      //const std::string msg = "Computing Distance Matrix ("
+      // const std::string msg = "Computing Distance Matrix ("
       //                        + std::to_string(nPoints0) + "x"
       //                        + std::to_string(nPoints1) + ")";
       // this->printMsg(

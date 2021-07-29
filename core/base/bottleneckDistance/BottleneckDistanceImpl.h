@@ -5,12 +5,11 @@ constexpr unsigned long long str2int(const char *str, int h = 0) {
 }
 
 template <typename dataType>
-int ttk::BottleneckDistance::execute(const bool usePersistenceMetric)
-{
+int ttk::BottleneckDistance::execute(const bool usePersistenceMetric) {
   Timer t;
 
   bool fromParaView = pvAlgorithm_ >= 0;
-  if (fromParaView) {
+  if(fromParaView) {
     switch(pvAlgorithm_) {
       case 0:
         matcher_ = 0;
@@ -73,8 +72,7 @@ double ttk::BottleneckDistance::computeGeometricalRange(
   const std::vector<diagramTuple> &CTDiagram1,
   const std::vector<diagramTuple> &CTDiagram2,
   const int d1Size,
-  const int d2Size) const
-{
+  const int d2Size) const {
   float minX1, maxX1, minY1, maxY1, minZ1, maxZ1;
   float minX2, maxX2, minY2, maxY2, minZ2, maxZ2;
   float minX, minY, minZ, maxX, maxY, maxZ;

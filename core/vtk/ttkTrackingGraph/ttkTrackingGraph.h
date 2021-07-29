@@ -40,16 +40,17 @@ protected:
                   vtkInformationVector **inputVector,
                   vtkInformationVector *outputVector) override;
 
-  int CountNodesAndEdges(int& nNodes, int& nEdges, std::vector<int>& nodeIdxOffsets, vtkMultiBlockDataSet *correspondences, vtkMultiBlockDataSet *features);
-  int Validate(vtkMultiBlockDataSet* correspondences, vtkMultiBlockDataSet *features);
+  int CountNodesAndEdges(int &nNodes,
+                         int &nEdges,
+                         std::vector<int> &nodeIdxOffsets,
+                         vtkMultiBlockDataSet *correspondences,
+                         vtkMultiBlockDataSet *features);
+  int Validate(vtkMultiBlockDataSet *correspondences,
+               vtkMultiBlockDataSet *features);
 
-  int GenerateTrackingGraphFromFeatures(
-    vtkPolyData *output,
-    vtkMultiBlockDataSet *correspondences,
-    vtkMultiBlockDataSet *features
-  );
-  int GenerateTrackingGraphFromMatrix(
-    vtkPolyData *output,
-    vtkMultiBlockDataSet *correspondences
-  );
+  int GenerateTrackingGraphFromFeatures(vtkPolyData *output,
+                                        vtkMultiBlockDataSet *correspondences,
+                                        vtkMultiBlockDataSet *features);
+  int GenerateTrackingGraphFromMatrix(vtkPolyData *output,
+                                      vtkMultiBlockDataSet *correspondences);
 };

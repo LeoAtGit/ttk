@@ -3,7 +3,8 @@
 /// \author Emma Nilsson <emma.nilsson@liu.se>
 /// \date 2021-06-04
 ///
-/// This filter creates a Perlin noise scalar field of chosen spatio-temporal dimenison.
+/// This filter creates a Perlin noise scalar field of chosen spatio-temporal
+/// dimenison.
 ///
 /// \sa ttk::PerlinNoise
 /// \sa ttkAlgorithm
@@ -19,11 +20,8 @@
 // TTK Base Includes
 #include <PerlinNoise.h>
 
-class TTKPERLINNOISE_EXPORT ttkPerlinNoise
-  : public ttkAlgorithm
-  ,
-    protected ttk::PerlinNoise
-{
+class TTKPERLINNOISE_EXPORT ttkPerlinNoise : public ttkAlgorithm,
+                                             protected ttk::PerlinNoise {
 private:
   int PerlinDim{0};
   int Scale{0};
@@ -77,8 +75,12 @@ protected:
 
   int FillInputPortInformation(int port, vtkInformation *info) override;
   int FillOutputPortInformation(int port, vtkInformation *info) override;
-  //int RequestInformation (vtkInformation* vtkNotUsed(request), vtkInformationVector** vtkNotUsed(inputVector), vtkInformationVector *outputVector)
-  int RequestInformation (vtkInformation* request, vtkInformationVector** inputVector, vtkInformationVector *outputVector) override;
+  // int RequestInformation (vtkInformation* vtkNotUsed(request),
+  // vtkInformationVector** vtkNotUsed(inputVector), vtkInformationVector
+  // *outputVector)
+  int RequestInformation(vtkInformation *request,
+                         vtkInformationVector **inputVector,
+                         vtkInformationVector *outputVector) override;
 
   int RequestData(vtkInformation *request,
                   vtkInformationVector **inputVector,

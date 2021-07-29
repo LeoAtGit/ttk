@@ -3,18 +3,25 @@
 /// \author Jonas Lukasczyk <jl@jluk.de>
 /// \date 29.07.2021
 ///
-/// \brief This module assigns to each vertex of a tracking graph a branch id based on a given attribute.
+/// \brief This module assigns to each vertex of a tracking graph a branch id
+/// based on a given attribute.
 ///
-/// This module assigns to each vertex of a tracking graph a branch id based on a given attribute. First, all birth nodes are assigned a unique branch id, and then the algorithm iterates over every vertex in order of time and then either inherits the branch id of its largest predecessor (but only if the current vertex is also the largest successor of this predecessor), or the vertex gets assinged a new unique branch id.
+/// This module assigns to each vertex of a tracking graph a branch id based on
+/// a given attribute. First, all birth nodes are assigned a unique branch id,
+/// and then the algorithm iterates over every vertex in order of time and then
+/// either inherits the branch id of its largest predecessor (but only if the
+/// current vertex is also the largest successor of this predecessor), or the
+/// vertex gets assinged a new unique branch id.
 ///
-/// \param Input vtkPolyData or vtkUnstructuredGrid representing a tracking graph.
-/// \param Output A shallow copy of the input data object augmented with a BranchId point data array.
+/// \param Input vtkPolyData or vtkUnstructuredGrid representing a tracking
+/// graph. \param Output A shallow copy of the input data object augmented with
+/// a BranchId point data array.
 ///
 /// This filter can be used as any other VTK filter (for instance, by using the
 /// sequence of calls SetInputData(), Update(), GetOutputDataObject()).
 ///
-/// This module requires two scalars fields (time and attribute) that need to be specified via the standard VTK call
-/// vtkAlgorithm::SetInputArrayToProcess().
+/// This module requires two scalars fields (time and attribute) that need to be
+/// specified via the standard VTK call vtkAlgorithm::SetInputArrayToProcess().
 ///
 /// The time array needs the following parameters:
 /// \param idx 0 (FIXED: the first array the algorithm requires (time))
@@ -45,8 +52,8 @@
 #include <BranchDecomposition.h>
 
 class TTKBRANCHDECOMPOSITION_EXPORT ttkBranchDecomposition
-  : public ttkAlgorithm, protected ttk::BranchDecomposition
-{
+  : public ttkAlgorithm,
+    protected ttk::BranchDecomposition {
 public:
   static ttkBranchDecomposition *New();
   vtkTypeMacro(ttkBranchDecomposition, ttkAlgorithm);

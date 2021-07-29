@@ -30,7 +30,6 @@ namespace ttk {
   class TrackingGraph : virtual public Debug {
 
   public:
-
     struct Edge {
       int u;
       int v;
@@ -42,15 +41,13 @@ namespace ttk {
 
     TrackingGraph();
 
-    template<typename IT>
-    int preconditionInOutEdges(
-      const int nNodes,
-      const int nEdges,
-      const IT* connectivityList
-    ) {
+    template <typename IT>
+    int preconditionInOutEdges(const int nNodes,
+                               const int nEdges,
+                               const IT *connectivityList) {
       ttk::Timer timer;
       const std::string msg("Building Tracking Graph Structure");
-      this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
+      this->printMsg(msg, 0, 0, 1, ttk::debug::LineMode::REPLACE);
 
       this->outEdges.clear();
       this->outEdges.resize(nNodes);
@@ -62,12 +59,12 @@ namespace ttk {
       // nextNodesTemp.resize(nNodes);
       // prevNodesTemp.resize(nNodes);
 
-      for(int i=0; i<nEdges; i++){
-        const int u = connectivityList[i*2+0];
-        const int v = connectivityList[i*2+1];
+      for(int i = 0; i < nEdges; i++) {
+        const int u = connectivityList[i * 2 + 0];
+        const int v = connectivityList[i * 2 + 1];
 
-        this->outEdges[u].push_back({u,v,i});
-        this->inEdges[v].push_back({u,v,i});
+        this->outEdges[u].push_back({u, v, i});
+        this->inEdges[v].push_back({u, v, i});
       }
 
       // for(int i=0; i<nNodes; i++){
@@ -75,7 +72,7 @@ namespace ttk {
       //   this->prevNodes[i].insert(this->prevNodes[i].begin(),prevNodesTemp[i].begin(),prevNodesTemp[i].end());
       // }
 
-      this->printMsg(msg,1,timer.getElapsedTime(),1);
+      this->printMsg(msg, 1, timer.getElapsedTime(), 1);
       return 1;
     }
 

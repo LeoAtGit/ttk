@@ -3,10 +3,10 @@
 #include <vtkInformation.h>
 #include <vtkObjectFactory.h>
 
+#include <vtkFloatArray.h>
 #include <vtkImageData.h>
 #include <vtkMultiBlockDataSet.h>
 #include <vtkPointSet.h>
-#include <vtkFloatArray.h>
 
 #include <vtkPointData.h>
 #include <vtkStringArray.h>
@@ -39,8 +39,8 @@ int ttkCorrespondenceByDistance::ComputeCorrespondences(
   // get point coordinates
 
   auto temp = vtkSmartPointer<vtkFloatArray>::New();
-  auto coords0 = nPoints0>0 ? p0->GetPoints()->GetData() : temp;
-  auto coords1 = nPoints1>0 ? p1->GetPoints()->GetData() : temp;
+  auto coords0 = nPoints0 > 0 ? p0->GetPoints()->GetData() : temp;
+  auto coords1 = nPoints1 > 0 ? p1->GetPoints()->GetData() : temp;
 
   if(coords0->GetDataType() != coords1->GetDataType())
     return !this->printErr("Input vtkPointSet need to have same precision.");

@@ -129,8 +129,7 @@ int ttk::TrackingFromPersistenceDiagrams::performSingleMatching(
   double pz,
   double ps,
   double pe,
-  double maxJump)
-{
+  double maxJump) {
   ttk::BottleneckDistance bottleneckDistance_;
   // bottleneckDistance_.setWrapper(this);
   bottleneckDistance_.setPersistencePercentThreshold(tolerance);
@@ -165,8 +164,7 @@ int ttk::TrackingFromPersistenceDiagrams::performMatchings(
   double pz,
   double ps,
   double pe,
-  double maxJump)
-{
+  double maxJump) {
 
 #ifdef TTK_ENABLE_OPENMP
 #pragma omp parallel for num_threads(threadNumber_)
@@ -175,8 +173,7 @@ int ttk::TrackingFromPersistenceDiagrams::performMatchings(
     performSingleMatching<dataType>(
       i, inputPersistenceDiagrams, outputMatchings,
       algorithm, // Not from paraview, from enclosing tracking plugin
-      wasserstein, tolerance, is3D,
-      px, py, pz, ps, pe, maxJump // Coefficients
+      wasserstein, tolerance, is3D, px, py, pz, ps, pe, maxJump // Coefficients
     );
   }
 

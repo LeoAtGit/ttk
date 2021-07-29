@@ -382,11 +382,9 @@ int ttkBottleneckDistance::getMatchingMesh(
   return 1;
 }
 
-int ttkBottleneckDistance::RequestData(
-  vtkInformation * /*request*/,
-  vtkInformationVector **inputVector,
-  vtkInformationVector *outputVector)
-{
+int ttkBottleneckDistance::RequestData(vtkInformation * /*request*/,
+                                       vtkInformationVector **inputVector,
+                                       vtkInformationVector *outputVector) {
   using dataType = double;
 
   auto outputCT1 = vtkUnstructuredGrid::GetData(outputVector, 0);
@@ -399,15 +397,13 @@ int ttkBottleneckDistance::RequestData(
   this->setPercentMaxJump(MaxJump);
 
   // Using advanced parameters if the user has tweaked them.
-  if (PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.)
-  {
+  if(PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.) {
     this->setPX(PX);
     this->setPY(PY);
     this->setPZ(PZ);
     this->setPE(PE);
-    this->setPS(PS);    
-  }
-  else // Using lifting parameter instead.
+    this->setPS(PS);
+  } else // Using lifting parameter instead.
   {
     // 0 -> persistence; 1 -> geometry
     double geometricalLift = Lifting / 100.0;
@@ -448,8 +444,9 @@ int ttkBottleneckDistance::RequestData(
     CTPersistenceDiagram2->GetPointData()->GetArray("Death"));
   bool is2D1 = !deathScalars1 && !birthScalars1;
   bool is2D2 = !deathScalars2 && !birthScalars2;
-  if (is2D1 != is2D2) {
-    this->printErr("Diagrams should have the same embedding type and hold double values.");
+  if(is2D1 != is2D2) {
+    this->printErr(
+      "Diagrams should have the same embedding type and hold double values.");
     return 0;
   }
   bool is2D = is2D1;

@@ -73,19 +73,17 @@ int ttkTrackingFromPersistenceDiagrams::RequestData(
     grid1->ShallowCopy(vtkUnstructuredGrid::SafeDownCast(input[i]));
     this->getPersistenceDiagram(inputPersistenceDiagrams[i], grid1, spacing, 0);
   }
-  
+
   double maxJump, tolerance;
   double px, py, pz, pe, ps;
   // Using advanced parameters if the user has tweaked them.
-  if (PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.)
-  {
+  if(PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.) {
     px = PX;
     py = PY;
     pz = PZ;
     pe = PE;
-    ps = PS;    
-  }
-  else // Using lifting parameter instead.
+    ps = PS;
+  } else // Using lifting parameter instead.
   {
     // 0 -> persistence; 1 -> geometry
     double geometricalLift = Lifting / 100.0;
@@ -102,8 +100,7 @@ int ttkTrackingFromPersistenceDiagrams::RequestData(
   this->performMatchings<dataType>(
     numInputs, inputPersistenceDiagrams, outputMatchings,
     algorithm, // Not from paraview, from enclosing tracking plugin
-    wasserstein, tolerance, is3D,
-    PX, PY, PZ, PS, PE, maxJump // Coefficients
+    wasserstein, tolerance, is3D, PX, PY, PZ, PS, PE, maxJump // Coefficients
   );
 
   // Get back meshes.

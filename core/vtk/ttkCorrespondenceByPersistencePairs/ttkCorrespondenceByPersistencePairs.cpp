@@ -98,15 +98,13 @@ int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
   const double maxJump = MaxJump;
 
   // Using advanced parameters if the user has tweaked them.
-  if (PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.)
-  {
+  if(PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.) {
     px = PX;
     py = PY;
     pz = PZ;
     pe = PE;
-    ps = PS;    
-  }
-  else // Using lifting parameter instead.
+    ps = PS;
+  } else // Using lifting parameter instead.
   {
     // 0 -> persistence; 1 -> geometry
     double geometricalLift = Lifting / 100.0;
@@ -117,16 +115,13 @@ int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
     pe = persistenceLift;
     ps = persistenceLift;
   }
-  
+
   // compute correspondences in basecode
   std::vector<mT> matchings;
-  switch (coords0->GetDataType()) {
-    vtkTemplateMacro(
-      status = this->computeDistanceMatrix<double>(
-      CTDiagram0,
-      CTDiagram1,
-      matchings,
-      px, py, pz, ps, pe, algorithm, wasserstein, pvAlgorithm, maxJump));
+  switch(coords0->GetDataType()) {
+    vtkTemplateMacro(status = this->computeDistanceMatrix<double>(
+                       CTDiagram0, CTDiagram1, matchings, px, py, pz, ps, pe,
+                       algorithm, wasserstein, pvAlgorithm, maxJump));
   }
   if(status < 0) {
     this->printErr("Error computing distance matrix.");

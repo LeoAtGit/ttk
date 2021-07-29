@@ -122,7 +122,6 @@ protected:
   ttkBottleneckDistance();
 
 private:
-
   bool UseOutputMatching{false};
   bool Is3D{false};
   double Spacing{0.0};

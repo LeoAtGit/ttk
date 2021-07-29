@@ -44,22 +44,23 @@ int ttkCorrespondenceAlgorithm::FillOutputPortInformation(
   return 0;
 }
 
-template<typename DT>
-void BuildLabelIndexMapDT(std::unordered_map<int,int>& map, const int n, const DT* indexLabelMapData){
-  for(int i=0; i<n; i++)
+template <typename DT>
+void BuildLabelIndexMapDT(std::unordered_map<int, int> &map,
+                          const int n,
+                          const DT *indexLabelMapData) {
+  for(int i = 0; i < n; i++)
     map.emplace(std::make_pair(static_cast<int>(indexLabelMapData[i]), i));
 }
 
-int ttkCorrespondenceAlgorithm::BuildLabelIndexMap(std::unordered_map<int,int>& map, const vtkDataArray* indexLabelMap){
+int ttkCorrespondenceAlgorithm::BuildLabelIndexMap(
+  std::unordered_map<int, int> &map, const vtkDataArray *indexLabelMap) {
   if(!indexLabelMap)
     return 0;
 
-  switch(indexLabelMap->GetDataType()){
+  switch(indexLabelMap->GetDataType()) {
     vtkTemplateMacro(BuildLabelIndexMapDT<VTK_TT>(
-      map,
-      indexLabelMap->GetNumberOfValues(),
-      ttkUtils::GetConstPointer<VTK_TT>(indexLabelMap)
-    ));
+      map, indexLabelMap->GetNumberOfValues(),
+      ttkUtils::GetConstPointer<VTK_TT>(indexLabelMap)));
   }
 
   return 1;
