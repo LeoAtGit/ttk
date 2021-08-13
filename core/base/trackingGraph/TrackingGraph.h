@@ -54,11 +54,6 @@ namespace ttk {
       this->inEdges.clear();
       this->inEdges.resize(nNodes);
 
-      // std::vector<std::unordered_set<int>> nextNodesTemp;
-      // std::vector<std::unordered_set<int>> prevNodesTemp;
-      // nextNodesTemp.resize(nNodes);
-      // prevNodesTemp.resize(nNodes);
-
       for(int i = 0; i < nEdges; i++) {
         const int u = connectivityList[i * 2 + 0];
         const int v = connectivityList[i * 2 + 1];
@@ -67,44 +62,9 @@ namespace ttk {
         this->inEdges[v].push_back({u, v, i});
       }
 
-      // for(int i=0; i<nNodes; i++){
-      //   this->nextNodes[i].insert(this->nextNodes[i].begin(),nextNodesTemp[i].begin(),nextNodesTemp[i].end());
-      //   this->prevNodes[i].insert(this->prevNodes[i].begin(),prevNodesTemp[i].begin(),prevNodesTemp[i].end());
-      // }
-
       this->printMsg(msg, 1, timer.getElapsedTime(), 1);
       return 1;
     }
-
-    // template<typename IT>
-    // int preconditionPrevAndNextNodesByTime(
-    //   const int nNodes,
-    //   const int nEdges,
-    //   const IT* connectivityList,
-    //   const int* time
-    // ) {
-    //   ttk::Timer timer;
-    //   const std::string msg("Building Tracking Graph Structure");
-    //   this->printMsg(msg,0,0,1,ttk::debug::LineMode::REPLACE);
-
-    //   this->prevNodesByTime.clear();
-    //   this->nextNodesByTime.clear();
-
-    //   for(int i=0; i<nNodes; i++){
-    //     this->prevNodesByTime.insert({time[i],std::unordered_map<int,std::unordered_set<int>>()});
-    //     this->nextNodesByTime.insert({time[i],std::unordered_map<int,std::unordered_set<int>>()});
-    //   }
-
-    //   for(int i=0; i<nEdges; i++){
-    //     const int u = connectivityList[i*2+0];
-    //     const int v = connectivityList[i*2+1];
-    //     this->nextNodesByTime.find(time[u])->second.find(u)->second.insert(v);
-    //     this->prevNodesByTime.find(time[v])->second.find(v)->second.insert(u);
-    //   }
-
-    //   this->printMsg(msg,1,timer.getElapsedTime(),1);
-    //   return 1;
-    // }
   }; // TrackingGraph class
 
 } // namespace ttk

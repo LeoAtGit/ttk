@@ -56,6 +56,7 @@ namespace ttk {
 
         for(int i = 0; i < nNodes; i++)
           nodesSortedByTime[i] = i;
+
         std::sort(nodesSortedByTime.begin(), nodesSortedByTime.end(),
                   [=](int a, int b) { return time[a] < time[b]; });
 
@@ -107,9 +108,6 @@ namespace ttk {
         this->printMsg(msg, 1, timer.getElapsedTime(), this->threadNumber_);
       }
 
-      std::vector<int> maxPrevNode(nNodes);
-      std::vector<int> maxNextNode(nNodes);
-
       // Initializing Branches
       {
         ttk::Timer timer;
@@ -118,21 +116,13 @@ namespace ttk {
           msg, 0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE);
 
 #pragma omp parallel for num_threads(this->threadNumber_)
-        for(int i = 0; i < nNodes; i++) {
-          maxPrevNode[i] = trackingGraph.inEdges[i].size() > 0
-                             ? trackingGraph.inEdges[i][0].u
-                             : -1;
-          maxNextNode[i] = trackingGraph.outEdges[i].size() > 0
-                             ? trackingGraph.outEdges[i][0].v
-                             : -1;
-
+        for(int i = 0; i < nNodes; i++)
           branchId[i] = trackingGraph.inEdges[i].size() < 1 ? i : -1;
-        }
 
         this->printMsg(msg, 1, timer.getElapsedTime(), this->threadNumber_);
       }
 
-      // Propagating Branchs
+      // Propagating Branches
       {
         ttk::Timer timer;
         const std::string msg = "Propagating Branches";
@@ -146,7 +136,7 @@ namespace ttk {
 
           int maxPrevNodeOfV = -1;
           for(const auto &e : trackingGraph.inEdges[v]) {
-            if(maxNextNode[e.u] == v) {
+            if(trackingGraph.outEdges[e.u][0].v == v) {
               maxPrevNodeOfV = e.u;
               break;
             }

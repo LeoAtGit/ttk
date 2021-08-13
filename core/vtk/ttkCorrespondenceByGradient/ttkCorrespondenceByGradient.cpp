@@ -91,18 +91,11 @@ int ttkCorrespondenceByGradient::ComputeCorrespondences(
   if(!status)
     return 0;
 
-  // add index label maps
-  int a = 0;
-  auto fd = correspondenceMatrix->GetFieldData();
-  for(auto &it : std::vector<vtkDataSet *>({seeds0, seeds1})) {
-    auto labels = this->GetInputArrayToProcess(1, it);
-    if(!labels)
-      return !this->printErr("Unable to retrieve labels.");
-    auto array = vtkSmartPointer<vtkDataArray>::Take(labels->NewInstance());
-    array->ShallowCopy(labels);
-    array->SetName(("IndexLabelMap" + std::to_string(a++)).data());
-    fd->AddArray(array);
-  }
+  status = this->AddIndexLabelMaps(correspondenceMatrix,
+                                   this->GetInputArrayToProcess(1, seeds0),
+                                   this->GetInputArrayToProcess(1, seeds1));
+  if(!status)
+    return 0;
 
   return 1;
 }

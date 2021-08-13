@@ -2,6 +2,7 @@
 
 #include <vtkDataSet.h>
 #include <vtkInformation.h>
+#include <vtkMultiBlockDataSet.h>
 #include <vtkUnstructuredGrid.h>
 
 #include <vtkCellData.h>
@@ -31,11 +32,17 @@ int ttkMergeTreeRefinement::FillInputPortInformation(int port,
                                                      vtkInformation *info) {
   switch(port) {
     case 0:
-      info->Set(
+      info->Remove(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE());
+      info->Append(
+        vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkMultiBlockDataSet");
+      info->Append(
         vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkUnstructuredGrid");
       return 1;
     case 1:
-      info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
+      info->Remove(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE());
+      info->Append(
+        vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkMultiBlockDataSet");
+      info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
       return 1;
     default:
       return 0;
@@ -59,58 +66,31 @@ int ttkMergeTreeRefinement::FillOutputPortInformation(int port,
 int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
                                         vtkInformationVector **inputVector,
                                         vtkInformationVector *outputVector) {
+
   ttk::Timer timer;
-  this->printMsg(
-    "Retrieving Input Data", 0, 0, 1, ttk::debug::LineMode::REPLACE);
+  const std::string msg{"Retrieving Input Data"};
+  this->printMsg(msg, 0, 0, 1, ttk::debug::LineMode::REPLACE);
 
-  // Get the input
-  auto i_MergeTree = vtkUnstructuredGrid::GetData(inputVector[0]);
-  auto i_Segmentation = vtkDataSet::GetData(inputVector[1]);
-  if(!i_MergeTree || !i_Segmentation) {
-    this->printErr("Unable to retrieve input data objects.");
-    return 0;
+  auto i_mergeTrees = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+  auto i_domains = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+  const bool isMultiInput = vtkMultiBlockDataSet::GetData(inputVector[0])
+                            && vtkMultiBlockDataSet::GetData(inputVector[1]);
+
+  if(isMultiInput) {
+    i_mergeTrees->ShallowCopy(vtkMultiBlockDataSet::GetData(inputVector[0]));
+    i_domains->ShallowCopy(vtkMultiBlockDataSet::GetData(inputVector[1]));
+  } else {
+    i_mergeTrees->SetBlock(0, vtkDataObject::GetData(inputVector[0]));
+    i_domains->SetBlock(0, vtkDataObject::GetData(inputVector[1]));
   }
-  auto o_MergeTree = vtkUnstructuredGrid::GetData(outputVector, 0);
-  auto o_Segmentation = vtkDataSet::GetData(outputVector, 1);
-  o_Segmentation->ShallowCopy(i_Segmentation);
 
-  const size_t n_i_mtPoints = i_MergeTree->GetNumberOfPoints();
-  const size_t n_i_mtEdges = i_MergeTree->GetNumberOfCells();
-  const size_t n_i_sPoints = i_Segmentation->GetNumberOfPoints();
+  const int nBlocks = i_mergeTrees->GetNumberOfBlocks();
+  if(nBlocks != (int)i_domains->GetNumberOfBlocks())
+    return !this->printErr(
+      "Number of input merge trees and domains must be equal.");
 
-  if(n_i_mtEdges < 1) {
-    o_MergeTree->ShallowCopy(i_MergeTree);
+  if(nBlocks < 1)
     return 1;
-  }
-
-  // get arrays
-  auto i_mtPointData = i_MergeTree->GetPointData();
-  auto i_mtCellData = i_MergeTree->GetCellData();
-
-  auto i_mtPointCoords = i_MergeTree->GetPoints()->GetData();
-  auto i_mtConnectivity = i_MergeTree->GetCells()->GetConnectivityArray();
-
-  auto i_mtScalars = this->GetInputArrayToProcess(0, i_MergeTree);
-  auto i_sScalars = this->GetInputArrayToProcess(0, i_Segmentation);
-  if(!i_mtScalars || !i_sScalars) {
-    this->printErr("Unable to retrieve input scalar arrays.");
-    return 0;
-  }
-  if(i_mtScalars->GetDataType() != i_sScalars->GetDataType()) {
-    this->printErr("Scalar arrays are not of the same type.");
-    return 0;
-  }
-
-  bool isSplitTree = i_mtScalars->GetTuple1(i_mtConnectivity->GetTuple1(0))
-                     > i_mtScalars->GetTuple1(
-                       i_mtConnectivity->GetTuple1(n_i_mtEdges * 2 - 1));
-
-  auto i_sBranchId = this->GetInputArrayToProcess(1, i_Segmentation);
-  if(!i_sBranchId || i_sBranchId->GetDataType() != VTK_INT) {
-    this->printErr("Unable to retrieve BranchId input array of type int*.");
-    return 0;
-  }
-  auto i_sBranchIdData = ttkUtils::GetPointer<int>(i_sBranchId);
 
   double interval;
   {
@@ -118,7 +98,7 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
 
     std::string errorMsg;
     if(!ttkUtils::replaceVariables(this->GetInterval(),
-                                   i_MergeTree->GetFieldData(),
+                                   i_mergeTrees->GetBlock(0)->GetFieldData(),
                                    finalExpressionString, errorMsg)) {
       this->printErr(errorMsg);
       return 0;
@@ -133,10 +113,91 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
     interval = values[0];
   }
 
-  this->printMsg("Retrieving Input Data", 1, timer.getElapsedTime(), 1);
-  timer.reStart();
+  this->printMsg(msg, 1, timer.getElapsedTime(), 1);
 
-  this->printMsg("Refining Merge Tree", 0, 0, 1, ttk::debug::LineMode::REPLACE);
+  auto o_mergeTrees = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+  auto o_domains = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+
+  for(int b = 0; b < nBlocks; b++) {
+    auto i_mergeTree
+      = vtkUnstructuredGrid::SafeDownCast(i_mergeTrees->GetBlock(b));
+    auto i_domain = vtkDataSet::SafeDownCast(i_domains->GetBlock(b));
+    if(!i_mergeTree->IsA("vtkUnstructuredGrid") || !i_domain->IsA("vtkDataSet"))
+      return !this->printErr("Merge trees must be vtkUnstructuredGrids and "
+                             "domains must be vtkDataSets.");
+
+    auto o_mergeTree = vtkSmartPointer<vtkUnstructuredGrid>::New();
+    auto o_domain = vtkSmartPointer<vtkDataSet>::Take(i_domain->NewInstance());
+
+    int status = this->RefineMergeTreeAndSegmentation(
+      o_mergeTree, o_domain, i_mergeTree, i_domain, interval);
+    if(!status)
+      return 0;
+
+    o_mergeTrees->SetBlock(b, o_mergeTree);
+    o_domains->SetBlock(b, o_domain);
+  }
+
+  if(isMultiInput) {
+    vtkMultiBlockDataSet::GetData(outputVector, 0)->ShallowCopy(o_mergeTrees);
+    vtkMultiBlockDataSet::GetData(outputVector, 1)->ShallowCopy(o_domains);
+  } else {
+    vtkDataObject::GetData(outputVector, 0)
+      ->ShallowCopy(o_mergeTrees->GetBlock(0));
+    vtkDataObject::GetData(outputVector, 1)
+      ->ShallowCopy(o_domains->GetBlock(0));
+  }
+
+  return 1;
+}
+int ttkMergeTreeRefinement::RefineMergeTreeAndSegmentation(
+  vtkUnstructuredGrid *o_mergeTree,
+  vtkDataSet *o_domain,
+  vtkUnstructuredGrid *i_mergeTree,
+  vtkDataSet *i_domain,
+  const double interval) {
+  ttk::Timer timer;
+  const std::string msg{"Refining Merge Tree"};
+  this->printMsg(msg, 0, 0, 1, ttk::debug::LineMode::REPLACE);
+
+  // Get the input
+  const size_t n_i_mtPoints = i_mergeTree->GetNumberOfPoints();
+  const size_t n_i_mtEdges = i_mergeTree->GetNumberOfCells();
+  const size_t n_i_dPoints = i_domain->GetNumberOfPoints();
+
+  if(n_i_mtEdges < 1) {
+    o_mergeTree->ShallowCopy(i_mergeTree);
+    return 1;
+  }
+
+  // get arrays
+  auto i_mtPointData = i_mergeTree->GetPointData();
+  auto i_mtCellData = i_mergeTree->GetCellData();
+
+  auto i_mtPointCoords = i_mergeTree->GetPoints()->GetData();
+  auto i_mtConnectivity = i_mergeTree->GetCells()->GetConnectivityArray();
+
+  auto i_mtScalars = this->GetInputArrayToProcess(0, i_mergeTree);
+  auto i_dScalars = this->GetInputArrayToProcess(0, i_domain);
+  if(!i_mtScalars || !i_dScalars) {
+    this->printErr("Unable to retrieve input scalar arrays.");
+    return 0;
+  }
+  if(i_mtScalars->GetDataType() != i_dScalars->GetDataType()) {
+    this->printErr("Scalar arrays are not of the same type.");
+    return 0;
+  }
+
+  bool isSplitTree = i_mtScalars->GetTuple1(i_mtConnectivity->GetTuple1(0))
+                     > i_mtScalars->GetTuple1(
+                       i_mtConnectivity->GetTuple1(n_i_mtEdges * 2 - 1));
+
+  auto i_dBranchId = this->GetInputArrayToProcess(1, i_domain);
+  if(!i_dBranchId || i_dBranchId->GetDataType() != VTK_INT) {
+    this->printErr("Unable to retrieve BranchId input array of type int*.");
+    return 0;
+  }
+  auto i_dBranchIdData = ttkUtils::GetPointer<int>(i_dBranchId);
 
   // compute number of output points and edges
   std::vector<int> edgeNodesOffset(n_i_mtEdges + 1, 0);
@@ -198,7 +259,7 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
 
   auto nodeId = vtkSmartPointer<vtkIntArray>::New();
   auto nodeIdData
-    = static_cast<int *>(prepArray(nodeId, n_i_sPoints, 1, "NodeId"));
+    = static_cast<int *>(prepArray(nodeId, n_i_dPoints, 1, "NodeId"));
 
   // edges
   auto o_mtOffsets = vtkSmartPointer<vtkIdTypeArray>::New();
@@ -366,42 +427,43 @@ int ttkMergeTreeRefinement::RequestData(vtkInformation *request,
   {
     auto cells = vtkSmartPointer<vtkCellArray>::New();
     cells->SetData(o_mtOffsets, o_mtConnectivity);
-    o_MergeTree->SetCells(VTK_LINE, cells);
+    o_mergeTree->SetCells(VTK_LINE, cells);
 
     auto points = vtkSmartPointer<vtkPoints>::New();
     points->SetData(outPointArrays[0]);
-    o_MergeTree->SetPoints(points);
+    o_mergeTree->SetPoints(points);
 
-    auto o_MergeTreePD = o_MergeTree->GetPointData();
+    auto o_mergeTreePD = o_mergeTree->GetPointData();
     for(size_t a = 1; a < outPointArrays.size(); a++)
-      o_MergeTreePD->AddArray(outPointArrays[a]);
-    o_MergeTreePD->AddArray(nextId);
-    o_MergeTreePD->AddArray(size);
-    o_MergeTreePD->AddArray(o_mtNodeId);
+      o_mergeTreePD->AddArray(outPointArrays[a]);
+    o_mergeTreePD->AddArray(nextId);
+    o_mergeTreePD->AddArray(size);
+    o_mergeTreePD->AddArray(o_mtNodeId);
 
-    auto o_MergeTreeCD = o_MergeTree->GetCellData();
+    auto o_mergeTreeCD = o_mergeTree->GetCellData();
     for(size_t a = 0; a < outCellArrays.size(); a++)
-      o_MergeTreeCD->AddArray(outCellArrays[a]);
+      o_mergeTreeCD->AddArray(outCellArrays[a]);
   }
-  this->printMsg("Refining Merge Tree", 1, timer.getElapsedTime(), 1);
+  this->printMsg(msg, 1, timer.getElapsedTime(), 1);
 
   // compute refined segmentation
   {
-    auto o_mtScalars = this->GetInputArrayToProcess(0, o_MergeTree);
+    o_domain->ShallowCopy(i_domain);
+    auto o_mtScalars = this->GetInputArrayToProcess(0, o_mergeTree);
     int status = 0;
     ttkTypeMacroA(
-      i_sScalars->GetDataType(),
+      i_dScalars->GetDataType(),
       (status = this->computeRefinedSegmentation<T0, ttk::SimplexId>(
          nodeIdData, sizeData,
 
-         isSplitTree, i_sBranchIdData,
-         ttkUtils::GetPointer<const T0>(i_sScalars),
+         isSplitTree, i_dBranchIdData,
+         ttkUtils::GetPointer<const T0>(i_dScalars),
          ttkUtils::GetPointer<const T0>(o_mtScalars), nextIdData, n_o_mtPoints,
-         n_i_sPoints)));
+         n_i_dPoints)));
     if(!status)
       return 0;
 
-    o_Segmentation->GetPointData()->AddArray(nodeId);
+    o_domain->GetPointData()->AddArray(nodeId);
   }
 
   return 1;

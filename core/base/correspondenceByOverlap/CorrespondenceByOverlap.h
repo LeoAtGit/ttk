@@ -27,21 +27,19 @@ namespace ttk {
   class CorrespondenceByOverlap : virtual public Debug {
 
   public:
-    typedef std::unordered_map<long long, long long> LabelIndexMap;
-
     CorrespondenceByOverlap() {
       this->setDebugMsgPrefix("CorrespondenceByOverlap");
     };
     ~CorrespondenceByOverlap(){};
 
-    template <class DT>
-    int computeLabelIndexMap(LabelIndexMap &labelIndexMap,
+    template <typename DT, typename IT>
+    int computeLabelIndexMap(std::unordered_map<IT, IT> &labelIndexMap,
                              const DT *labels,
-                             const int nLabels) const {
+                             const IT nLabels) const {
 
-      long long labelIndex = 0;
-      for(int i = 0; i < nLabels; i++) {
-        const auto &l = labels[i];
+      IT labelIndex = 0;
+      for(IT i = 0; i < nLabels; i++) {
+        auto l = static_cast<const IT>(labels[i]);
         if(l >= 0 && labelIndexMap.find(l) == labelIndexMap.end())
           labelIndexMap.insert({l, labelIndex++});
       }
@@ -49,18 +47,19 @@ namespace ttk {
       return 1;
     };
 
-    template <class DT>
-    int computeAdjacencyMatrix(int *adjacencyMatrix,
-                               const DT *labels0,
-                               const DT *labels1,
-                               const int nVertices,
-                               const LabelIndexMap &labelIndexMap0,
-                               const LabelIndexMap &labelIndexMap1) const {
+    template <typename DT, typename IT>
+    int computeAdjacencyMatrix(
+      int *adjacencyMatrix,
+      const DT *labels0,
+      const DT *labels1,
+      const int nVertices,
+      const std::unordered_map<IT, IT> &labelIndexMap0,
+      const std::unordered_map<IT, IT> &labelIndexMap1) const {
 
       ttk::Timer timer;
 
-      const auto nLabels0 = labelIndexMap0.size();
-      const auto nLabels1 = labelIndexMap1.size();
+      const IT nLabels0 = labelIndexMap0.size();
+      const IT nLabels1 = labelIndexMap1.size();
 
       if(nLabels0 < 1)
         return this->printWrn("Number of first labels smaller than 1.");
@@ -71,21 +70,21 @@ namespace ttk {
                               + "x" + std::to_string(nLabels1);
       this->printMsg(msg, 0, 0, this->threadNumber_, debug::LineMode::REPLACE);
 
-      int nLables = nLabels0 * nLabels1;
+      const IT nLables = nLabels0 * nLabels1;
 
 #ifdef TTK_ENABLE_OPENMP
 #pragma omp parallel for num_threads(this->threadNumber_)
 #endif
-      for(int i = 0; i < nLables; i++) {
+      for(IT i = 0; i < nLables; i++) {
         adjacencyMatrix[i] = 0;
       }
 
 #ifdef TTK_ENABLE_OPENMP
 #pragma omp parallel for num_threads(this->threadNumber_)
 #endif
-      for(int i = 0; i < nVertices; i++) {
-        const int l0 = labels0[i];
-        const int l1 = labels1[i];
+      for(IT i = 0; i < nVertices; i++) {
+        auto l0 = static_cast<const IT>(labels0[i]);
+        auto l1 = static_cast<const IT>(labels1[i]);
         if(l0 >= 0 && l1 >= 0) {
 #pragma omp atomic update
           adjacencyMatrix[labelIndexMap1.at(l1) * nLabels0

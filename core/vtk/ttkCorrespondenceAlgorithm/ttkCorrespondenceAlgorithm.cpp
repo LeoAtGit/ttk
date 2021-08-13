@@ -6,6 +6,8 @@
 #include <vtkMultiBlockDataSet.h>
 #include <vtkPointSet.h>
 
+#include <vtkStringArray.h>
+
 #include <vtkDoubleArray.h>
 #include <vtkPointData.h>
 
@@ -135,6 +137,72 @@ int ttkCorrespondenceAlgorithm::RequestData(
       copy->ShallowCopy(inputs[i]);
       this->PreviousInputs->SetBlock(i, copy);
     }
+  }
+
+  return 1;
+}
+
+int ttkCorrespondenceAlgorithm::GetIndexLabelMaps(vtkDataArray *&indexLabelMapP,
+                                                  vtkDataArray *&indexLabelMapC,
+                                                  vtkFieldData *fieldData) {
+  for(int a = 0; a < fieldData->GetNumberOfArrays(); a++) {
+    auto array = fieldData->GetArray(a);
+    const auto name = std::string(array->GetName());
+    const auto prefix = name.substr(name.size() - 2, 2);
+
+    if(prefix.compare("_P") == 0) {
+      indexLabelMapP = array;
+    } else if(prefix.compare("_C") == 0) {
+      indexLabelMapC = array;
+    }
+  }
+
+  return indexLabelMapP && indexLabelMapC;
+}
+
+int ttkCorrespondenceAlgorithm::AddIndexLabelMaps(
+  vtkImageData *correspondenceMatrix,
+  vtkDataArray *indexLabelMapP,
+  vtkDataArray *indexLabelMapC,
+  const std::string labelIdentifier) {
+  auto fd = correspondenceMatrix->GetFieldData();
+
+  int a = 0;
+  const std::string suffix[2]{"_P", "_C"};
+  for(auto &map :
+      std::vector<vtkDataArray *>({indexLabelMapP, indexLabelMapC})) {
+    auto array = vtkSmartPointer<vtkDataArray>::Take(map->NewInstance());
+    array->ShallowCopy(map);
+    array->SetName(
+      ((labelIdentifier.size() < 1 ? std::string(indexLabelMapP->GetName())
+                                   : labelIdentifier)
+       + suffix[a++])
+        .data());
+    fd->AddArray(array);
+  }
+
+  return 1;
+}
+
+int ttkCorrespondenceAlgorithm::AddIndexLabelMaps(
+  vtkImageData *correspondenceMatrix,
+  const std::unordered_map<ttk::SimplexId, ttk::SimplexId> &labelIndexMapP,
+  const std::unordered_map<ttk::SimplexId, ttk::SimplexId> &labelIndexMapC,
+  const std::string labelIdentifier) {
+  auto fd = correspondenceMatrix->GetFieldData();
+  int a = 0;
+  const std::string suffix[2]{"_P", "_C"};
+  for(auto map :
+      std::vector<const std::unordered_map<ttk::SimplexId, ttk::SimplexId> *>(
+        {&labelIndexMapP, &labelIndexMapC})) {
+    auto array = vtkSmartPointer<ttkSimplexIdTypeArray>::New();
+    array->SetName((labelIdentifier + suffix[a++]).data());
+    array->SetNumberOfTuples(map->size());
+    auto arrayData = ttkUtils::GetPointer<ttk::SimplexId>(array);
+    for(auto it : (*map))
+      arrayData[it.second] = it.first;
+
+    fd->AddArray(array);
   }
 
   return 1;

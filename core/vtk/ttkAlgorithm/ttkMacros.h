@@ -122,13 +122,14 @@ using ttkSimplexIdTypeArray = vtkIntArray;
                      ttk::ImplicitTriangulation, 0, call);         \
     ttkTypeMacroCase(ttk::Triangulation::Type::PERIODIC,           \
                      ttk::PeriodicImplicitTriangulation, 0, call); \
-    ttkTypeMacroErrorCase(0, group)                                \
+    ttkTypeMacroErrorCase(0, group);                               \
   }
 
-#define ttkTypeMacroR(group, call)                                 \
-  switch(group) {                                                  \
-    ttkTypeMacroCase(VTK_FLOAT, float, 0, call) ttkTypeMacroCase(  \
-      VTK_DOUBLE, double, 0, call) ttkTypeMacroErrorCase(0, group) \
+#define ttkTypeMacroR(group, call)                 \
+  switch(group) {                                  \
+    ttkTypeMacroCase(VTK_FLOAT, float, 0, call);   \
+    ttkTypeMacroCase(VTK_DOUBLE, double, 0, call); \
+    ttkTypeMacroErrorCase(0, group);               \
   }
 
 #define ttkTypeMacroI(group, call)                                         \
@@ -143,7 +144,7 @@ using ttkSimplexIdTypeArray = vtkIntArray;
     ttkTypeMacroCase(VTK_UNSIGNED_LONG, unsigned long, 0, call);           \
     ttkTypeMacroCase(VTK_UNSIGNED_LONG_LONG, unsigned long long, 0, call); \
     ttkTypeMacroCase(VTK_ID_TYPE, vtkIdType, 0, call);                     \
-    ttkTypeMacroErrorCase(0, group)                                        \
+    ttkTypeMacroErrorCase(0, group);                                       \
   }
 
 #define ttkTypeMacroA(group, call)                                         \

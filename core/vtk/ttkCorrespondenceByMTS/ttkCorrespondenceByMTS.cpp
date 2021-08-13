@@ -37,8 +37,8 @@ int ttkCorrespondenceByMTS::ComputeCorrespondences(
   auto m0 = vtkDataSet::SafeDownCast(inputsAsMB0->GetBlock(1));
   auto m1 = vtkDataSet::SafeDownCast(inputsAsMB1->GetBlock(1));
 
-  const int nEdges0 = m0->GetNumberOfPoints() - 1;
-  const int nEdges1 = m1->GetNumberOfPoints() - 1;
+  const int nNodes0 = m0->GetNumberOfPoints();
+  const int nNodes1 = m1->GetNumberOfPoints();
 
   // extract arrays
   auto seg0 = vtkIntArray::SafeDownCast(d0->GetPointData()->GetArray("NodeId"));
@@ -61,7 +61,7 @@ int ttkCorrespondenceByMTS::ComputeCorrespondences(
     return !this->printErr("Unable to retrieve merge tree scalar arrays.");
 
   // initialize correspondence matrix
-  correspondenceMatrix->SetDimensions(nEdges0, nEdges1, 1);
+  correspondenceMatrix->SetDimensions(nNodes0, nNodes1, 1);
   correspondenceMatrix->AllocateScalars(VTK_INT, 1);
   auto matrixData = correspondenceMatrix->GetPointData()->GetArray(0);
   matrixData->SetName("Overlap");
@@ -78,23 +78,16 @@ int ttkCorrespondenceByMTS::ComputeCorrespondences(
          ttkUtils::GetPointer<const int>(next0),
          ttkUtils::GetPointer<const int>(next1),
          ttkUtils::GetPointer<const VTK_TT>(scalars0),
-         ttkUtils::GetPointer<const VTK_TT>(scalars1), nEdges0, nEdges1)));
+         ttkUtils::GetPointer<const VTK_TT>(scalars1), nNodes0, nNodes1)));
   }
   if(!status)
     return 0;
 
-  // // add index label maps
-  // int a = 0;
-  // auto fd = correspondenceMatrix->GetFieldData();
-  // for(auto &it : std::vector<vtkDataSet *>({m0, m1})) {
-  //   auto labels = this->GetInputArrayToProcess(1, it);
-  //   if(!labels)
-  //     return !this->printErr("Unable to retrieve labels.");
-  //   auto array = vtkSmartPointer<vtkDataArray>::Take(labels->NewInstance());
-  //   array->ShallowCopy(labels);
-  //   array->SetName(("IndexLabelMap" + std::to_string(a++)).data());
-  //   fd->AddArray(array);
-  // }
+  status = ttkCorrespondenceAlgorithm::AddIndexLabelMaps(
+    correspondenceMatrix, this->GetInputArrayToProcess(1, m0),
+    this->GetInputArrayToProcess(1, m1));
+  if(!status)
+    return 0;
 
   return 1;
 }

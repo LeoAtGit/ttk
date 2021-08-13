@@ -3,6 +3,7 @@ ttk_add_base_library(planarGraphLayout
     PlanarGraphLayout.cpp
   HEADERS
     PlanarGraphLayout.h
+    MergeTreeVisualization.h
   DEPENDS
     common
 )

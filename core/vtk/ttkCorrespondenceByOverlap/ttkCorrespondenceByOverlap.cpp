@@ -10,6 +10,7 @@
 #include <vtkMultiBlockDataSet.h>
 #include <vtkPointData.h>
 
+#include <ttkMacros.h>
 #include <ttkUtils.h>
 
 vtkStandardNewMacro(ttkCorrespondenceByOverlap);
@@ -51,18 +52,18 @@ int ttkCorrespondenceByOverlap::ComputeCorrespondences(
   const int nVertices = labels0->GetNumberOfTuples();
 
   // extract unique labels from volume
-  ttk::CorrespondenceByOverlap::LabelIndexMap labelIndexMap0;
-  ttk::CorrespondenceByOverlap::LabelIndexMap labelIndexMap1;
+  std::unordered_map<ttk::SimplexId, ttk::SimplexId> labelIndexMap0;
+  std::unordered_map<ttk::SimplexId, ttk::SimplexId> labelIndexMap1;
   int status = 0;
-  for(auto &it : std::vector<std::pair<vtkDataArray *, LabelIndexMap *>>(
+  for(auto &it : std::vector<std::pair<
+        vtkDataArray *, std::unordered_map<ttk::SimplexId, ttk::SimplexId> *>>(
         {{labels0, &labelIndexMap0}, {labels1, &labelIndexMap1}})) {
-    switch(labels0->GetDataType()) {
-      vtkTemplateMacro(
-        status = this->computeLabelIndexMap<VTK_TT>(
-          *it.second, ttkUtils::GetPointer<const VTK_TT>(it.first), nVertices));
-      if(!status)
-        return 0;
-    }
+    ttkTypeMacroA(
+      labels0->GetDataType(),
+      (status = this->computeLabelIndexMap<T0, ttk::SimplexId>(
+         *it.second, ttkUtils::GetPointer<const T0>(it.first), nVertices)));
+    if(!status)
+      return 0;
   }
 
   const int nLabels0 = labelIndexMap0.size();
@@ -75,29 +76,19 @@ int ttkCorrespondenceByOverlap::ComputeCorrespondences(
   matrixData->SetName("Overlap");
 
   // compute overlaps
-  switch(labels0->GetDataType()) {
-    vtkTemplateMacro(status = this->computeAdjacencyMatrix<VTK_TT>(
-                       ttkUtils::GetPointer<int>(matrixData),
-                       ttkUtils::GetPointer<const VTK_TT>(labels0),
-                       ttkUtils::GetPointer<const VTK_TT>(labels1), nVertices,
-                       labelIndexMap0, labelIndexMap1));
-  }
+  ttkTypeMacroA(labels0->GetDataType(),
+                (status = this->computeAdjacencyMatrix<T0, ttk::SimplexId>(
+                   ttkUtils::GetPointer<int>(matrixData),
+                   ttkUtils::GetPointer<const T0>(labels0),
+                   ttkUtils::GetPointer<const T0>(labels1), nVertices,
+                   labelIndexMap0, labelIndexMap1)));
   if(!status)
     return 0;
 
-  // add index label maps
-  int a = 0;
-  for(const auto it :
-      std::vector<LabelIndexMap *>({&labelIndexMap0, &labelIndexMap1})) {
-    auto array = vtkSmartPointer<vtkIntArray>::New();
-    array->SetName(std::string("IndexLabelMap" + std::to_string(a++)).data());
-    array->SetNumberOfTuples(it->size());
-    auto arrayData = ttkUtils::GetPointer<int>(array);
-    for(const auto &it2 : *it)
-      arrayData[it2.second] = it2.first;
-
-    correspondenceMatrix->GetFieldData()->AddArray(array);
-  }
+  status = ttkCorrespondenceAlgorithm::AddIndexLabelMaps(
+    correspondenceMatrix, labelIndexMap0, labelIndexMap1, labels0->GetName());
+  if(!status)
+    return 0;
 
   return 1;
 }
