@@ -56,15 +56,13 @@ int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
   const double spacing
     = 0; // 2d tracking -> height spacing parameter for 3d display
   status = getDiagram<double>(CTDiagram0, p0, spacing, 0);
-  if(status < 0) {
-    this->printErr("Could not extract diagram from first input data-set");
-    return 0;
-  }
+  if(status < 0)
+    return !this->printErr("Could not extract diagram from first input data-set");
+
   status = getDiagram<double>(CTDiagram1, p1, spacing, 1);
-  if(status < 0) {
-    this->printErr("Could not extract diagram from second input data-set");
-    return 0;
-  }
+  if(status < 0)
+    return !this->printErr("Could not extract diagram from second input data-set");
+
   if(coords0->GetDataType() != coords1->GetDataType())
     return !this->printErr("Input diagrams need to have the same data type.");
 
@@ -144,33 +142,6 @@ int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
       correspondenceMatrixData[n2 * nFeatures0 + n1]
         = (float)1; // std::get<2>(t);
     }
-  }
-
-  // add index label maps
-  using LabelIndexMap = std::unordered_map<long long, long long>;
-  LabelIndexMap labelsIndexMap0;
-  LabelIndexMap labelsIndexMap1;
-  for(auto &it : std::vector<std::pair<std::vector<dT> *, LabelIndexMap *>>(
-        {{&CTDiagram0, &labelsIndexMap0}, {&CTDiagram1, &labelsIndexMap1}})) {
-    long long labelIndex = 0;
-    const int nLabels = it.first->size();
-    // there are no gaps in indices in the Persistence Diagrams pipleine
-    for(int i = 0; i < nLabels; ++i) {
-      it.second->insert({i, labelIndex++});
-    }
-  }
-
-  int a = 0;
-  for(const auto it :
-      std::vector<LabelIndexMap *>({&labelsIndexMap0, &labelsIndexMap1})) {
-    auto array = vtkSmartPointer<vtkIntArray>::New();
-    array->SetName(std::string("IndexLabelMap" + std::to_string(a++)).data());
-    array->SetNumberOfTuples(it->size());
-    auto arrayData = ttkUtils::GetPointer<int>(array);
-    for(const auto &it2 : *it)
-      arrayData[it2.second] = it2.first;
-
-    correspondenceMatrix->GetFieldData()->AddArray(array);
   }
 
   return 1;
