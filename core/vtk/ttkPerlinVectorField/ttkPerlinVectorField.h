@@ -16,7 +16,7 @@
 
 // TTK Base Includes
 #include <PerlinVectorField.h>
-#include<PerlinNoise.h>
+#include <PerlinNoise.h>
 
 class TTKPERLINVECTORFIELD_EXPORT ttkPerlinVectorField
   : public ttkAlgorithm // we inherit from the generic ttkAlgorithm class

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+    <SourceProxy name="ttkRandomPointsGenerator" class="ttkRandomPointsGenerator" label="TTK RandomPointsGenerator">
+      <Documentation long_help="RandomPointsGenerator Long" short_help="RandomPointsGenerator Short">
+        This filter creates a ?.
+      </Documentation>
+
+      <IntVectorProperty name="nPoints" label="Number of points" command="SetnPoints" number_of_elements="1" default_values="10">
+          <Documentation>?</Documentation>
+      </IntVectorProperty>
+
+      <IntVectorProperty command="SetPositionDomain" default_values="10 10 10" name="PositionDomain" number_of_elements="3">
+          <Documentation>?</Documentation>
+      </IntVectorProperty>
+
+      <IntVectorProperty name="RandomSeed" command="SetRandomSeed" number_of_elements="1" default_values="1">
+          <Documentation>?</Documentation>
+      </IntVectorProperty>
+
+      <!-- DEBUG -->
+      ${DEBUG_WIDGETS}
+
+      <!-- MENU CATEGORY -->
+      <Hints>
+        <ShowInMenu category="TTK - Misc" />
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>

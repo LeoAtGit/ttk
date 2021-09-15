@@ -1,0 +1,9 @@
+NAME
+  ttkRandomPointsGenerator
+SOURCES
+  ttkRandomPointsGenerator.cpp
+HEADERS
+  ttkRandomPointsGenerator.h
+DEPENDS
+  randomPointsGenerator
+  ttkAlgorithm

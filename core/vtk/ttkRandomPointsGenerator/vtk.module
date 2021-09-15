@@ -1,0 +1,4 @@
+NAME
+  ttkRandomPointsGenerator
+DEPENDS
+  ttkAlgorithm
