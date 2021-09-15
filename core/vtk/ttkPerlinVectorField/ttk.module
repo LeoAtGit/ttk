@@ -1,0 +1,10 @@
+NAME
+  ttkPerlinVectorField
+SOURCES
+  ttkPerlinVectorField.cpp
+HEADERS
+  ttkPerlinVectorField.h
+DEPENDS
+  perlinVectorField
+  ttkPerlinNoise
+  ttkAlgorithm
