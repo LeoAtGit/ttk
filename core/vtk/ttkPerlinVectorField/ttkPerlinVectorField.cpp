@@ -112,21 +112,30 @@ int ttkPerlinVectorField::RequestData(vtkInformation *request,
   for (int y = 0; y < dimY; y++) {
     for (int x = 0; x < dimX; x++) {
       double xD = ((double)x)/dimD;
-      double xD2 = ((double)(dimX))/dimD;
       double yD = ((double)y)/dimD;
-      double yD2 = ((double)(dimY - y))/(dimD);
 
       double xNoise;
-      double yNoise;
-      pN.perlin3D<double>(xD, yD, 0, xNoise);
-      pN.perlin3D<double>(yD2, xD, 0, yNoise);
+      pN.perlin4D<double>(xD, yD, 0, 0, xNoise);
 
       // Calculate index and set noise to it in the array (nComp * x + nComp * dimX * y)
       int idx = 2 * x + 2 * dimX * y;
       noiseData[idx] = xNoise;
-      noiseData[idx + 1] = yNoise;
     }
   }
+
+  for (int z = 0; z < dimZ; z++) {
+    for (int y = 0; y < dimY; y++) {
+      double yD = ((double)y)/dimD;
+      double zD = ((double)z)/dimD;
+
+      double yNoise;
+      pN.perlin4D<double>(0, yD, zD, 0, yNoise);
+
+      // Calculate index and set noise to it in the array (nComp * x + nComp * dimX * y)
+      int idx = 2 * y + 2 * dimY * z;
+      noiseData[idx + 1] = yNoise;
+    }
+  } 
 
 
   // Add arrays to image output
