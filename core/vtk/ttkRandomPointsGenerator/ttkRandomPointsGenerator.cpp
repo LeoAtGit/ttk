@@ -63,6 +63,13 @@ int ttkRandomPointsGenerator::RequestData(vtkInformation *request,
   std::uniform_real_distribution<> disY(0.0, (double)PositionDomain[1]);
   std::uniform_real_distribution<> disZ(0.0, (double)PositionDomain[2]);
 
+  // Create an array to store dimensions in
+  auto dimArray = vtkSmartPointer<vtkIntArray>::New();
+  dimArray->SetName("DomainDimension");
+  dimArray->SetNumberOfComponents(3);
+  dimArray->SetNumberOfTuples(1);
+  dimArray->SetTuple3(0, PositionDomain[0], PositionDomain[1], PositionDomain[2]);
+
   // Create array with point Ids for viz purposes
   vtkSmartPointer<vtkIntArray> idArray = vtkIntArray::New();
   idArray->SetNumberOfComponents(1);
@@ -80,7 +87,7 @@ int ttkRandomPointsGenerator::RequestData(vtkInformation *request,
   auto output = vtkPolyData::GetData(outputVector);
   output->SetPoints(points);
   output->GetPointData()->AddArray(idArray);
-
+  output->GetFieldData()->AddArray(dimArray);
 
   // return success
   return 1;
