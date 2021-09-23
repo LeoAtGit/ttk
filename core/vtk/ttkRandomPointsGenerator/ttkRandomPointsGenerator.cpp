@@ -83,7 +83,7 @@ int ttkRandomPointsGenerator::RequestData(vtkInformation *request,
     idArray->SetTuple1(i, i);
   }
 
-  // Get output image
+  // Get output data and add arrays
   auto output = vtkPolyData::GetData(outputVector);
   output->SetPoints(points);
   output->GetPointData()->AddArray(idArray);

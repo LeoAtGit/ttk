@@ -6,17 +6,25 @@
         This filter creates a ?.
       </Documentation>
 
+      <!-- OUTPUT PARAMETER WIDGETS -->
       <IntVectorProperty name="nPoints" label="Number of points" command="SetnPoints" number_of_elements="1" default_values="10">
           <Documentation>?</Documentation>
       </IntVectorProperty>
 
-      <IntVectorProperty command="SetPositionDomain" default_values="10 10 10" name="PositionDomain" number_of_elements="3">
+      <IntVectorProperty name="PositionDomain" command="SetPositionDomain" default_values="10 10 10" number_of_elements="3">
           <Documentation>?</Documentation>
       </IntVectorProperty>
 
       <IntVectorProperty name="RandomSeed" command="SetRandomSeed" number_of_elements="1" default_values="1">
           <Documentation>?</Documentation>
       </IntVectorProperty>
+
+      <!-- Create a UI group that contains all output parameter widgets (here only one) -->
+      <PropertyGroup panel_widget="Line" label="Output Options">
+        <Property name="nPoints" />
+        <Property name="PositionDomain" />
+        <Property name="RandomSeed" />
+      </PropertyGroup>
 
       <!-- DEBUG -->
       ${DEBUG_WIDGETS}
