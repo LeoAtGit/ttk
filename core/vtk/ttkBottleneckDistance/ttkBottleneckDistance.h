@@ -35,8 +35,11 @@ public:
 
   vtkTypeMacro(ttkBottleneckDistance, ttkAlgorithm);
 
-  vtkSetMacro(Alpha, double);
-  vtkGetMacro(Alpha, double);
+  vtkSetMacro(Lifting, double);
+  vtkGetMacro(Lifting, double);
+
+  vtkSetMacro(MaxJump, double);
+  vtkGetMacro(MaxJump, double);
 
   vtkSetMacro(Tolerance, double);
   vtkGetMacro(Tolerance, double);
@@ -58,9 +61,6 @@ public:
 
   vtkSetMacro(UseOutputMatching, bool);
   vtkGetMacro(UseOutputMatching, bool);
-
-  vtkSetMacro(BenchmarkSize, int);
-  vtkGetMacro(BenchmarkSize, int);
 
   vtkSetMacro(UsePersistenceMetric, bool);
   vtkGetMacro(UsePersistenceMetric, bool);
@@ -97,9 +97,6 @@ public:
                             double spacing,
                             int diagramNumber);
 
-  template <typename dataType>
-  int generatePersistenceDiagram(std::vector<diagramTuple> &diagram, int size);
-
   // Warn: this is duplicated in ttkTrackingFromPersistenceDiagrams
   template <typename dataType>
   int augmentPersistenceDiagrams(
@@ -121,24 +118,21 @@ public:
                       double spacing,
                       bool is2D);
 
-  int doBenchmark();
-
 protected:
   ttkBottleneckDistance();
 
 private:
-  int BenchmarkSize{-1};
-
   bool UseOutputMatching{false};
   bool Is3D{false};
   double Spacing{0.0};
-  double Alpha{1.0};
   double Tolerance{1.0};
   double PX{0.0};
   double PY{0.0};
   double PZ{0.0};
   double PE{1.0};
   double PS{1.0};
+  double MaxJump{0.1};
+  double Lifting{0.0};
   std::string DistanceAlgorithm{};
   std::string WassersteinMetric{"2"};
   bool UsePersistenceMetric{false};

@@ -9,6 +9,9 @@
 // VTK Includes
 #include <ttkAlgorithm.h>
 
+class vtkUnstructuredGrid;
+class vtkDataSet;
+
 class TTKMERGETREEREFINEMENT_EXPORT ttkMergeTreeRefinement
   : public ttkAlgorithm,
     public ttk::MergeTreeRefinement {
@@ -31,4 +34,9 @@ protected:
   int RequestData(vtkInformation *request,
                   vtkInformationVector **inputVector,
                   vtkInformationVector *outputVector) override;
+  int RefineMergeTreeAndSegmentation(vtkUnstructuredGrid *o_mergeTree,
+                                     vtkDataSet *o_domain,
+                                     vtkUnstructuredGrid *i_mergeTree,
+                                     vtkDataSet *i_domain,
+                                     const double interval);
 };

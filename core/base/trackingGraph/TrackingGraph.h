@@ -22,109 +22,49 @@
 #include <Debug.h>
 #include <Triangulation.h>
 
+#include <unordered_map>
+#include <unordered_set>
+
 namespace ttk {
 
-  /**
-   * The TrackingGraph class provides methods to compute for each vertex of a
-   * triangulation the average scalar value of itself and its direct neighbors.
-   */
   class TrackingGraph : virtual public Debug {
 
   public:
-    TrackingGraph();
-
-    /**
-     * TODO 2: This method preconditions the triangulation for all operations
-     *         the algorithm of this module requires. For instance,
-     *         preconditionVertexNeighbors, preconditionBoundaryEdges, ...
-     *
-     *         Note: If the algorithm does not require a triangulation then
-     *               this method can be deleted.
-     */
-    int preconditionTriangulation(
-      ttk::AbstractTriangulation *triangulation) const {
-      return triangulation->preconditionVertexNeighbors();
+    struct Edge {
+      int u;
+      int v;
+      int e;
     };
 
-    /**
-     * TODO 3: Implmentation of the algorithm.
-     *
-     *         Note: If the algorithm requires a triangulation then this
-     *               method must be called after the triangulation has been
-     *               preconditioned for the upcoming operations.
-     */
-    template <class dataType,
-              class triangulationType = ttk::AbstractTriangulation>
-    int computeAverages(dataType *outputData,
-                        const dataType *inputData,
-                        const triangulationType *triangulation) const {
-      // start global timer
-      ttk::Timer globalTimer;
+    std::vector<std::vector<Edge>> inEdges;
+    std::vector<std::vector<Edge>> outEdges;
 
-      // print horizontal separator
-      this->printMsg(ttk::debug::Separator::L1); // L1 is the '=' separator
+    TrackingGraph();
 
-      // print input parameters in table format
-      this->printMsg({
-        {"#Threads", std::to_string(this->threadNumber_)},
-        {"#Vertices", std::to_string(triangulation->getNumberOfVertices())},
-      });
-      this->printMsg(ttk::debug::Separator::L1);
+    template <typename IT>
+    int preconditionInOutEdges(const int nNodes,
+                               const int nEdges,
+                               const IT *connectivityList) {
+      ttk::Timer timer;
+      const std::string msg("Building Tracking Graph Structure");
+      this->printMsg(msg, 0, 0, 1, ttk::debug::LineMode::REPLACE);
 
-      // -----------------------------------------------------------------------
-      // Compute Vertex Averages
-      // -----------------------------------------------------------------------
-      {
-        // start a local timer for this subprocedure
-        ttk::Timer localTimer;
+      this->outEdges.clear();
+      this->outEdges.resize(nNodes);
+      this->inEdges.clear();
+      this->inEdges.resize(nNodes);
 
-        // print the progress of the current subprocedure (currently 0%)
-        this->printMsg("Computing Averages",
-                       0, // progress form 0-1
-                       0, // elapsed time so far
-                       this->threadNumber_, ttk::debug::LineMode::REPLACE);
+      for(int i = 0; i < nEdges; i++) {
+        const int u = connectivityList[i * 2 + 0];
+        const int v = connectivityList[i * 2 + 1];
 
-        // compute the average of each vertex in parallel
-        size_t nVertices = triangulation->getNumberOfVertices();
-#ifdef TTK_ENABLE_OPENMP
-#pragma omp parallel for num_threads(this->threadNumber_)
-#endif
-        for(size_t i = 0; i < nVertices; i++) {
-          // initialize average
-          outputData[i] = inputData[i];
-
-          // add neighbor values to average
-          size_t nNeighbors = triangulation->getVertexNeighborNumber(i);
-          ttk::SimplexId neighborId;
-          for(size_t j = 0; j < nNeighbors; j++) {
-            triangulation->getVertexNeighbor(i, j, neighborId);
-            outputData[i] += inputData[neighborId];
-          }
-
-          // devide by neighbor number
-          outputData[i] /= (nNeighbors + 1);
-        }
-
-        // print the progress of the current subprocedure with elapsed time
-        this->printMsg("Computing Averages",
-                       1, // progress
-                       localTimer.getElapsedTime(), this->threadNumber_);
+        this->outEdges[u].push_back({u, v, i});
+        this->inEdges[v].push_back({u, v, i});
       }
 
-      // ---------------------------------------------------------------------
-      // print global performance
-      // ---------------------------------------------------------------------
-      {
-        this->printMsg(ttk::debug::Separator::L2); // horizontal '-' separator
-        this->printMsg(
-          "Complete", 1, globalTimer.getElapsedTime() // global progress, time
-        );
-        this->printMsg(ttk::debug::Separator::L1); // horizontal '=' separator
-      }
-
-      return 1; // return success
+      this->printMsg(msg, 1, timer.getElapsedTime(), 1);
+      return 1;
     }
-
   }; // TrackingGraph class
 
 } // namespace ttk

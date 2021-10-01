@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <unordered_map>
+
 // VTK Module
 #include <ttkCorrespondenceAlgorithmModule.h>
 
@@ -21,7 +23,8 @@
 
 class vtkImageData;
 class vtkMultiBlockDataSet;
-class vtkDataSet;
+class vtkDataArray;
+class vtkFieldData;
 
 class TTKCORRESPONDENCEALGORITHM_EXPORT ttkCorrespondenceAlgorithm
   : public ttkAlgorithm {
@@ -32,6 +35,23 @@ private:
 public:
   static ttkCorrespondenceAlgorithm *New();
   vtkTypeMacro(ttkCorrespondenceAlgorithm, ttkAlgorithm);
+
+  static int GetIndexLabelMaps(vtkDataArray *&indexLabelMapR,
+                               vtkDataArray *&indexLabelMapC,
+                               vtkFieldData *fieldData);
+  static int AddIndexLabelMaps(vtkImageData *correspondenceMatrix,
+                               vtkDataArray *indexLabelMapR,
+                               vtkDataArray *indexLabelMapC,
+                               const std::string labelIdentifier = "");
+  static int AddIndexLabelMaps(
+    vtkImageData *correspondenceMatrix,
+    const std::unordered_map<ttk::SimplexId, ttk::SimplexId> &labelIndexMapP,
+    const std::unordered_map<ttk::SimplexId, ttk::SimplexId> &labelIndexMapC,
+    const std::string labelIdentifier);
+
+  static int
+    BuildLabelIndexMap(std::unordered_map<ttk::SimplexId, ttk::SimplexId> &,
+                       const vtkDataArray *indexLabelMap);
 
 protected:
   ttkCorrespondenceAlgorithm();

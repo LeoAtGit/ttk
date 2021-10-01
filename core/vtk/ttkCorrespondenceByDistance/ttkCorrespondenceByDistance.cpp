@@ -3,11 +3,13 @@
 #include <vtkInformation.h>
 #include <vtkObjectFactory.h>
 
+#include <vtkFloatArray.h>
 #include <vtkImageData.h>
 #include <vtkMultiBlockDataSet.h>
 #include <vtkPointSet.h>
 
 #include <vtkPointData.h>
+#include <vtkStringArray.h>
 
 #include <ttkUtils.h>
 
@@ -31,15 +33,17 @@ int ttkCorrespondenceByDistance::ComputeCorrespondences(
   if(!p0 || !p1)
     return !this->printErr("Input data objects need to be vtkPointSets.");
 
+  const int nPoints0 = p0->GetNumberOfPoints();
+  const int nPoints1 = p1->GetNumberOfPoints();
+
   // get point coordinates
-  auto coords0 = p0->GetPoints()->GetData();
-  auto coords1 = p1->GetPoints()->GetData();
+
+  auto temp = vtkSmartPointer<vtkFloatArray>::New();
+  auto coords0 = nPoints0 > 0 ? p0->GetPoints()->GetData() : temp;
+  auto coords1 = nPoints1 > 0 ? p1->GetPoints()->GetData() : temp;
 
   if(coords0->GetDataType() != coords1->GetDataType())
     return !this->printErr("Input vtkPointSet need to have same precision.");
-
-  const int nPoints0 = coords0->GetNumberOfTuples();
-  const int nPoints1 = coords1->GetNumberOfTuples();
 
   // initialize correspondence matrix i.e., distance matrix
   correspondenceMatrix->SetDimensions(nPoints0, nPoints1, 1);
@@ -59,18 +63,11 @@ int ttkCorrespondenceByDistance::ComputeCorrespondences(
   if(!status)
     return 0;
 
-  // add index label maps
-  int a = 0;
-  auto fd = correspondenceMatrix->GetFieldData();
-  for(auto &it : std::vector<vtkPointSet *>({p0, p1})) {
-    auto labels = this->GetInputArrayToProcess(0, it);
-    if(!labels)
-      return !this->printErr("Unable to retrieve labels.");
-    auto array = vtkSmartPointer<vtkDataArray>::Take(labels->NewInstance());
-    array->ShallowCopy(labels);
-    array->SetName(("IndexLabelMap" + std::to_string(a++)).data());
-    fd->AddArray(array);
-  }
+  status = ttkCorrespondenceAlgorithm::AddIndexLabelMaps(
+    correspondenceMatrix, this->GetInputArrayToProcess(0, p0),
+    this->GetInputArrayToProcess(0, p1));
+  if(!status)
+    return 0;
 
   return 1;
 }

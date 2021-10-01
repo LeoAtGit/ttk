@@ -55,9 +55,17 @@ public:
   // Emultate old VTK functions
   static void *GetVoidPointer(vtkDataArray *array, vtkIdType start = 0);
   static void *GetVoidPointer(vtkPoints *points, vtkIdType start = 0);
+
   template <typename DT>
   static DT *GetPointer(vtkDataArray *array, vtkIdType start = 0) {
     return static_cast<DT *>(ttkUtils::GetVoidPointer(array, start));
+  };
+
+  template <typename DT>
+  static const DT *GetConstPointer(const vtkDataArray *array,
+                                   vtkIdType start = 0) {
+    return static_cast<const DT *>(
+      ttkUtils::GetVoidPointer(const_cast<vtkDataArray *>(array), start));
   };
 
   static void *

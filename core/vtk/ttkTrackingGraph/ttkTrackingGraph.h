@@ -40,9 +40,17 @@ protected:
                   vtkInformationVector **inputVector,
                   vtkInformationVector *outputVector) override;
 
-  int GenerateSpatialTrackingGraph(vtkPolyData *output,
-                                   vtkMultiBlockDataSet *correspondences,
-                                   vtkMultiBlockDataSet *features);
-  int GeneratePlanarTrackingGraph(vtkPolyData *output,
-                                  vtkMultiBlockDataSet *correspondences);
+  int CountNodesAndEdges(int &nNodes,
+                         int &nEdges,
+                         std::vector<int> &nodeIdxOffsets,
+                         vtkMultiBlockDataSet *correspondences,
+                         vtkMultiBlockDataSet *features);
+  int Validate(vtkMultiBlockDataSet *correspondences,
+               vtkMultiBlockDataSet *features);
+
+  int GenerateTrackingGraphFromFeatures(vtkPolyData *output,
+                                        vtkMultiBlockDataSet *correspondences,
+                                        vtkMultiBlockDataSet *features);
+  int GenerateTrackingGraphFromMatrix(vtkPolyData *output,
+                                      vtkMultiBlockDataSet *correspondences);
 };

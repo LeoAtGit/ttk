@@ -56,15 +56,13 @@ int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
   const double spacing
     = 0; // 2d tracking -> height spacing parameter for 3d display
   status = getDiagram<double>(CTDiagram0, p0, spacing, 0);
-  if(status < 0) {
-    this->printErr("Could not extract diagram from first input data-set");
-    return 0;
-  }
+  if(status < 0)
+    return !this->printErr("Could not extract diagram from first input data-set");
+
   status = getDiagram<double>(CTDiagram1, p1, spacing, 1);
-  if(status < 0) {
-    this->printErr("Could not extract diagram from second input data-set");
-    return 0;
-  }
+  if(status < 0)
+    return !this->printErr("Could not extract diagram from second input data-set");
+
   if(coords0->GetDataType() != coords1->GetDataType())
     return !this->printErr("Input diagrams need to have the same data type.");
 
@@ -89,20 +87,39 @@ int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
   // get metric parameters
   const std::string algorithm = DistanceAlgorithm;
   const std::string wasserstein = WassersteinMetric;
-  const double alpha = Alpha;
   const int pvAlgorithm = PVAlgorithm;
-  const double px = PX;
-  const double py = PY;
-  const double pz = PZ;
-  const double ps = PS;
-  const double pe = PE;
+  double px;
+  double py;
+  double pz;
+  double ps;
+  double pe;
+  const double maxJump = MaxJump;
+
+  // Using advanced parameters if the user has tweaked them.
+  if(PX != 0. || PY != 0. || PZ != 0. || PE != 1. || PS != 1.) {
+    px = PX;
+    py = PY;
+    pz = PZ;
+    pe = PE;
+    ps = PS;
+  } else // Using lifting parameter instead.
+  {
+    // 0 -> persistence; 1 -> geometry
+    double geometricalLift = Lifting / 100.0;
+    double persistenceLift = 1.0 - geometricalLift;
+    px = geometricalLift;
+    py = geometricalLift;
+    pz = geometricalLift;
+    pe = persistenceLift;
+    ps = persistenceLift;
+  }
 
   // compute correspondences in basecode
   std::vector<mT> matchings;
   switch(coords0->GetDataType()) {
     vtkTemplateMacro(status = this->computeDistanceMatrix<double>(
                        CTDiagram0, CTDiagram1, matchings, px, py, pz, ps, pe,
-                       algorithm, wasserstein, alpha, pvAlgorithm));
+                       algorithm, wasserstein, pvAlgorithm, maxJump));
   }
   if(status < 0) {
     this->printErr("Error computing distance matrix.");
@@ -125,33 +142,6 @@ int ttkCorrespondenceByPersistencePairs::ComputeCorrespondences(
       correspondenceMatrixData[n2 * nFeatures0 + n1]
         = (float)1; // std::get<2>(t);
     }
-  }
-
-  // add index label maps
-  using LabelIndexMap = std::unordered_map<long long, long long>;
-  LabelIndexMap labelsIndexMap0;
-  LabelIndexMap labelsIndexMap1;
-  for(auto &it : std::vector<std::pair<std::vector<dT> *, LabelIndexMap *>>(
-        {{&CTDiagram0, &labelsIndexMap0}, {&CTDiagram1, &labelsIndexMap1}})) {
-    long long labelIndex = 0;
-    const int nLabels = it.first->size();
-    // there are no gaps in indices in the Persistence Diagrams pipleine
-    for(int i = 0; i < nLabels; ++i) {
-      it.second->insert({i, labelIndex++});
-    }
-  }
-
-  int a = 0;
-  for(const auto it :
-      std::vector<LabelIndexMap *>({&labelsIndexMap0, &labelsIndexMap1})) {
-    auto array = vtkSmartPointer<vtkIntArray>::New();
-    array->SetName(std::string("IndexLabelMap" + std::to_string(a++)).data());
-    array->SetNumberOfTuples(it->size());
-    auto arrayData = ttkUtils::GetPointer<int>(array);
-    for(const auto &it2 : *it)
-      arrayData[it2.second] = it2.first;
-
-    correspondenceMatrix->GetFieldData()->AddArray(array);
   }
 
   return 1;

@@ -5,14 +5,15 @@ constexpr unsigned long long str2int(const char *str, int h = 0) {
 }
 
 template <typename dataType>
-int BottleneckDistance::execute(const bool usePersistenceMetric) {
+int ttk::BottleneckDistance::execute(const bool usePersistenceMetric) {
   Timer t;
 
   bool fromParaView = pvAlgorithm_ >= 0;
   if(fromParaView) {
     switch(pvAlgorithm_) {
       case 0:
-        this->printMsg("Solving with the TTK approach");
+        matcher_ = 0;
+        this->printMsg("Solving with Sparse Munkres.");
         this->computeBottleneck<dataType>(
           *static_cast<const std::vector<diagramTuple> *>(outputCT1_),
           *static_cast<const std::vector<diagramTuple> *>(outputCT2_),
@@ -20,22 +21,13 @@ int BottleneckDistance::execute(const bool usePersistenceMetric) {
           usePersistenceMetric);
         break;
       case 1: {
-        std::stringstream msg;
-        this->printMsg("Solving with the legacy Dionysus exact approach.");
-        this->printErr("Not supported");
-      } break;
-      case 2: {
-        this->printMsg(
-          "Solving with the approximate Dionysus geometric approach.");
-        this->printErr("Not supported");
-      } break;
-      case 3: {
-        this->printMsg("Solving with the parallel TTK approach");
-        this->printErr("Not supported");
-      } break;
-      case 4: {
-        this->printMsg("Benchmarking");
-        this->printErr("Not supported");
+        matcher_ = 1;
+        this->printMsg("Solving with Auction.");
+        this->computeBottleneck<dataType>(
+          *static_cast<const std::vector<diagramTuple> *>(outputCT1_),
+          *static_cast<const std::vector<diagramTuple> *>(outputCT2_),
+          *static_cast<std::vector<matchingTuple> *>(matchings_),
+          usePersistenceMetric);
       } break;
       default: {
         this->printErr("You must specify a valid assignment algorithm.");
@@ -45,8 +37,9 @@ int BottleneckDistance::execute(const bool usePersistenceMetric) {
   } else {
     switch(str2int(algorithm_.c_str())) {
       case str2int("0"):
-      case str2int("ttk"):
-        this->printMsg("Solving with the TTK approach");
+      case str2int("munkres"):
+        matcher_ = 0;
+        this->printMsg("Solving with Sparse Munkres.");
         this->computeBottleneck<dataType>(
           *static_cast<const std::vector<diagramTuple> *>(outputCT1_),
           *static_cast<const std::vector<diagramTuple> *>(outputCT2_),
@@ -54,24 +47,14 @@ int BottleneckDistance::execute(const bool usePersistenceMetric) {
           usePersistenceMetric);
         break;
       case str2int("1"):
-      case str2int("legacy"): {
-        this->printMsg("Solving with the legacy Dionysus exact approach.");
-        this->printErr("Not supported");
-      } break;
-      case str2int("2"):
-      case str2int("geometric"): {
-        this->printMsg(
-          "Solving with the approximate Dionysus geometric approach.");
-        this->printErr("Not supported");
-      } break;
-      case str2int("3"):
-      case str2int("parallel"): {
-        this->printMsg("Solving with the parallel TTK approach");
-        this->printErr("Not supported");
-      } break;
-      case str2int("bench"): {
-        this->printMsg("Benchmarking");
-        this->printErr("Not supported");
+      case str2int("auction"): {
+        matcher_ = 1;
+        this->printMsg("Solving with Auction.");
+        this->computeBottleneck<dataType>(
+          *static_cast<const std::vector<diagramTuple> *>(outputCT1_),
+          *static_cast<const std::vector<diagramTuple> *>(outputCT2_),
+          *static_cast<std::vector<matchingTuple> *>(matchings_),
+          usePersistenceMetric);
       } break;
       default: {
         this->printErr("You must specify a valid assignment algorithm.");
@@ -85,7 +68,7 @@ int BottleneckDistance::execute(const bool usePersistenceMetric) {
 }
 
 template <typename dataType>
-double BottleneckDistance::computeGeometricalRange(
+double ttk::BottleneckDistance::computeGeometricalRange(
   const std::vector<diagramTuple> &CTDiagram1,
   const std::vector<diagramTuple> &CTDiagram2,
   const int d1Size,
@@ -134,7 +117,7 @@ double BottleneckDistance::computeGeometricalRange(
 }
 
 template <typename dataType>
-double BottleneckDistance::computeMinimumRelevantPersistence(
+double ttk::BottleneckDistance::computeMinimumRelevantPersistence(
   const std::vector<diagramTuple> &CTDiagram1,
   const std::vector<diagramTuple> &CTDiagram2,
   const int d1Size,
@@ -173,7 +156,7 @@ double BottleneckDistance::computeMinimumRelevantPersistence(
 }
 
 template <typename dataType>
-void BottleneckDistance::computeMinMaxSaddleNumberAndMapping(
+void ttk::BottleneckDistance::computeMinMaxSaddleNumberAndMapping(
   const std::vector<diagramTuple> &CTDiagram,
   int dSize,
   int &nbMin,
@@ -213,7 +196,7 @@ void BottleneckDistance::computeMinMaxSaddleNumberAndMapping(
 }
 
 template <typename dataType>
-void BottleneckDistance::buildCostMatrices(
+void ttk::BottleneckDistance::buildCostMatrices(
   const std::vector<diagramTuple> &CTDiagram1,
   const std::vector<diagramTuple> &CTDiagram2,
   const int d1Size,
@@ -388,19 +371,19 @@ void BottleneckDistance::buildCostMatrices(
 }
 
 template <typename dataType>
-void BottleneckDistance::solvePWasserstein(
+void ttk::BottleneckDistance::solvePWasserstein(
   const int nbRow,
   const int nbCol,
   std::vector<std::vector<dataType>> &matrix,
   std::vector<matchingTuple> &matchings,
-  AssignmentMunkres<dataType> &solver) {
+  AssignmentSolver<dataType> &solver) {
   solver.setInput(matrix);
   solver.run(matchings);
   solver.clearMatrix();
 }
 
 template <typename dataType>
-void BottleneckDistance::solveInfinityWasserstein(
+void ttk::BottleneckDistance::solveInfinityWasserstein(
   const int nbRow,
   const int nbCol,
   const int nbRowToCut,
@@ -423,7 +406,7 @@ void BottleneckDistance::solveInfinityWasserstein(
 }
 
 template <typename dataType>
-dataType BottleneckDistance::buildMappings(
+dataType ttk::BottleneckDistance::buildMappings(
   const std::vector<matchingTuple> &inputMatchings,
   const bool transposeGlobal,
   const bool transposeLocal,

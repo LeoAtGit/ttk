@@ -31,12 +31,12 @@ namespace ttk {
       const std::string &wasserstein,
       double tolerance,
       bool is3D,
-      double alpha,
       double px,
       double py,
       double pz,
       double ps,
-      double pe);
+      double pe,
+      double maxJump);
 
     template <typename dataType>
     int performMatchings(
@@ -47,12 +47,12 @@ namespace ttk {
       const std::string &wasserstein,
       double tolerance,
       bool is3D,
-      double alpha,
       double px,
       double py,
       double pz,
       double ps,
-      double pe);
+      double pe,
+      double maxJump);
 
     template <typename dataType>
     int performTracking(std::vector<std::vector<diagramTuple>> &allDiagrams,
@@ -124,15 +124,16 @@ int ttk::TrackingFromPersistenceDiagrams::performSingleMatching(
   const std::string &wasserstein,
   double tolerance,
   bool is3D,
-  double alpha,
   double px,
   double py,
   double pz,
   double ps,
-  double pe) {
+  double pe,
+  double maxJump) {
   ttk::BottleneckDistance bottleneckDistance_;
   // bottleneckDistance_.setWrapper(this);
   bottleneckDistance_.setPersistencePercentThreshold(tolerance);
+  bottleneckDistance_.setPercentMaxJump(maxJump);
   bottleneckDistance_.setPX(px);
   bottleneckDistance_.setPY(py);
   bottleneckDistance_.setPZ(pz);
@@ -158,12 +159,12 @@ int ttk::TrackingFromPersistenceDiagrams::performMatchings(
   const std::string &wasserstein,
   double tolerance,
   bool is3D,
-  double alpha,
   double px,
   double py,
   double pz,
   double ps,
-  double pe) {
+  double pe,
+  double maxJump) {
 
 #ifdef TTK_ENABLE_OPENMP
 #pragma omp parallel for num_threads(threadNumber_)
@@ -172,9 +173,7 @@ int ttk::TrackingFromPersistenceDiagrams::performMatchings(
     performSingleMatching<dataType>(
       i, inputPersistenceDiagrams, outputMatchings,
       algorithm, // Not from paraview, from enclosing tracking plugin
-      wasserstein, tolerance, is3D,
-      alpha, // Blending
-      px, py, pz, ps, pe // Coefficients
+      wasserstein, tolerance, is3D, px, py, pz, ps, pe, maxJump // Coefficients
     );
   }
 
