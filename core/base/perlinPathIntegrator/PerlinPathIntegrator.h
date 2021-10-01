@@ -27,6 +27,7 @@ namespace ttk {
       double x{0.0};
       double y{0.0};
       double z{0.0};
+      double v[3]{0.0, 0.0, 0.0};
 
       Point() {
 
@@ -38,6 +39,9 @@ namespace ttk {
         x = p.x;
         y = p.y;
         z = p.z;
+        v[0] = p.v[0];
+        v[1] = p.v[1];
+        v[2] = p.v[2];
       }
 
       Point operator+(const Point& a) const {
@@ -47,6 +51,7 @@ namespace ttk {
           p.x = x + a.x;
           p.y = y + a.y;
           p.z = z + a.z;
+
           return p;
       }
 
@@ -61,12 +66,13 @@ namespace ttk {
 
       }
 
-      //friend Point operator*(double k, const Point& p);
-    };
+      void setVelocity(const double vel[3]) {
+        v[0] = vel[0];
+        v[1] = vel[1];
+        v[2] = vel[2];
+      }
 
-    // Point operator*(double k, const Point& p) {
-    //     return p * k;
-    // }
+    };
 
     // Set functions for class variables
     void setDomainDimension(const int dims[3]) {
@@ -90,24 +96,25 @@ namespace ttk {
       pn.perlin4D<double>(p.x/psf_[0], p.y/psf_[1], p.z/psf_[2], t, dv.x);
       pn.perlin4D<double>(p.z/psf_[2], p.x/psf_[0], p.y/psf_[1], t, dv.y);
       pn.perlin4D<double>(p.y/psf_[1], p.z/psf_[2], p.x/psf_[0], t, dv.z);
+
       return dv;
     }
 
-    int RK4(const Point& prevP, Point& newP, double time) {
-      // Call perlin function to execute vector field 
+    int RK4(Point& prevP, Point& newP, double time) {
+      // Call perlin function to execute vector field
+      // add const point&
       Point q1 = sampleVectorField(prevP, time) * h_;
       Point q2 = sampleVectorField(prevP + (q1 * 0.5), time) * h_;
       Point q3 = sampleVectorField(prevP + (q2 * 0.5), time) * h_;
       Point q4 = sampleVectorField(prevP + q3, time) * h_; 
-      //Point q = prevP + (q1 * 0.5);
-      //Point q = (q1 + q2 * 2 + q3 * 2 + q4) * (1.0/6.0);
-      newP = prevP + ((q1 + q2 * 2 + q3 * 2 + q4) * (1.0/6));
-      // this->printMsg("q1: " + std::to_string(q1.x) + " " + std::to_string(q1.y) + " " + std::to_string(q1.z));
-      // this->printMsg("q2: " + std::to_string(q2.x) + " " + std::to_string(q2.y) + " " + std::to_string(q2.z));
-      // this->printMsg("q3: " + std::to_string(q3.x) + " " + std::to_string(q3.y) + " " + std::to_string(q3.z));
-      // this->printMsg("q4: " + std::to_string(q4.x) + " " + std::to_string(q4.y) + " " + std::to_string(q4.z));
-      // this->printMsg("q: " + std::to_string(q.x) + " " + std::to_string(q.y) + " " + std::to_string(q.z));
-      
+
+      Point vel = (q1 + q2 * 2 + q3 * 2 + q4) * (1.0/6);
+      newP = prevP + vel;
+
+      // Set velocity of previous point
+      double v[3] = {vel.x, vel.y, vel.z};
+      prevP.setVelocity(v);
+
       return 1;
     }
 
@@ -127,15 +134,29 @@ namespace ttk {
       setPerlinScaleFactor(psf);
 
 
+      // Integrate the paths of the initial points by moving the points
+      // along the vector field for all timesteps
       for (int i = 0; i < nTimesteps - 1; i++) {
-        const std::vector<Point> curPoints = outPoints[i];
-        double time = nTimesteps * timeInterval;
-        for (size_t j = 0; j < curPoints.size(); j++) {
+        std::vector<Point>& curPoints = outPoints[i];
+        double time = i * timeInterval;
+        for (size_t j = 0; j < outPoints[i].size(); j++) {
           Point newP;
-          RK4(curPoints[j], newP, time);
-          newP.timestep = i;
-          newP.pointId = curPoints[j].pointId;
-          outPoints[i+1].push_back(newP);
+          auto& curPoint = curPoints[j];
+
+          // Integrate using RK4
+          RK4(curPoint, newP, time);
+
+          // Check if points is within the domain dimensions
+          if ((newP.x > 0.0 && newP.x < dimensions_[0]) && 
+            (newP.y > 0.0 && newP.y < dimensions_[1]) &&
+            (newP.z > 0.0 && newP.z < dimensions_[2])
+          ) {
+            // Add point to the next time-step
+            newP.timestep = i+1;
+            newP.pointId = curPoint.pointId;
+            outPoints[i+1].push_back(newP);
+
+          }
         }
       }
       return 1;
