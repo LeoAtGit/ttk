@@ -1,0 +1,9 @@
+NAME
+  ttkKernelDensityEstimation
+SOURCES
+  ttkKernelDensityEstimation.cpp
+HEADERS
+  ttkKernelDensityEstimation.h
+DEPENDS
+  kernelDensityEstimation
+  ttkAlgorithm
