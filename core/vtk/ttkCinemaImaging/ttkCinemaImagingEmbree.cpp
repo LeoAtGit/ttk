@@ -13,38 +13,44 @@
 #include <vtkFloatArray.h>
 #include <vtkUnsignedIntArray.h>
 
+#include <ttkCinemaDarkroomCamera.h>
+
 ttk::ttkCinemaImagingEmbree::ttkCinemaImagingEmbree() {
   this->setDebugMsgPrefix("CinemaImaging(Embree)");
 };
 ttk::ttkCinemaImagingEmbree::~ttkCinemaImagingEmbree() {
 }
 
-int ttk::ttkCinemaImagingEmbree::RenderVTKObject(
-  vtkMultiBlockDataSet *outputImages,
+int ttk::ttkCinemaImagingEmbree::RenderVTKObject(vtkMultiBlockDataSet *images,
 
-  vtkPointSet *inputObject,
-  vtkPointSet *inputGrid) const {
+                                                 vtkPointSet *object,
+                                                 vtkPointSet *cameras) const {
   int status = 0;
 
 #if TTK_ENABLE_EMBREE
 
-  auto inputObjectCells = ttkCinemaImaging::GetCells(inputObject);
-
+  // initialize device
   RTCDevice device;
   status = this->initializeDevice(device);
   if(!status)
     return 0;
 
-  auto inputObjectConnectivityList = static_cast<vtkIdType *>(
-    ttkUtils::GetVoidPointer(inputObjectCells->GetConnectivityArray()));
+  // get cells
+  auto cells = ttkCinemaImaging::GetCells(object);
+  if(!cells)
+    return !this->printErr("Unable to retrieve cell array.");
 
+  auto connectivityList
+    = ttkUtils::GetPointer<vtkIdType>(cells->GetConnectivityArray());
+
+  // initilize scene
   RTCScene scene;
   status = this->initializeScene<vtkIdType>(
     scene,
 
-    device, inputObject->GetNumberOfPoints(),
-    static_cast<float *>(ttkUtils::GetVoidPointer(inputObject->GetPoints())),
-    inputObjectCells->GetNumberOfCells(), inputObjectConnectivityList);
+    device, object->GetNumberOfPoints(),
+    ttkUtils::GetPointer<float>(object->GetPoints()->GetData()),
+    cells->GetNumberOfCells(), connectivityList);
   if(!status)
     return 0;
 
@@ -54,41 +60,25 @@ int ttk::ttkCinemaImagingEmbree::RenderVTKObject(
 
   // iterate over sampling locations
   this->printMsg(ttk::debug::Separator::L2);
-  float *samplingPositions
-    = static_cast<float *>(ttkUtils::GetVoidPointer(inputGrid->GetPoints()));
-  int nSamplingPositions = inputGrid->GetNumberOfPoints();
-  auto camParameters = inputGrid->GetPointData();
-  auto camUp = static_cast<double *>(
-    ttkUtils::GetVoidPointer(camParameters->GetArray("CamUp")));
-  auto camDir = static_cast<double *>(
-    ttkUtils::GetVoidPointer(camParameters->GetArray("CamDirection")));
-  auto camHeight = static_cast<double *>(
-    ttkUtils::GetVoidPointer(camParameters->GetArray("CamHeight")));
-  auto camNearFar = static_cast<double *>(
-    ttkUtils::GetVoidPointer(camParameters->GetArray("CamNearFar")));
-  auto camAngle = static_cast<double *>(
-    ttkUtils::GetVoidPointer(camParameters->GetArray("CamAngle")));
-  auto resolution = static_cast<double *>(
-    ttkUtils::GetVoidPointer(camParameters->GetArray("Resolution")));
-  auto projectionMode = static_cast<double *>(
-    ttkUtils::GetVoidPointer(camParameters->GetArray("ProjectionMode")));
 
-  for(int i = 0; i < nSamplingPositions; i++) {
+  // fetch camera calibrations
+  ttkCinemaDarkroomCamera::Calibration calibration(cameras);
 
-    double camPos[3]{samplingPositions[i * 3], samplingPositions[i * 3 + 1],
-                     samplingPositions[i * 3 + 2]};
+  for(int c = 0; c < calibration.nCameras; c++) {
+
+    auto resolution = calibration.Resolution.Get(c);
 
     // Initialize Output
-    auto outputImage = vtkSmartPointer<vtkImageData>::New();
-    outputImage->SetDimensions(resolution[0], resolution[1], 1);
-    outputImage->SetSpacing(1, 1, 1);
-    outputImage->SetOrigin(0, 0, 0);
-    outputImage->AllocateScalars(VTK_FLOAT, 1);
+    auto image = vtkSmartPointer<vtkImageData>::New();
+    image->SetDimensions(resolution[0], resolution[1], 1);
+    image->SetSpacing(1, 1, 1);
+    image->SetOrigin(0, 0, 0);
+    image->AllocateScalars(VTK_FLOAT, 1);
 
-    size_t nPixels = resolution[i * 2] * resolution[i * 2 + 1];
-    auto outputImagePD = outputImage->GetPointData();
+    size_t nPixels = resolution[0] * resolution[1];
+    auto imagePD = image->GetPointData();
 
-    auto depthBuffer = outputImagePD->GetArray(0);
+    auto depthBuffer = imagePD->GetArray(0);
     depthBuffer->SetName("Depth");
 
     auto primitiveIdArray = vtkSmartPointer<vtkUnsignedIntArray>::New();
@@ -96,41 +86,43 @@ int ttk::ttkCinemaImagingEmbree::RenderVTKObject(
     primitiveIdArray->SetNumberOfComponents(1);
     primitiveIdArray->SetNumberOfTuples(nPixels);
     auto primitiveIdArrayData
-      = static_cast<unsigned int *>(ttkUtils::GetVoidPointer(primitiveIdArray));
-    outputImagePD->AddArray(primitiveIdArray);
+      = ttkUtils::GetPointer<unsigned int>(primitiveIdArray);
+    imagePD->AddArray(primitiveIdArray);
 
     auto barycentricCoordinates = vtkSmartPointer<vtkFloatArray>::New();
     barycentricCoordinates->SetName("BarycentricCoordinates");
     barycentricCoordinates->SetNumberOfComponents(2);
     barycentricCoordinates->SetNumberOfTuples(nPixels);
     auto barycentricCoordinatesData
-      = static_cast<float *>(ttkUtils::GetVoidPointer(barycentricCoordinates));
-    outputImagePD->AddArray(barycentricCoordinates);
+      = ttkUtils::GetPointer<float>(barycentricCoordinates);
+    imagePD->AddArray(barycentricCoordinates);
 
     // Render Object
     status = this->renderImage(
-      static_cast<float *>(ttkUtils::GetVoidPointer(depthBuffer)),
-      primitiveIdArrayData, barycentricCoordinatesData,
+      ttkUtils::GetPointer<float>(depthBuffer), primitiveIdArrayData,
+      barycentricCoordinatesData,
 
-      scene, &resolution[i * 2], camPos, &camDir[i * 3], &camUp[i * 3],
-      projectionMode[i] == 0 ? camHeight[i] : camAngle[i],
-      projectionMode[i] == 0);
+      scene, resolution.data(), calibration.Position.Get(c).data(),
+      calibration.Direction.Get(c).data(), calibration.Up.Get(c).data(),
+      calibration.Scale.Array ? calibration.Scale.Get(c)[0]
+                              : calibration.Angle.Get(c)[0],
+      calibration.Scale.Array);
     if(!status)
       return 0;
 
-    ttkCinemaImaging::Normalize(depthBuffer, &camNearFar[i * 2]);
+    ttkCinemaImaging::Normalize(depthBuffer, calibration.NearFar.Get(c).data());
 
     status = ttkCinemaImaging::MapPointAndCellData(
-      outputImage,
+      image,
 
-      inputObject, this, primitiveIdArrayData, barycentricCoordinatesData,
-      inputObjectConnectivityList);
+      object, this, primitiveIdArrayData, barycentricCoordinatesData,
+      connectivityList);
     if(!status)
       return !this->printErr("Unable to Map Point and Cell Data.");
 
-    ttkCinemaImaging::AddAllFieldDataArrays(inputGrid, outputImage, i);
+    ttkCinemaImaging::AddAllFieldDataArrays(cameras, image, c);
 
-    outputImages->SetBlock(i, outputImage);
+    images->SetBlock(c, image);
   }
   this->printMsg(ttk::debug::Separator::L2);
 

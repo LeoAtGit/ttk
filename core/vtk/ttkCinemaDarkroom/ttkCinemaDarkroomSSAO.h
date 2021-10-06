@@ -38,5 +38,5 @@ protected:
   std::string GetFragmentShaderCode() override;
 
   int RegisterReplacements() override;
-  int RegisterTextures(vtkImageData* image) override;
+  int RegisterTextures(vtkImageData *image) override;
 };

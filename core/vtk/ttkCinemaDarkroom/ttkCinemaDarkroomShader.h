@@ -66,9 +66,8 @@ private:
   vtkSmartPointer<vtkRenderWindow> RenderWindow;
 
 public:
-
-  vtkSetMacro(OutputName, const std::string&);
-  vtkGetMacro(OutputName, const std::string&);
+  vtkSetMacro(OutputName, const std::string &);
+  vtkGetMacro(OutputName, const std::string &);
   vtkSetMacro(FloatOutput, bool);
   vtkGetMacro(FloatOutput, bool);
   vtkSetMacro(UseMSAA, bool);
@@ -108,7 +107,7 @@ protected:
   /// Adds a texture to the render pass with the name tex{textureIdx} whose
   /// values correspond to the point data array specified via
   /// SetInputArrayToProcess(arrayIdx).
-  int AddTexture(vtkImageData *image, int arrayIdx, int textureIdx);
+  int AddTexture(vtkImageData *image, int arrayIdx);
 
   virtual std::string GetVertexShaderCode();
   virtual std::string GetFragmentShaderCode();

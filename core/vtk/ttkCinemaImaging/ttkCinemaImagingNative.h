@@ -11,9 +11,9 @@ namespace ttk {
     ttkCinemaImagingNative();
     ~ttkCinemaImagingNative();
 
-    int RenderVTKObject(vtkMultiBlockDataSet *outputImages,
+    int RenderVTKObject(vtkMultiBlockDataSet *images,
 
-                        vtkPointSet *inputObject,
-                        vtkPointSet *inputGrid) const;
+                        vtkPointSet *object,
+                        vtkPointSet *cameras) const;
   };
 }; // namespace ttk

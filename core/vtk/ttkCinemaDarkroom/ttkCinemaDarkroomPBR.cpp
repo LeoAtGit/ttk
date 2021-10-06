@@ -175,17 +175,18 @@ vec3 CalculateLightingAnalytical(
     return ((kd * diffuse) + specular) * angle;
 }
 
-vec4 compute(in vec2 uv, in vec4 centerColor){
+vec4 compute(const in vec2 sampleUV, const in vec2 pixelUV){
 
-  vec4 albedoRGBA = texture2D( tex1, uv );
-  float alpha = albedoRGBA.a;
-  vec3 albedo = albedoRGBA.rgb;
-  float ao = texture2D( tex2, uv ).r;
-  float depth = readDepth(uv);
+  vec4 pixelAlbedoRGBA = texture2D( tex1, pixelUV );
+  vec4 sampleAlbedoRGBA = texture2D( tex1, sampleUV );
+  float alpha = sampleAlbedoRGBA.a;
+  vec3 albedo = sampleAlbedoRGBA.rgb;
+  float ao = texture2D( tex2, sampleUV ).r;
+  float depth = readDepth(sampleUV);
 
-  vec3 normal = computeNormal(uv, depth);
+  vec3 normal = computeNormal(sampleUV, depth);
   vec3 lightDir = normalize(vec3(1,1,1));
-  // vec3 viewDir = normalize(vec3(0,0,3)-vec3(uv*2.0-1.0, -depth) );
+  // vec3 viewDir = normalize(vec3(0,0,3)-vec3(sampleUV*2.0-1.0, -depth) );
   vec3 viewDir = normalize(vec3(0,0,1));
 
   vec3 ambientColor = albedo;
@@ -203,7 +204,7 @@ vec4 compute(in vec2 uv, in vec4 centerColor){
   vec3 color = ambientColor*AMBIENT + diffuseColor*DIFFUSE + aoColor*AO;
 
   return alpha<1.0 || depth==1.0
-    ? vec4(centerColor.rgb,floor(alpha))
+    ? vec4(pixelAlbedoRGBA.rgb,floor(alpha))
     : vec4(color,1.0)
   ;
 }
@@ -225,11 +226,11 @@ int ttkCinemaDarkroomPBR::RegisterReplacements() {
 }
 
 int ttkCinemaDarkroomPBR::RegisterTextures(vtkImageData *image) {
-  if(!this->AddTexture(image, 0, 0))
+  if(!this->AddTexture(image, 0))
     return 0;
-  if(!this->AddTexture(image, 1, 1))
+  if(!this->AddTexture(image, 1))
     return 0;
-  if(!this->AddTexture(image, 2, 2))
+  if(!this->AddTexture(image, 2))
     return 0;
   return 1;
 }

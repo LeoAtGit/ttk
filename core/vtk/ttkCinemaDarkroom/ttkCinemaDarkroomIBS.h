@@ -26,14 +26,14 @@ class TTKCINEMADARKROOM_EXPORT ttkCinemaDarkroomIBS
   : public ttkCinemaDarkroomShader {
 private:
   double Strength{1.0};
-  double Luminance{1.0};
+  double Diffuse{1.0};
   double Ambient{0.2};
 
 public:
   vtkSetMacro(Strength, double);
   vtkGetMacro(Strength, double);
-  vtkSetMacro(Luminance, double);
-  vtkGetMacro(Luminance, double);
+  vtkSetMacro(Diffuse, double);
+  vtkGetMacro(Diffuse, double);
   vtkSetMacro(Ambient, double);
   vtkGetMacro(Ambient, double);
 
@@ -47,5 +47,5 @@ protected:
   std::string GetFragmentShaderCode() override;
 
   int RegisterReplacements() override;
-  int RegisterTextures(vtkImageData* image) override;
+  int RegisterTextures(vtkImageData *image) override;
 };

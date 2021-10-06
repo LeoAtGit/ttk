@@ -29,13 +29,16 @@ uniform sampler2D tex2; // ao
 READ_DEPTH
 COMPUTE_NORMAL
 
-vec4 compute(in vec2 uv, in vec4 centerColor) {
-    vec4 albedoRGBA = texture2D( tex1, uv );
-    vec3 albedo = albedoRGBA.rgb;
-    float alpha = albedoRGBA.a;
-    float ao = texture2D( tex2, uv ).r;
-    float depth = readDepth(uv);
-    vec3 normal = computeNormal(uv, depth);
+vec4 compute(const in vec2 sampleUV, const in vec2 pixelUV){
+
+    vec4 pixelAlbedoRGBA = texture2D( tex1, pixelUV );
+    vec4 sampleAlbedoRGBA = texture2D( tex1, sampleUV );
+
+    vec3 albedo = sampleAlbedoRGBA.rgb;
+    float alpha = sampleAlbedoRGBA.a;
+    float ao = texture2D( tex2, sampleUV ).r;
+    float depth = readDepth(sampleUV);
+    vec3 normal = computeNormal(sampleUV, depth);
 
     vec3 lightDir = normalize(vec3(1,1,1));
     vec3 viewDir = vec3(0,0,1);
@@ -50,7 +53,7 @@ vec4 compute(in vec2 uv, in vec4 centerColor) {
     vec3 color = ambientColor*AMBIENT + diffuseColor*DIFFUSE + specular*SPECULAR;
 
     return alpha<1.0 || depth==1.0
-      ? vec4(centerColor.rgb,floor(alpha))
+      ? vec4(pixelAlbedoRGBA.rgb,floor(alpha))
       : vec4(color,1.0)
     ;
 }
@@ -71,11 +74,11 @@ int ttkCinemaDarkroomPhong::RegisterReplacements() {
 }
 
 int ttkCinemaDarkroomPhong::RegisterTextures(vtkImageData *image) {
-  if(!this->AddTexture(image, 0, 0))
+  if(!this->AddTexture(image, 0))
     return 0;
-  if(!this->AddTexture(image, 1, 1))
+  if(!this->AddTexture(image, 1))
     return 0;
-  if(!this->AddTexture(image, 2, 2))
+  if(!this->AddTexture(image, 2))
     return 0;
   return 1;
 }

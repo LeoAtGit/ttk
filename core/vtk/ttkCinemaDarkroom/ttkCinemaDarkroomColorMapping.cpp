@@ -27,13 +27,13 @@ ttkCinemaDarkroomColorMapping::~ttkCinemaDarkroomColorMapping() {
 
 template <typename DT>
 int mapScalarsToColors(unsigned char *colors,
-                      const std::vector<double> &colorMap,
-                      const double *nanColor,
-                      const bool transparentNAN,
-                      const DT *array,
-                      const double range[2],
-                      const size_t nPixels,
-                      const int threadNumber) {
+                       const std::vector<double> &colorMap,
+                       const double *nanColor,
+                       const bool transparentNAN,
+                       const DT *array,
+                       const double range[2],
+                       const size_t nPixels,
+                       const int threadNumber) {
   const size_t nKeys = colorMap.size() / 4;
   const double rangeD = range[1] - range[0];
 
@@ -63,8 +63,9 @@ int mapScalarsToColors(unsigned char *colors,
       }
     }
 
-    double lambda = (normalizedValue - colorMap[ki * 4]) / (colorMap[(ki + 1) * 4] - colorMap[ki * 4]);
-    lambda = std::min(std::max(lambda,0.0),1.0);
+    double lambda = (normalizedValue - colorMap[ki * 4])
+                    / (colorMap[(ki + 1) * 4] - colorMap[ki * 4]);
+    lambda = std::min(std::max(lambda, 0.0), 1.0);
     double lambdaInv = 1 - lambda;
     size_t idx2 = ki * 4;
 
@@ -80,18 +81,20 @@ int mapScalarsToColors(unsigned char *colors,
   return 1;
 };
 
-int ttkCinemaDarkroomColorMapping::SyncColorMapsWithParaView(){
+int ttkCinemaDarkroomColorMapping::SyncColorMapsWithParaView() {
+  ttk::Timer timer;
+  const std::string msg{"Synchronizing Color-Maps With ParaView"};
+  this->printMsg(msg, 0, 0, 1, ttk::debug::LineMode::REPLACE);
+
   std::string code(R"(
 from paraview.simple import GetColorTransferFunction
 from paraview.simple import GetSources
 from paraview.simple import FindSource
 
-sources = GetSources()
-
-for sourceName in sources:
+for sourceName in GetSources():
   source = FindSource(sourceName[0])
   className = source.__class__.__name__
-  if (className=='TTKDarkroomColorMapping' or className=='TTKDarkroomShading') and (source.ColorMap=='ParaView' or source.ColorMap==-3):
+  if (className=='TTKDarkroomColorMapping' or className=='TTKDarkroomMaster') and (source.ColorMap=='ParaView' or source.ColorMap==-3):
     lut = GetColorTransferFunction(source.Scalars[1])
     cm = map(str,lut.RGBPoints)
     source.ColorMapData = ','.join(cm)
@@ -101,6 +104,9 @@ for sourceName in sources:
 
   vtkPythonInterpreter::RunSimpleString(code.data());
 
+  this->printMsg(msg, 1, timer.getElapsedTime(), 1);
+  this->Modified();
+
   return 1;
 }
 
@@ -108,19 +114,21 @@ int ttkCinemaDarkroomColorMapping::Render(vtkImageData *image) {
   ttk::Timer timer;
   int dim[3];
   image->GetDimensions(dim);
-  const int nPixels = dim[0]*dim[1];
+  const int nPixels = dim[0] * dim[1];
 
   auto scalarArray = this->GetInputArrayToProcess(0, image);
   if(!scalarArray || this->GetInputArrayAssociation(0, image) != 0
      || scalarArray->GetNumberOfComponents() != 1)
     return !this->printErr("Unable to retrieve point scalar array.");
 
-  const std::string msg = "Mapping "+std::string(scalarArray->GetName())+" (" + std::to_string(dim[0]) + "x" + std::to_string(dim[1]) + ")";
-  this->printMsg(msg, 0, 0, this->threadNumber_,ttk::debug::LineMode::REPLACE, ttk::debug::Priority::DETAIL);
-
+  const std::string msg = "Mapping " + std::string(scalarArray->GetName())
+                          + " (" + std::to_string(dim[0]) + "x"
+                          + std::to_string(dim[1]) + ")";
+  this->printMsg(msg, 0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE,
+                 ttk::debug::Priority::DETAIL);
 
   auto colorArray = vtkSmartPointer<vtkUnsignedCharArray>::New();
-  colorArray->SetName((std::string("Albedo_")+scalarArray->GetName()).data());
+  colorArray->SetName("Albedo");
   colorArray->SetNumberOfComponents(4);
   colorArray->SetNumberOfTuples(nPixels);
   image->GetPointData()->AddArray(colorArray);
@@ -144,8 +152,8 @@ int ttkCinemaDarkroomColorMapping::Render(vtkImageData *image) {
     colorMapData[7] = this->SingleColor[2];
     colorMap = &colorMapData;
   } else if(this->ColorMap == -2 || this->ColorMap == -3) {
-    int status = ttkUtils::stringListToDoubleVector(
-      this->ColorMapData, colorMapData);
+    int status
+      = ttkUtils::stringListToDoubleVector(this->ColorMapData, colorMapData);
     if(!status || colorMapData.size() < 8 || colorMapData.size() % 4 != 0)
       return !this->printErr("Invalid manual color map input.");
 
@@ -153,20 +161,19 @@ int ttkCinemaDarkroomColorMapping::Render(vtkImageData *image) {
   } else {
     if(this->ColorMap < 0 || this->ColorMap >= (int)this->ColorMaps.size())
       return !this->printErr("Invalid color map index: "
-                     + std::to_string(this->ColorMap));
+                             + std::to_string(this->ColorMap));
     colorMap = &this->ColorMaps[this->ColorMap];
   }
 
   switch(scalarArray->GetDataType()) {
     vtkTemplateMacro(mapScalarsToColors<VTK_TT>(
       colorArrayData, *colorMap, this->NANColor, this->TransparentNAN,
-      ttkUtils::GetPointer<VTK_TT>(scalarArray),
-      this->ScalarRange,
-      nPixels,
+      ttkUtils::GetPointer<VTK_TT>(scalarArray), this->ScalarRange, nPixels,
       this->threadNumber_));
   }
 
-  this->printMsg(msg, 1, timer.getElapsedTime(), this->threadNumber_, ttk::debug::LineMode::NEW, ttk::debug::Priority::DETAIL);
+  this->printMsg(msg, 1, timer.getElapsedTime(), this->threadNumber_,
+                 ttk::debug::LineMode::NEW, ttk::debug::Priority::DETAIL);
 
   return 1;
 }

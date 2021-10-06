@@ -1,6 +1,7 @@
 NAME
   ttkCinemaDarkroom
 SOURCES
+  ttkCinemaDarkroomUtils.cpp
   ttkCinemaDarkroomCamera.cpp
   ttkCinemaDarkroomShader.cpp
   ttkCinemaDarkroomIBS.cpp
@@ -13,8 +14,9 @@ SOURCES
   ttkCinemaDarkroomCompositing.cpp
   ttkCinemaDarkroomColorMapping.cpp
   ttkCinemaDarkroomColorMaps.cpp
-  ttkCinemaDarkroomShading.cpp
+  ttkCinemaDarkroomMaster.cpp
 HEADERS
+  ttkCinemaDarkroomUtils.h
   ttkCinemaDarkroomCamera.h
   ttkCinemaDarkroomShader.h
   ttkCinemaDarkroomIBS.h
@@ -26,7 +28,7 @@ HEADERS
   ttkCinemaDarkroomSSDoF.h
   ttkCinemaDarkroomCompositing.h
   ttkCinemaDarkroomColorMapping.h
-  ttkCinemaDarkroomShading.h
+  ttkCinemaDarkroomMaster.h
 DEPENDS
   ttkAlgorithm
   Boost::boost

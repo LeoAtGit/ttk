@@ -37,9 +37,8 @@ namespace ttk {
                     const double camPos[3],
                     const double camDirRaw[3],
                     const double camUp[3],
-                    const double &camHeight,
-                    const bool &orthographicProjection,
-                    const double &viewAngle) const;
+                    const double &camScaleOrAngle,
+                    const bool &orthographicProjection) const;
   };
 
 }; // namespace ttk
@@ -58,9 +57,8 @@ int ttk::CinemaImagingNative::renderImage(
   const double camPos[3],
   const double camDirRaw[3],
   const double camUp[3],
-  const double &camHeight,
-  const bool &orthographicProjection,
-  const double &viewAngle) const {
+  const double &camScaleOrAngle,
+  const bool &orthographicProjection) const {
   ttk::Timer timer;
   int resX = resolution[0];
   int resY = resolution[1];
@@ -72,7 +70,7 @@ int ttk::CinemaImagingNative::renderImage(
 
   // Compute camera size
   const double aspect = resolution[0] / resolution[1];
-  const double camSize[2] = {aspect * camHeight, camHeight};
+  const double camSize[2] = {aspect * camScaleOrAngle, camScaleOrAngle};
 
   const auto normalize = [](double out[3], const double in[3]) {
     double temp = sqrt(in[0] * in[0] + in[1] * in[1] + in[2] * in[2]);
@@ -165,18 +163,31 @@ int ttk::CinemaImagingNative::renderImage(
       }
     }
   } else {
-    double factor = (viewAngle / 180.0 * 3.141592653589793) / resolution[0];
+    // rescale normalized camRight and camUp vectors
+    double factor
+      = std::tan(camScaleOrAngle / 2.0 / 180.0 * 3.141592653589793) * 2.0;
+    camUpTrue[0] *= factor;
+    camUpTrue[1] *= factor;
+    camUpTrue[2] *= factor;
+    camRight[0] *= factor * aspect;
+    camRight[1] *= factor * aspect;
+    camRight[2] *= factor * aspect;
+
+    double resXD = (double)resX;
+    double resYD = (double)resY;
+    double resX2 = resXD * 0.5;
+    double resY2 = resYD * 0.5;
 
 #ifdef TTK_ENABLE_OPENMP
 #pragma omp parallel for num_threads(this->threadNumber_)
 #endif
     for(int y = 0; y < resY; y++) {
-      double v = (y - resY * 0.5) * factor;
+      double v = (((double)y) - resY2) / resY;
       size_t pixelIndex = y * resX;
       size_t bcIndex = 2 * pixelIndex;
 
       for(int x = 0; x < resX; x++) {
-        double u = (x - resX * 0.5) * factor;
+        double u = (((double)x) - resX2) / resX;
 
         depthBuffer[pixelIndex] = nan;
         primitiveIds[pixelIndex] = CinemaImaging::INVALID_ID;

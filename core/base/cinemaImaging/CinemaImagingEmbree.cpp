@@ -94,11 +94,11 @@ int ttk::CinemaImagingEmbree::renderImage(
   size_t pixelIndex = 0;
   size_t bcIndex = 0;
   const float nan = std::numeric_limits<float>::quiet_NaN();
+  const double aspect = resolution[0] / resolution[1];
 
   if(orthographicProjection) {
 
     // Compute camera size
-    const double aspect = resolution[0] / resolution[1];
     const double camSize[2] = {aspect * camFactor, camFactor};
 
     // Compute pixel size in world coordinates
@@ -165,13 +165,23 @@ int ttk::CinemaImagingEmbree::renderImage(
     }
   } else {
 
-    double factor = (camFactor / 180.0 * 3.141592653589793) / resolution[0];
+    // rescale normalized camRight and camUp vectors
+    double factor = std::tan(camFactor / 2.0 / 180.0 * 3.141592653589793) * 2.0;
+    camUpTrue[0] *= factor;
+    camUpTrue[1] *= factor;
+    camUpTrue[2] *= factor;
+    camRight[0] *= factor * aspect;
+    camRight[1] *= factor * aspect;
+    camRight[2] *= factor * aspect;
 
+    double resXD = (double)resX;
+    double resYD = (double)resY;
+    double resX2 = resXD * 0.5;
+    double resY2 = resYD * 0.5;
     for(int y = 0; y < resY; y++) {
-      double v = (y - resY * 0.5) * factor;
-
+      double v = (((double)y) - resY2) / resY;
       for(int x = 0; x < resX; x++) {
-        double u = (x - resX * 0.5) * factor;
+        double u = (((double)x) - resX2) / resX;
 
         struct RTCRayHit rayhit;
 

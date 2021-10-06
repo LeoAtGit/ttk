@@ -18,6 +18,8 @@
 #include <ttkCinemaImagingNative.h>
 #include <ttkCinemaImagingVTK.h>
 
+#include <ttkCinemaDarkroomCamera.h>
+
 #include <CinemaImaging.h>
 
 vtkStandardNewMacro(ttkCinemaImaging);
@@ -58,177 +60,64 @@ int ttkCinemaImaging::RequestData(vtkInformation *request,
                                   vtkInformationVector **inputVector,
                                   vtkInformationVector *outputVector) {
 
-  auto inputObject = vtkDataObject::GetData(inputVector[0]);
-  auto inputGrid = vtkPointSet::GetData(inputVector[1]);
-  auto outputCollection = vtkMultiBlockDataSet::GetData(outputVector);
-  if(!inputObject || !inputGrid)
+  auto object = vtkDataObject::GetData(inputVector[0]);
+  auto cameras = vtkPointSet::GetData(inputVector[1]);
+  if(!object || !cameras)
     return !this->printErr("Unsupported input object types.");
 
-  if(inputGrid->GetNumberOfPoints()<1)
-    return this->printWrn("Sampling Grid is Empty.");
+  ttkCinemaDarkroomCamera::Calibration calibration(cameras);
+  if(calibration.nCameras < 0)
+    return !this->printErr("Invalid Camera Calibrations.");
 
-  auto inputObjectAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
-  if(inputObject->IsA("vtkMultiBlockDataSet"))
-    inputObjectAsMB->ShallowCopy(inputObject);
+  if(calibration.nCameras == 0)
+    return this->printWrn("Empty Camera Set.");
+
+  auto objectAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+  if(object->IsA("vtkMultiBlockDataSet"))
+    objectAsMB->ShallowCopy(object);
   else
-    inputObjectAsMB->SetBlock(0, inputObject);
-  const size_t nInputObjects = inputObjectAsMB->GetNumberOfBlocks();
-
-  // get default parameters
-  std::vector<double> defaultFocalPoint{
-    this->FocalPoint[0], this->FocalPoint[1], this->FocalPoint[2]};
-  std::vector<double> defaultNearFar{this->NearFar[0], this->NearFar[1]};
-  double defaultHeight = this->Height;
-  double defaultAngle = this->Angle;
-
-  if(this->AutoFocalPoint || this->AutoNearFar || this->AutoHeight) {
-
-    double objectBounds[6];
-    inputObjectAsMB->GetBounds(objectBounds);
-
-    auto norm = [](const double v[3]) {
-      return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    };
-
-    const double d[3]{objectBounds[1] - objectBounds[0],
-                      objectBounds[3] - objectBounds[2],
-                      objectBounds[5] - objectBounds[4]};
-
-    const double objectDiameter = norm(d);
-
-    const double c[3]{objectBounds[0] + 0.5 * d[0],
-                      objectBounds[2] + 0.5 * d[1],
-                      objectBounds[4] + 0.5 * d[2]};
-
-    if(this->AutoFocalPoint) {
-      defaultFocalPoint[0] = c[0];
-      defaultFocalPoint[1] = c[1];
-      defaultFocalPoint[2] = c[2];
-    }
-
-    if(this->AutoNearFar) {
-      double firstPoint[3];
-      inputGrid->GetPoint(0,firstPoint);
-      const double l[3]{
-        c[0] - firstPoint[0],
-        c[1] - firstPoint[1],
-        c[2] - firstPoint[2],
-      };
-      const double ld = norm(l);
-
-      defaultNearFar[0] = std::max(0.01, ld - objectDiameter * 0.6);
-      defaultNearFar[1] = ld + objectDiameter * 0.6;
-    }
-
-    if(this->AutoHeight) {
-      defaultHeight = objectDiameter;
-    }
-  }
-
-  // Enforce grid contains all camera parameters as field data
-  auto aInputGrid
-    = vtkSmartPointer<vtkPointSet>::Take(inputGrid->NewInstance());
-  aInputGrid->ShallowCopy(inputGrid);
-  int n = aInputGrid->GetNumberOfPoints();
-  auto aInputGridPD = aInputGrid->GetPointData();
-
-  ttkCinemaImaging::EnforceGridData(
-    aInputGridPD, "Resolution", n,
-    {(double)this->Resolution[0], (double)this->Resolution[1]});
-  ttkCinemaImaging::EnforceGridData(
-    aInputGridPD, "ProjectionMode", n, {(double)this->ProjectionMode});
-
-  ttkCinemaImaging::EnforceGridData(
-    aInputGridPD, "CamNearFar", n, defaultNearFar);
-  ttkCinemaImaging::EnforceGridData(
-    aInputGridPD, "CamHeight", n, {defaultHeight});
-  ttkCinemaImaging::EnforceGridData(aInputGridPD, "CamAngle", n, {defaultAngle});
-  ttkCinemaImaging::EnforceGridData(aInputGridPD, "CamUp", n, {0, 1, 0});
-
-  const bool gridHasDirection = aInputGridPD->HasArray("CamDirection");
-  const bool gridHasFocalPoint = aInputGridPD->HasArray("CamFocalPoint");
-  if(gridHasFocalPoint || !gridHasDirection) {
-    ttkCinemaImaging::EnforceGridData(
-      aInputGridPD, "CamFocalPoint", n, defaultFocalPoint);
-    ttkCinemaImaging::ComputeDirFromFocalPoint(aInputGrid);
-  } else {
-    ttkCinemaImaging::EnforceGridData(
-      aInputGridPD, "CamDirection", n, {0, 0, -1});
-  }
-
-  // print parameters
-  {
-    this->printMsg(
-      {{"#Objects", std::to_string(nInputObjects)},
-       {"Backend", this->Backend == 0   ? std::string("VTK_OPENGL")
-                   : this->Backend == 1 ? std::string("EMBREE")
-                                        : std::string("NATIVE")},
-       {"Resolution", std::to_string(this->Resolution[0]) + " x "
-                        + std::to_string(this->Resolution[1])},
-       {"Projection", this->ProjectionMode ? "Perspective" : "Orthographic"},
-       {"CamNearFar", std::to_string(defaultNearFar[0]) + " / "
-                        + std::to_string(defaultNearFar[1])},
-       {"CamFocalPoint", gridHasDirection || gridHasFocalPoint
-                           ? "Grid Data"
-                           : "(" + std::to_string(defaultFocalPoint[0]) + ", "
-                               + std::to_string(defaultFocalPoint[1]) + ", "
-                               + std::to_string(defaultFocalPoint[2]) + ")"},
-       {std::string(this->ProjectionMode == 0 ? "CamHeight" : "CamAngle"),
-        std::to_string(this->ProjectionMode == 0 ? defaultHeight
-                                                 : defaultAngle)}});
-    this->printMsg(ttk::debug::Separator::L1);
-  }
+    objectAsMB->SetBlock(0, object);
+  const size_t nObjects = objectAsMB->GetNumberOfBlocks();
 
   auto outputAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
-  for(size_t b = 0; b < nInputObjects; b++) {
-    auto outputImages = vtkSmartPointer<vtkMultiBlockDataSet>::New();
-    auto inputPointSet
-      = vtkPointSet::SafeDownCast(inputObjectAsMB->GetBlock(b));
-    if(!inputPointSet->IsA("vtkUnstructuredGrid")
-       && !inputPointSet->IsA("vtkPolyData")) {
-      this->printErr("Unsupported input object type.");
-      return 0;
-    }
-    int status = this->RequestDataSingle(outputImages,
-
-                            inputPointSet, aInputGrid, defaultFocalPoint,
-                            defaultNearFar, defaultHeight, defaultAngle);
+  for(size_t b = 0; b < nObjects; b++) {
+    auto images = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+    auto objectAsPS = vtkPointSet::SafeDownCast(objectAsMB->GetBlock(b));
+    int status = this->RequestDataSingle(images, objectAsPS, cameras);
     if(!status)
       return 0;
-    outputAsMB->SetBlock(b, outputImages);
-
+    outputAsMB->SetBlock(b, images);
   }
 
-  if(inputObject->IsA("vtkMultiBlockDataSet"))
-    outputCollection->ShallowCopy(outputAsMB);
+  auto output = vtkMultiBlockDataSet::GetData(outputVector);
+  if(object->IsA("vtkMultiBlockDataSet"))
+    output->ShallowCopy(outputAsMB);
   else
-    outputCollection->ShallowCopy(outputAsMB->GetBlock(0));
+    output->ShallowCopy(outputAsMB->GetBlock(0));
 
   return 1;
 }
 
 template <typename RT>
-int renderDispatch(int debugLevel, int threadNumber, vtkMultiBlockDataSet* outputImages, vtkPointSet* inputObject, vtkPointSet* inputGrid){
+int renderDispatch(int debugLevel,
+                   int threadNumber,
+                   vtkMultiBlockDataSet *images,
+                   vtkPointSet *object,
+                   vtkPointSet *cameras) {
   RT renderer;
   renderer.setDebugLevel(debugLevel);
   renderer.setThreadNumber(threadNumber);
-  return renderer.RenderVTKObject(outputImages, inputObject, inputGrid);
+  return renderer.RenderVTKObject(images, object, cameras);
 }
 
-int ttkCinemaImaging::RequestDataSingle(
-  vtkMultiBlockDataSet *outputImages,
-
-  vtkPointSet *inputObject,
-  vtkPointSet *inputGrid,
-  const std::vector<double> &defaultFocalPoint,
-  const std::vector<double> &defaultNearFar,
-  const double defaultHeight,
-  const double defaultAngle) {
+int ttkCinemaImaging::RequestDataSingle(vtkMultiBlockDataSet *images,
+                                        vtkPointSet *object,
+                                        vtkPointSet *cameras) {
   ttk::Timer globalTimer;
 
-  auto cells = ttkCinemaImaging::GetCells(inputObject);
+  auto cells = ttkCinemaImaging::GetCells(object);
   if(!cells)
-    return 0;
+    return !this->printErr("Unable to retrieve cell array.");
 
   size_t nTriangles = cells->GetNumberOfCells();
   // make sure that cells consists only of triangles
@@ -238,25 +127,23 @@ int ttkCinemaImaging::RequestDataSingle(
     vtkIdType j = 0;
     for(size_t i = 0; i < nTriangles; i++, j += 3) {
       if(j != offsets[i]) {
-        this->printErr("Connectivity list has to contain only triangles.");
-        return 0;
+        return !this->printErr(
+          "Connectivity list has to contain only triangles.");
       }
     }
   }
 
-  int status = 0;
+  // perform rendering
   if(this->Backend == 0) {
-    return renderDispatch<ttk::ttkCinemaImagingVTK>(this->debugLevel_, this->threadNumber_, outputImages, inputObject, inputGrid);
+    return renderDispatch<ttk::ttkCinemaImagingVTK>(
+      this->debugLevel_, this->threadNumber_, images, object, cameras);
   } else if(this->Backend == 1) {
-    return renderDispatch<ttk::ttkCinemaImagingEmbree>(this->debugLevel_, this->threadNumber_, outputImages, inputObject, inputGrid);
+    return renderDispatch<ttk::ttkCinemaImagingEmbree>(
+      this->debugLevel_, this->threadNumber_, images, object, cameras);
   } else {
-    return renderDispatch<ttk::ttkCinemaImagingNative>(this->debugLevel_, this->threadNumber_, outputImages, inputObject, inputGrid);
+    return renderDispatch<ttk::ttkCinemaImagingNative>(
+      this->debugLevel_, this->threadNumber_, images, object, cameras);
   }
-
-  if(!status)
-    return 0;
-
-  return 1;
 }
 
 vtkCellArray *ttkCinemaImaging::GetCells(vtkPointSet *pointSet) {
@@ -266,6 +153,7 @@ vtkCellArray *ttkCinemaImaging::GetCells(vtkPointSet *pointSet) {
     case VTK_POLY_DATA:
       return static_cast<vtkPolyData *>(pointSet)->GetPolys();
   }
+
   return nullptr;
 };
 
@@ -332,40 +220,15 @@ int ttkCinemaImaging::ComputeDirFromFocalPoint(vtkPointSet *inputGrid) {
     dir[i] = focal[i] - pos[i];
 
   // normalize
-  for(int i = 0; i < nTuples; i++){
-    double* d = &dir[i*3];
-    const double norm = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+  for(int i = 0; i < nTuples; i++) {
+    double *d = &dir[i * 3];
+    const double norm = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
     d[0] /= norm;
     d[1] /= norm;
     d[2] /= norm;
   }
 
   inputGrid->GetPointData()->AddArray(newArray);
-
-  return 1;
-};
-
-int ttkCinemaImaging::EnforceGridData(vtkPointData *fd,
-                                     const std::string &name,
-                                     int nTuples,
-                                     const std::vector<double> &defaultValues) {
-  auto array = vtkDoubleArray::SafeDownCast(fd->GetArray(name.data()));
-
-  if(!array) {
-    int nComponents = defaultValues.size();
-
-    auto newArray = vtkSmartPointer<vtkDoubleArray>::New();
-    newArray->SetName(name.data());
-    newArray->SetNumberOfComponents(nComponents);
-    newArray->SetNumberOfTuples(nTuples);
-
-    auto data = ttkUtils::GetPointer<double>(newArray);
-    for(int i = 0, q = 0; i < nTuples; i++)
-      for(int j = 0; j < nComponents; j++)
-        data[q++] = defaultValues[j];
-
-    fd->AddArray(newArray);
-  }
 
   return 1;
 };
@@ -425,7 +288,7 @@ int ttkCinemaImaging::MapPointAndCellData(
   // Map Point Data
   for(size_t j = 0; j < nInputObjectPDArrays; j++) {
     auto inputArray = inputObjectPD->GetArray(j);
-    auto outputArray =  vtkSmartPointer<vtkFloatArray>::New();
+    auto outputArray = vtkSmartPointer<vtkFloatArray>::New();
     outputArray->SetName(inputArray->GetName());
     outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());
     outputArray->SetNumberOfTuples(nPixels);
@@ -434,13 +297,13 @@ int ttkCinemaImaging::MapPointAndCellData(
 
     switch(inputArray->GetDataType()) {
       vtkTemplateMacro(status = renderer->interpolateArray(
-                        ttkUtils::GetPointer<float>(outputArray),
+                         ttkUtils::GetPointer<float>(outputArray),
 
-                        primitiveIdArray, barycentricCoordinates,
-                        inputObjectConnectivityList,
+                         primitiveIdArray, barycentricCoordinates,
+                         inputObjectConnectivityList,
 
-                        ttkUtils::GetPointer<const VTK_TT>(inputArray),
-                        nPixels, inputArray->GetNumberOfComponents()));
+                         ttkUtils::GetPointer<const VTK_TT>(inputArray),
+                         nPixels, inputArray->GetNumberOfComponents()));
     }
 
     if(!status)
@@ -450,7 +313,7 @@ int ttkCinemaImaging::MapPointAndCellData(
   // Map Cell Data
   for(size_t j = 0; j < nInputObjectCDArrays; j++) {
     auto inputArray = inputObjectCD->GetArray(j);
-    auto outputArray =  vtkSmartPointer<vtkFloatArray>::New();
+    auto outputArray = vtkSmartPointer<vtkFloatArray>::New();
     outputArray->SetName(inputArray->GetName());
     outputArray->SetNumberOfComponents(inputArray->GetNumberOfComponents());
     outputArray->SetNumberOfTuples(nPixels);

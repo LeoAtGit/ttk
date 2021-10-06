@@ -80,7 +80,7 @@ int ttkCinemaDarkroomCompositing::RequestData(
   auto firstInput = vtkDataObject::GetData(inputVector[0], 0);
 
   if(firstInput->IsA("vtkImageData")) {
-    // if input are repeated vtkImageData objects
+    // if inputs are repeated vtkImageData objects
     for(size_t i = 0; i < nInputs; i++) {
       auto collection = vtkSmartPointer<vtkMultiBlockDataSet>::New();
       auto image = vtkImageData::GetData(inputVector[0], i);
@@ -141,8 +141,8 @@ int ttkCinemaDarkroomCompositing::RequestData(
                  0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE);
 
   auto getImage = [](vtkMultiBlockDataSet *root, int i, int j) {
-    return (vtkImageData *)((vtkMultiBlockDataSet *)root->GetBlock(i))
-      ->GetBlock(j);
+    return static_cast<vtkImageData *>(
+      static_cast<vtkMultiBlockDataSet *>(root->GetBlock(i))->GetBlock(j));
   };
 
   for(size_t i = 0; i < nCompositingSteps; i++) {
@@ -151,6 +151,7 @@ int ttkCinemaDarkroomCompositing::RequestData(
 
     auto output = vtkSmartPointer<vtkImageData>::New();
     output->DeepCopy(firstImage);
+    auto outputPD = output->GetPointData();
 
     for(size_t j = 1; j < nImagesPerCompositingStep; j++) {
       auto image = getImage(inputAsMB, j, i);
@@ -174,31 +175,43 @@ int ttkCinemaDarkroomCompositing::RequestData(
       mask->SetNumberOfTuples(nPixels);
       switch(depth0Array->GetDataType()) {
         vtkTemplateMacro(computeMask<VTK_TT>(
-          static_cast<unsigned char *>(ttkUtils::GetVoidPointer(mask)),
-          static_cast<VTK_TT *>(ttkUtils::GetVoidPointer(depth0Array)),
-          static_cast<VTK_TT *>(ttkUtils::GetVoidPointer(depth1Array)),
-          nPixels));
+          ttkUtils::GetPointer<unsigned char>(mask),
+          ttkUtils::GetPointer<VTK_TT>(depth0Array),
+          ttkUtils::GetPointer<VTK_TT>(depth1Array), nPixels));
       }
 
-      auto outputPD = output->GetPointData();
       auto inputPD = image->GetPointData();
 
+      // merge all non-albedo arrays
+      std::vector<std::string> toRemove;
       for(int a = 0; a < outputPD->GetNumberOfArrays(); a++) {
         auto outputArray = outputPD->GetArray(a);
         if(!outputArray)
           continue;
+
         auto inputArray = inputPD->GetArray(outputArray->GetName());
-        if(!inputArray)
+
+        if(!inputArray
+           || outputArray->GetDataType() != inputArray->GetDataType()
+           || outputArray->GetNumberOfTuples()
+                != inputArray->GetNumberOfTuples()
+           || outputArray->GetNumberOfComponents()
+                != inputArray->GetNumberOfComponents()) {
+          toRemove.push_back(outputArray->GetName());
           continue;
+        }
 
         switch(outputArray->GetDataType()) {
           vtkTemplateMacro(compositeArray<VTK_TT>(
-            static_cast<VTK_TT *>(ttkUtils::GetVoidPointer(outputArray)),
-            static_cast<unsigned char *>(ttkUtils::GetVoidPointer(mask)),
-            static_cast<VTK_TT *>(ttkUtils::GetVoidPointer(inputArray)),
-            nPixels, outputArray->GetNumberOfComponents()));
+            ttkUtils::GetPointer<VTK_TT>(outputArray),
+            ttkUtils::GetPointer<unsigned char>(mask),
+            ttkUtils::GetPointer<VTK_TT>(inputArray), nPixels,
+            outputArray->GetNumberOfComponents()));
         }
       }
+
+      for(auto x : toRemove)
+        outputPD->RemoveArray(x.data());
     }
 
     outputAsMB->SetBlock(i, output);

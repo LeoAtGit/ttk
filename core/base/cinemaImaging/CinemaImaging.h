@@ -19,8 +19,7 @@ namespace ttk {
 
                          const DT *inputArray,
                          const size_t &nPixels,
-                         const size_t &nComponents = 1
-                         ) const;
+                         const size_t &nComponents = 1) const;
 
     template <typename DT>
     int lookupArray(float *outputArray,
@@ -29,8 +28,7 @@ namespace ttk {
 
                     const DT *inputArray,
                     const size_t &nPixels,
-                    const size_t &nComponents = 1
-                    ) const;
+                    const size_t &nComponents = 1) const;
   };
 } // namespace ttk
 
@@ -45,7 +43,6 @@ int ttk::CinemaImaging::interpolateArray(float *outputArray,
                                          const size_t &nPixels,
                                          const size_t &nComponents) const {
 
-
   const auto missingValue = std::numeric_limits<float>::quiet_NaN();
 
 #ifdef TTK_ENABLE_OPENMP
@@ -53,25 +50,27 @@ int ttk::CinemaImaging::interpolateArray(float *outputArray,
 #endif
   for(size_t i = 0; i < nPixels; i++) {
     const unsigned int &cellId = primitiveIds[i];
-    const auto offset = i*nComponents;
+    const auto offset = i * nComponents;
     if(cellId == CinemaImaging::INVALID_ID) {
-      for(size_t c=0; c<nComponents; c++)
-        outputArray[offset+c] = missingValue;
+      for(size_t c = 0; c < nComponents; c++)
+        outputArray[offset + c] = missingValue;
       continue;
     }
 
     const size_t cellIndex = cellId * 3;
-    const auto o0 = nComponents*connectivityList[cellIndex + 0];
-    const auto o1 = nComponents*connectivityList[cellIndex + 1];
-    const auto o2 = nComponents*connectivityList[cellIndex + 2];
+    const auto o0 = nComponents * connectivityList[cellIndex + 0];
+    const auto o1 = nComponents * connectivityList[cellIndex + 1];
+    const auto o2 = nComponents * connectivityList[cellIndex + 2];
 
     const size_t bcIndex = i * 2;
-    const float& u = barycentricCoordinates[bcIndex + 0];
-    const float& v = barycentricCoordinates[bcIndex + 1];
+    const float &u = barycentricCoordinates[bcIndex + 0];
+    const float &v = barycentricCoordinates[bcIndex + 1];
     const float w = 1 - u - v;
 
-    for(size_t c=0; c<nComponents; c++)
-      outputArray[offset+c] = w * static_cast<float>(inputArray[o0+c]) + u * static_cast<float>(inputArray[o1+c]) + v * static_cast<float>(inputArray[o2+c]);
+    for(size_t c = 0; c < nComponents; c++)
+      outputArray[offset + c] = w * static_cast<float>(inputArray[o0 + c])
+                                + u * static_cast<float>(inputArray[o1 + c])
+                                + v * static_cast<float>(inputArray[o2 + c]);
   }
 
   return 1;
@@ -84,8 +83,7 @@ int ttk::CinemaImaging::lookupArray(float *outputArray,
 
                                     const DT *inputArray,
                                     const size_t &nPixels,
-                                    const size_t &nComponents
-) const {
+                                    const size_t &nComponents) const {
 
   const auto missingValue = std::numeric_limits<float>::quiet_NaN();
 

@@ -68,8 +68,8 @@ float calcAO( float depth, float dw, float dh, vec2 uv ) {
     return temp1;
 }
 
-float compute(in vec2 uv){
-  float depth = readDepth( uv );
+float compute(const in vec2 sampelUV, const in vec2 pixelUV){
+  float depth = readDepth( sampelUV );
 
   const float samplesF = SAMPLES;
   float occlusion = 0.0;
@@ -84,15 +84,15 @@ float compute(in vec2 uv){
       float r = sqrt( 1.0 - z ) * RADIUS;
       float pw = cos( l ) * r;
       float ph = sin( l ) * r;
-      occlusion += calcAO( depth, pw * aspect, ph, uv );
+      occlusion += calcAO( depth, pw * aspect, ph, sampelUV );
       z = z - dz;
       l = l + DL;
   }
 
-  return 1.-occlusion/samplesF;
+  return depth>0.99 ? 1.0 : 1.-occlusion/samplesF;
 }
 
-MAIN_SCALAR_MSAA
+MAIN_SCALAR
 
   )");
 }
@@ -107,7 +107,7 @@ int ttkCinemaDarkroomSSSAO::RegisterReplacements() {
 }
 
 int ttkCinemaDarkroomSSSAO::RegisterTextures(vtkImageData *image) {
-  if(!this->AddTexture(image, 0, 0))
+  if(!this->AddTexture(image, 0))
     return 0;
   return 1;
 }

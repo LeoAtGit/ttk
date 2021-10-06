@@ -36,7 +36,7 @@ vtkStandardNewMacro(ttkCinemaDarkroomShader);
 const std::string mainColorCode(R"(
   void main(){
     vec2 uv = vPos.xy;
-    vec4 color = compute(uv,texture2D( tex1, uv ));
+    vec4 color = compute(uv,uv);
     gl_FragColor = color;
   }
 )");
@@ -47,13 +47,12 @@ const std::string mainColorMSAACode(R"(
 
     vec2 uv = vPos.xy;
     vec2 eps = vec2(1,-1)*0.15;
-    vec4 centerColor = texture2D( tex1, uv );
 
     vec4 color = (
-       compute(uv+eps.xx*pixelSize, centerColor)
-      +compute(uv+eps.xy*pixelSize, centerColor)
-      +compute(uv+eps.yy*pixelSize, centerColor)
-      +compute(uv+eps.yx*pixelSize, centerColor)
+       compute(uv+eps.xx*pixelSize, uv)
+      +compute(uv+eps.xy*pixelSize, uv)
+      +compute(uv+eps.yy*pixelSize, uv)
+      +compute(uv+eps.yx*pixelSize, uv)
     );
     color = color/4.0;
 
@@ -65,7 +64,7 @@ const std::string mainScalarCode(R"(
   void main(){
     vec2 uv = vPos.xy;
 
-    float scalar = compute(uv);
+    float scalar = compute(uv, uv);
 
     gl_FragDepth = scalar;
   }
@@ -79,10 +78,10 @@ const std::string mainScalarMSAACode(R"(
     vec2 eps = vec2(0.5,-0.5);
 
     float scalar = (
-       compute(uv+eps.xx*pixelSizeHalf)
-      +compute(uv+eps.xy*pixelSizeHalf)
-      +compute(uv+eps.yy*pixelSizeHalf)
-      +compute(uv+eps.yx*pixelSizeHalf)
+       compute(uv+eps.xx*pixelSizeHalf, uv)
+      +compute(uv+eps.xy*pixelSizeHalf, uv)
+      +compute(uv+eps.yy*pixelSizeHalf, uv)
+      +compute(uv+eps.yx*pixelSizeHalf, uv)
     )/4.0;
 
     gl_FragDepth = scalar;
@@ -127,6 +126,43 @@ const std::string computeHalfVectorCode(R"(
   ){
     return normalize(toLight + toView);
   }
+)");
+
+const std::string poissonDisc(R"(
+  const vec2 poissonDisc[32] = vec2[](
+    vec2( -0.94201624,  -0.39906216 ),
+    vec2(  0.94558609,  -0.76890725 ),
+    vec2( -0.094184101, -0.92938870 ),
+    vec2(  0.34495938,   0.29387760 ),
+    vec2( -0.91588581,   0.45771432 ),
+    vec2( -0.81544232,  -0.87912464 ),
+    vec2( -0.38277543,   0.27676845 ),
+    vec2(  0.97484398,   0.75648379 ),
+    vec2(  0.44323325,  -0.97511554 ),
+    vec2(  0.53742981,  -0.47373420 ),
+    vec2( -0.26496911,  -0.41893023 ),
+    vec2(  0.79197514,   0.19090188 ),
+    vec2( -0.24188840,   0.99706507 ),
+    vec2( -0.81409955,   0.91437590 ),
+    vec2(  0.19984126,   0.78641367 ),
+    vec2(  0.14383161,  -0.14100790 ),
+    vec2( -0.44201624,  -0.29906216 ),
+    vec2(  0.94558609,  -0.46890725 ),
+    vec2( -0.194184101, -0.42938870 ),
+    vec2(  0.24495938,   0.99387760 ),
+    vec2( -0.31588581,   0.45771432 ),
+    vec2( -0.81544232,  -0.87912464 ),
+    vec2( -0.08277543,   0.87676845 ),
+    vec2(  0.57484398,   0.55648379 ),
+    vec2(  0.74323325,  -0.27511554 ),
+    vec2(  0.44298431,  -0.47373420 ),
+    vec2( -0.21196911,  -0.22893023 ),
+    vec2(  0.79197514,   0.12020188 ),
+    vec2( -0.11184840,   0.99706507 ),
+    vec2( -0.4309955,   0.111437590 ),
+    vec2(  0.12344126,   0.78641367 ),
+    vec2(  0.2183161,   -0.89100790 )
+  );
 )");
 
 const std::string packFloatCode(R"(
@@ -177,7 +213,8 @@ int ttkCinemaDarkroomShader::FillInputPortInformation(int port,
                                                       vtkInformation *info) {
   if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkImageData");
-    info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkMultiBlockDataSet");
+    info->Append(
+      vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkMultiBlockDataSet");
     return 1;
   }
   return 0;
@@ -227,8 +264,8 @@ std::string
   ttkCinemaDarkroomShader::PerformReplacements(const std::string &source) {
   std::string result = source;
 
-  for(int i=this->Replacements.size()-1; i>=0; i--){
-    const auto& it = this->Replacements[i];
+  for(int i = this->Replacements.size() - 1; i >= 0; i--) {
+    const auto &it = this->Replacements[i];
     boost::replace_all(result, it.first, it.second);
   }
 
@@ -266,9 +303,10 @@ int ttkCinemaDarkroomShader::AddReplacement(const std::string &name,
   return this->AddReplacementText(name, text);
 }
 
-int ttkCinemaDarkroomShader::AddReplacementText(const std::string &name, const std::string &text){
-  this->Replacements.resize(this->Replacements.size()+1);
-  auto& pair = this->Replacements.back();
+int ttkCinemaDarkroomShader::AddReplacementText(const std::string &name,
+                                                const std::string &text) {
+  this->Replacements.resize(this->Replacements.size() + 1);
+  auto &pair = this->Replacements.back();
   pair.first = name;
   pair.second = text;
 
@@ -343,28 +381,27 @@ int ttkCinemaDarkroomShader::InitRenderer(vtkImageData *outputImage) {
   return 1;
 }
 
-int ttkCinemaDarkroomShader::RegisterTextures(vtkImageData *image){
+int ttkCinemaDarkroomShader::RegisterTextures(vtkImageData *image) {
   return 1;
 }
 
-int ttkCinemaDarkroomShader::RegisterReplacements(){
+int ttkCinemaDarkroomShader::RegisterReplacements() {
   this->Replacements.clear();
   auto size = this->RenderWindow->GetSize();
   this->AddReplacement("RESOLUTION", {(double)size[0], (double)size[1]});
   this->AddReplacementText("READ_DEPTH", readDepthCode);
   this->AddReplacementText("COMPUTE_NORMAL", computeNormalCode);
   this->AddReplacementText("COMPUTE_HALF_VECTOR", computeHalfVectorCode);
+  this->AddReplacementText("POISSON_DISC", poissonDisc);
 
-  this->AddReplacementText("MAIN_COLOR", this->UseMSAA ? mainColorMSAACode : mainColorCode);
-  this->AddReplacementText("MAIN_COLOR_MSAA", mainColorMSAACode);
-  this->AddReplacementText("MAIN_SCALAR", this->UseMSAA ? mainScalarMSAACode : mainScalarCode);
-  this->AddReplacementText("MAIN_SCALAR_MSAA", mainScalarMSAACode);
+  this->AddReplacementText(
+    "MAIN_COLOR", this->UseMSAA ? mainColorMSAACode : mainColorCode);
+  this->AddReplacementText(
+    "MAIN_SCALAR", this->UseMSAA ? mainScalarMSAACode : mainScalarCode);
   return 1;
 }
 
-int ttkCinemaDarkroomShader::AddTexture(vtkImageData *image,
-                                        int arrayIdx,
-                                        int textureIdx) {
+int ttkCinemaDarkroomShader::AddTexture(vtkImageData *image, int arrayIdx) {
   int dim[3];
   image->GetDimensions(dim);
 
@@ -375,16 +412,17 @@ int ttkCinemaDarkroomShader::AddTexture(vtkImageData *image,
     return 0;
   }
 
-  std::string textureName = "tex" + std::to_string(textureIdx);
+  std::string textureName = "tex" + std::to_string(arrayIdx);
 
   auto properties = this->FullScreenQuadActor->GetProperty();
-  if(!properties->GetTexture(textureName.data())){
+  if(!properties->GetTexture(textureName.data())) {
     auto texture = vtkSmartPointer<vtkOpenGLTexture>::New();
     texture->InterpolateOn();
     properties->SetTexture(textureName.data(), texture);
   }
 
-  auto texture = static_cast<vtkOpenGLTexture*>(properties->GetTexture(textureName.data()));
+  auto texture = static_cast<vtkOpenGLTexture *>(
+    properties->GetTexture(textureName.data()));
   auto textureObj = vtkSmartPointer<vtkTextureObject>::New();
   textureObj->SetContext(
     vtkOpenGLRenderWindow::SafeDownCast(this->RenderWindow));
@@ -405,7 +443,7 @@ int ttkCinemaDarkroomShader::Render(vtkImageData *image) {
   ttk::Timer timer;
   int dim[3];
   image->GetDimensions(dim);
-  const int nPixels = dim[0]*dim[1];
+  const int nPixels = dim[0] * dim[1];
 
   this->printMsg(
     "Rendering (" + std::to_string(dim[0]) + "x" + std::to_string(dim[1]) + ")",
@@ -414,7 +452,7 @@ int ttkCinemaDarkroomShader::Render(vtkImageData *image) {
   this->RenderWindow->Render();
 
   vtkSmartPointer<vtkDataArray> outputArray;
-  if(this->FloatOutput){
+  if(this->FloatOutput) {
     outputArray = vtkSmartPointer<vtkFloatArray>::New();
     outputArray->SetNumberOfComponents(1);
     outputArray->SetNumberOfTuples(nPixels);
@@ -425,7 +463,8 @@ int ttkCinemaDarkroomShader::Render(vtkImageData *image) {
     outputArray->SetNumberOfComponents(4);
     outputArray->SetNumberOfTuples(nPixels);
     this->RenderWindow->GetRGBACharPixelData(
-      0, 0, dim[0] - 1, dim[1] - 1, 1, vtkUnsignedCharArray::SafeDownCast(outputArray));
+      0, 0, dim[0] - 1, dim[1] - 1, 1,
+      vtkUnsignedCharArray::SafeDownCast(outputArray));
   }
   outputArray->SetName(this->GetOutputName().data());
 
@@ -434,26 +473,27 @@ int ttkCinemaDarkroomShader::Render(vtkImageData *image) {
 
   this->printMsg(
     "Rendering (" + std::to_string(dim[0]) + "x" + std::to_string(dim[1]) + ")",
-    1, timer.getElapsedTime(), 1, ttk::debug::LineMode::NEW, ttk::debug::Priority::DETAIL);
+    1, timer.getElapsedTime(), 1, ttk::debug::LineMode::NEW,
+    ttk::debug::Priority::DETAIL);
 
   return 1;
 }
 
 int ttkCinemaDarkroomShader::RequestData(vtkInformation *request,
-                                      vtkInformationVector **inputVector,
-                                      vtkInformationVector *outputVector) {
+                                         vtkInformationVector **inputVector,
+                                         vtkInformationVector *outputVector) {
 
   // fetch input
   auto input = vtkDataObject::GetData(inputVector[0]);
   auto inputAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
-  if(input->IsA("vtkMultiBlockDataSet")){
+  if(input->IsA("vtkMultiBlockDataSet")) {
     inputAsMB->ShallowCopy(input);
   } else if(input->IsA("vtkImageData")) {
-    inputAsMB->SetBlock(0,input);
+    inputAsMB->SetBlock(0, input);
   }
 
   const size_t nImages = inputAsMB->GetNumberOfBlocks();
-  if(nImages<1)
+  if(nImages < 1)
     return this->printWrn("Empty Input Image Set");
 
   // initialize renderer based on first image
@@ -463,22 +503,25 @@ int ttkCinemaDarkroomShader::RequestData(vtkInformation *request,
   // prepare shaders
   this->RegisterReplacements();
   this->FullScreenQuadActor->GetShaderProperty()->SetVertexShaderCode(
-    this->PerformReplacements(this->GetVertexShaderCode()).data()
-  );
+    this->PerformReplacements(this->GetVertexShaderCode()).data());
   this->FullScreenQuadActor->GetShaderProperty()->SetFragmentShaderCode(
-    this->PerformReplacements(this->GetFragmentShaderCode()).data()
-  );
+    this->PerformReplacements(this->GetFragmentShaderCode()).data());
 
   // compute output
   ttk::Timer timer;
   int dim[3];
   firstImage->GetDimensions(dim);
-  const std::string msg = "Rendering "+std::to_string(nImages)+" (" + std::to_string(dim[0]) + "x" + std::to_string(dim[1]) + ") Images";
-  auto debugLevel = this->debugLevel_==static_cast<int>(ttk::debug::Priority::DETAIL) ? ttk::debug::Priority::VERBOSE : static_cast<ttk::debug::Priority>(this->debugLevel_);
+  const std::string msg = "Rendering " + std::to_string(nImages) + " ("
+                          + std::to_string(dim[0]) + "x"
+                          + std::to_string(dim[1]) + ") Images";
+  auto debugLevel
+    = this->debugLevel_ == static_cast<int>(ttk::debug::Priority::DETAIL)
+        ? ttk::debug::Priority::VERBOSE
+        : static_cast<ttk::debug::Priority>(this->debugLevel_);
 
   this->printMsg(msg, 0, 0, 1, ttk::debug::LineMode::REPLACE, debugLevel);
   auto outputAsMB = vtkSmartPointer<vtkMultiBlockDataSet>::New();
-  for(size_t i=0; i<nImages; i++){
+  for(size_t i = 0; i < nImages; i++) {
     // init output
     auto outputImage = vtkSmartPointer<vtkImageData>::New();
     outputImage->ShallowCopy(inputAsMB->GetBlock(i));
@@ -491,9 +534,12 @@ int ttkCinemaDarkroomShader::RequestData(vtkInformation *request,
     this->Render(outputImage);
 
     // print progress
-    this->printMsg(msg, ((float)i+1)/((float)nImages), timer.getElapsedTime(), 1, ttk::debug::LineMode::REPLACE, debugLevel);
+    this->printMsg(msg, ((float)i + 1) / ((float)nImages),
+                   timer.getElapsedTime(), 1, ttk::debug::LineMode::REPLACE,
+                   debugLevel);
   }
-  this->printMsg(msg, 1, timer.getElapsedTime(), 1, ttk::debug::LineMode::NEW, debugLevel);
+  this->printMsg(
+    msg, 1, timer.getElapsedTime(), 1, ttk::debug::LineMode::NEW, debugLevel);
 
   auto output = vtkDataObject::GetData(outputVector);
   if(output->IsA("vtkMultiBlockDataSet"))

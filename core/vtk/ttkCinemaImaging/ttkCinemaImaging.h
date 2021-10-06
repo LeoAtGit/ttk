@@ -41,20 +41,6 @@ class TTKCINEMAIMAGING_EXPORT ttkCinemaImaging : public ttkAlgorithm {
 private:
   int Backend{0};
 
-  int Resolution[2]{256, 256};
-
-  int ProjectionMode{0};
-
-  bool AutoFocalPoint{true};
-  bool AutoNearFar{true};
-  bool AutoHeight{true};
-
-  double FocalPoint[3]{0, 0, 0};
-  double NearFar[2]{0, 1};
-  double Height{1};
-
-  double Angle{45}; // only used for perpective view
-
 public:
   static ttkCinemaImaging *New();
   vtkTypeMacro(ttkCinemaImaging, ttkAlgorithm);
@@ -62,33 +48,6 @@ public:
   // Backend
   vtkSetMacro(Backend, int);
   vtkGetMacro(Backend, int);
-
-  // General Settings
-  vtkSetVector2Macro(Resolution, int);
-  vtkGetVector2Macro(Resolution, int);
-
-  // Camera
-  vtkSetMacro(ProjectionMode, int);
-  vtkGetMacro(ProjectionMode, int);
-
-  vtkSetMacro(AutoFocalPoint, bool);
-  vtkGetMacro(AutoFocalPoint, bool);
-  vtkSetVector3Macro(FocalPoint, double);
-  vtkGetVector3Macro(FocalPoint, double);
-
-  vtkSetMacro(AutoNearFar, bool);
-  vtkGetMacro(AutoNearFar, bool);
-  vtkSetVector2Macro(NearFar, double);
-  vtkGetVector2Macro(NearFar, double);
-
-  vtkSetMacro(AutoHeight, bool);
-  vtkGetMacro(AutoHeight, bool);
-  vtkSetMacro(Height, double);
-  vtkGetMacro(Height, double);
-
-  // Perspective
-  vtkSetMacro(Angle, double);
-  vtkGetMacro(Angle, double);
 
   static vtkCellArray *GetCells(vtkPointSet *pointSet);
 
@@ -104,11 +63,6 @@ public:
                                    int tupelIdx);
 
   static int ComputeDirFromFocalPoint(vtkPointSet *inputGrid);
-
-  static int EnforceGridData(vtkPointData *fd,
-                            const std::string &name,
-                            int nTuples,
-                            const std::vector<double> &Values);
 
   static int MapPointAndCellData(vtkImageData *outputImage,
 
@@ -129,12 +83,8 @@ protected:
                   vtkInformationVector **inputVector,
                   vtkInformationVector *outputVector) override;
 
-  int RequestDataSingle(vtkMultiBlockDataSet *collection,
+  int RequestDataSingle(vtkMultiBlockDataSet *outputImages,
 
                         vtkPointSet *object,
-                        vtkPointSet *grid,
-                        const std::vector<double> &defaultFocal,
-                        const std::vector<double> &defaultNearFar,
-                        const double defaultHeight,
-                        const double defaultAngle);
+                        vtkPointSet *cameras);
 };

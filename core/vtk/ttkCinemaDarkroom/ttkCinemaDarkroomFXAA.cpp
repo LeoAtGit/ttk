@@ -120,10 +120,12 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution,
     return color;
 }
 
-void main() {
-    vec2 fragCoord = vPos.xy * RESOLUTION;
-    gl_FragColor = fxaa(tex0, fragCoord, RESOLUTION, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);
+vec4 compute(const in vec2 sampleUV, const in vec2 pixelUV){
+  return fxaa(tex0, sampleUV*RESOLUTION, RESOLUTION, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);
 }
+
+MAIN_COLOR
+
   )");
 }
 
@@ -133,7 +135,7 @@ int ttkCinemaDarkroomFXAA::RegisterReplacements() {
 }
 
 int ttkCinemaDarkroomFXAA::RegisterTextures(vtkImageData *image) {
-  if(!this->AddTexture(image, 0, 0))
+  if(!this->AddTexture(image, 0))
     return 0;
   return 1;
 }

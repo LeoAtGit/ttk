@@ -15,20 +15,16 @@ namespace ttk {
     ttkCinemaImagingVTK();
     ~ttkCinemaImagingVTK();
 
-    int RenderVTKObject(vtkMultiBlockDataSet *outputImages,
-
-                        vtkPointSet *inputObject,
-                        vtkPointSet *inputGrid) const;
+    int RenderVTKObject(vtkMultiBlockDataSet *images,
+                        vtkPointSet *object,
+                        vtkPointSet *cameras) const;
 
   protected:
     int setupRenderer(vtkRenderer *renderer,
                       vtkPointSet *object,
                       vtkCamera *camera) const;
 
-    int setupWindow(vtkRenderWindow *window,
-                    vtkRenderer *renderer,
-                    const double resolution[2]) const;
-
+    int setupWindow(vtkRenderWindow *window, vtkRenderer *renderer) const;
     int addValuePass(vtkPointSet *object,
                      int fieldType,
                      vtkRenderPassCollection *valuePassCollection,

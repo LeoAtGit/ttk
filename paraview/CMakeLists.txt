@@ -5,6 +5,13 @@ set(TTK_XMLS             "" CACHE INTERNAL "")
 set(TTK_MODULES          "" CACHE INTERNAL "")
 file(GLOB XML_FILES xmls/*.xml)
 
+file(READ "xmls/widgets/debug_widgets.xml" DEBUG_WIDGETS)
+file(READ "xmls/widgets/topological_compression.xml" TOPOLOGICAL_COMPRESSION_WIDGETS)
+file(READ "xmls/widgets/darkroom_color_mapping.xml" DARKROOM_COLOR_MAPPING_WIDGETS)
+file(READ "xmls/widgets/darkroom_sssao.xml" DARKROOM_SSSAO_WIDGETS)
+file(READ "xmls/widgets/darkroom_shader.xml" DARKROOM_SHADER_WIDGETS)
+file(READ "xmls/widgets/darkroom_msaa.xml" DARKROOM_MSAA_WIDGETS)
+
 foreach(XML_FILE ${XML_FILES})
   get_filename_component(MODULE_NAME ${XML_FILE} NAME_WLE)
   ttk_register_pv_filter(ttk${MODULE_NAME} xmls/${MODULE_NAME}.xml)

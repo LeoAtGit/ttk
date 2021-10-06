@@ -6,19 +6,100 @@
         This source generates a single vertex with point data to represent a camera that can be used for Cinema Darkroom rendering. The source can also be synchronized with the camera of an active view port.
       </Documentation>
 
-      <DoubleVectorProperty name="Position" command="SetPosition" number_of_elements="3" default_values="1 1 1">
+      <InputProperty name="Position" port_index="0" command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources" />
+          <Group name="filters" />
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkDataObject" />
+        </DataTypeDomain>
+        <Documentation>vtkDataObject TODO.</Documentation>
+        <Hints>
+          <Optional />
+        </Hints>
+      </InputProperty>
+
+      <InputProperty name="Near Far Bounding Box" port_index="1" command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources" />
+          <Group name="filters" />
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkDataObject" />
+        </DataTypeDomain>
+        <Documentation>vtkDataObject TODO.</Documentation>
+        <Hints>
+          <Optional />
+        </Hints>
+      </InputProperty>
+
+      <InputProperty name="Focus Object" port_index="2" command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources" />
+          <Group name="filters" />
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkDataObject" />
+        </DataTypeDomain>
+        <Documentation>vtkDataObject TODO.</Documentation>
+        <Hints>
+          <Optional />
+        </Hints>
+      </InputProperty>
+
+      <IntVectorProperty name="Resolution" command="SetResolution" number_of_elements="2" default_values="256 256">
+        <Documentation>Pixel Resolution of the Camera.</Documentation>
+      </IntVectorProperty>
+      <DoubleVectorProperty name="PositionVec" label="Position" command="SetPosition" number_of_elements="3" default_values="0 0 0">
         <Documentation>Camera Position.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Position" value="null"/>
+        </Hints>
       </DoubleVectorProperty>
-      <DoubleVectorProperty name="Up" command="SetUp" number_of_elements="3" default_values="0 0 1">
+      <DoubleVectorProperty name="Up" command="SetUp" number_of_elements="3" default_values="0 1 0">
         <Documentation>Camera Up-Vector.</Documentation>
       </DoubleVectorProperty>
-      <DoubleVectorProperty name="FocalPoint" command="SetFocalPoint" number_of_elements="3" default_values="0 0 0">
-        <Documentation>Camera Focal Point.</Documentation>
+      <DoubleVectorProperty name="Direction" command="SetDirection" number_of_elements="3" default_values="0 0 -1">
+        <Documentation>Camera Direction.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Focus Object" value="null"/>
+        </Hints>
       </DoubleVectorProperty>
 
-      <Property name="SyncCamera" command="SyncWithParaViewCamera" panel_widget="command_button">
-        <Documentation>Synchronize parameters with Camera of active ParaView renderview.</Documentation>
+      <DoubleVectorProperty name="NearFar" command="SetNearFar" number_of_elements="2" default_values="0.01 1">
+        <Documentation>Camera Near Far.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Near Far Bounding Box" value="null"/>
+        </Hints>
+      </DoubleVectorProperty>
+
+      <IntVectorProperty name="Orthographic" command="SetOrthographic" number_of_elements="1" default_values="1">
+        <BooleanDomain name="bool" />
+        <Documentation>Use Orthographic Projection.</Documentation>
+      </IntVectorProperty>
+      <DoubleVectorProperty name="Angle" command="SetAngle" number_of_elements="1" default_values="90">
+        <Documentation>Camera View Angle (Perspective Projection Only).</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Orthographic" value="0" />
+        </Hints>
+      </DoubleVectorProperty>
+      <DoubleVectorProperty name="Scale" command="SetScale" number_of_elements="1" default_values="1">
+        <Documentation>Camera Scale Factor (Orthographic Projection Only).</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Orthographic" value="1" />
+        </Hints>
+      </DoubleVectorProperty>
+
+      <Property name="SyncParaViewCamera" label="Sync ParaView Camera" command="SyncParaViewCamera" panel_widget="command_button">
+        <Documentation>Synchronize the active ParaView camera with the active Darkroom camera.</Documentation>
       </Property>
+      <Property name="SyncDarkroomCamera" command="SyncDarkroomCamera" panel_widget="command_button">
+        <Documentation>Synchronize the active Darkroom camera with the active ParaView camera.</Documentation>
+      </Property>
+
+      <OutputPort name="Camera" index="0" id="port0"/>
+      <OutputPort name="Frustum" index="1" id="port1"/>
 
       ${DEBUG_WIDGETS}
 
@@ -113,48 +194,7 @@
         <Documentation>The array that contains the scalar values that going to be mapped to color.</Documentation>
       </StringVectorProperty>
 
-      <IntVectorProperty name="ColorMap" command="SetColorMap" number_of_elements="1" default_values="-3">
-        <EnumerationDomain name="enum">
-          <Entry value="-3" text="ParaView" />
-          <Entry value="-2" text="Manual" />
-          <Entry value="-1" text="Single" />
-          <Entry value="0" text="R2B_EX" /><Entry value="1" text="Accent" /><Entry value="2" text="Blues" /><Entry value="3" text="BrBG" /><Entry value="4" text="BuGn" /><Entry value="5" text="BuPu" /><Entry value="6" text="Dark2" /><Entry value="7" text="GnBu" /><Entry value="8" text="Greens" /><Entry value="9" text="Greys" /><Entry value="10" text="OrRd" /><Entry value="11" text="Oranges" /><Entry value="12" text="PRGn" /><Entry value="13" text="Paired" /><Entry value="14" text="Pastel1" /><Entry value="15" text="Pastel2" /><Entry value="16" text="PiYG" /><Entry value="17" text="PuBu" /><Entry value="18" text="PuBuGn" /><Entry value="19" text="PuOr" /><Entry value="20" text="PuRd" /><Entry value="21" text="Purples" /><Entry value="22" text="RdBu" /><Entry value="23" text="RdGy" /><Entry value="24" text="RdPu" /><Entry value="25" text="RdYlBu" /><Entry value="26" text="RdYlGn" /><Entry value="27" text="Reds" /><Entry value="28" text="Set1" /><Entry value="29" text="Set2" /><Entry value="30" text="Set3" /><Entry value="31" text="Spectral" /><Entry value="32" text="YlGn" /><Entry value="33" text="YlGnBu" /><Entry value="34" text="YlOrBr" /><Entry value="35" text="YlOrRd" /><Entry value="36" text="autumn" /><Entry value="37" text="binary" /><Entry value="38" text="bone" /><Entry value="39" text="cool" /><Entry value="40" text="copper" /><Entry value="41" text="flag" /><Entry value="42" text="gist_earth" /><Entry value="43" text="gist_gray" /><Entry value="44" text="gist_heat" /><Entry value="45" text="gist_ncar" /><Entry value="46" text="gist_rainbow" /><Entry value="47" text="gist_stern" /><Entry value="48" text="gist_yarg" /><Entry value="49" text="gray" /><Entry value="50" text="hot" />
-        </EnumerationDomain>
-        <Documentation>This option controls if the filter uses a single color, a manually defined color map, or any predefined color map for the mapping.</Documentation>
-      </IntVectorProperty>
-
-      <DoubleVectorProperty name="NANColor" label="NAN Color" command="SetNANColor" number_of_elements="3" default_values="0 0 0" panel_widget="color_selector">
-        <Documentation>The color that is used for Not-A-Number values.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" inverse="1" property="ColorMap" value="-3" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <IntVectorProperty name="TransparentNAN" label="Transparent NAN" command="SetTransparentNAN" number_of_elements="1" default_values="1">
-        <BooleanDomain name="bool" />
-        <Documentation>Determines if the alpha values of nan scalars are 0 or 1.</Documentation>
-      </IntVectorProperty>
-
-      <DoubleVectorProperty name="SingleColor" command="SetSingleColor" number_of_elements="3" default_values="0 0 0" panel_widget="color_selector">
-        <Documentation>The color that is going to be used for fixed color mapping.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="ColorMap" value="-1" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <StringVectorProperty name="ColorMapData" command="SetColorMapData" number_of_elements="1" default_values="0,0,0,0,1,1,1,1">
-        <Documentation>The manually defined color map in the from of a list of quadruples with normalized float values between 0 and 1: x0,r0,g0,b0, x1,r1,g1,b1, ...</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="ColorMap" value="-2" />
-        </Hints>
-      </StringVectorProperty>
-
-      <DoubleVectorProperty name="ScalarRange" command="SetScalarRange" number_of_elements="2" default_values="0 1">
-        <Documentation>Range of the Scalar Values.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" inverse="1" property="ColorMap" value="-3" />
-        </Hints>
-      </DoubleVectorProperty>
+      ${DARKROOM_COLOR_MAPPING_WIDGETS}
 
       ${DEBUG_WIDGETS}
 
@@ -203,6 +243,8 @@
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>Factor that controls self-shadowing.</Documentation>
       </DoubleVectorProperty>
+
+      ${DARKROOM_MSAA_WIDGETS}
 
       ${DEBUG_WIDGETS}
 
@@ -256,6 +298,8 @@
         <Documentation>Factor that controls self-shadowing.</Documentation>
       </DoubleVectorProperty>
 
+      ${DARKROOM_MSAA_WIDGETS}
+
       ${DEBUG_WIDGETS}
 
       <Hints>
@@ -290,7 +334,7 @@
         <Documentation>A vtkImageData object.</Documentation>
       </InputProperty>
 
-      <StringVectorProperty name="Color" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
+      <StringVectorProperty name="Albedo" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
         <ArrayListDomain attribute_type="Scalars" name="array_list">
           <RequiredProperties>
             <Property function="Input" name="Input" />
@@ -319,14 +363,16 @@
         <DoubleRangeDomain name="range" min="0" max="10000" />
         <Documentation>Strength of the silhouette effect.</Documentation>
       </DoubleVectorProperty>
-      <DoubleVectorProperty name="Luminance" command="SetLuminance" number_of_elements="1" default_values="1">
+      <DoubleVectorProperty name="Diffuse" command="SetDiffuse" number_of_elements="1" default_values="1">
         <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Luminance factor.</Documentation>
+        <Documentation>Diffuse Light Factor.</Documentation>
       </DoubleVectorProperty>
       <DoubleVectorProperty name="Ambient" command="SetAmbient" number_of_elements="1" default_values="0.2">
         <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Ambient light factor.</Documentation>
+        <Documentation>Ambient Light Factor.</Documentation>
       </DoubleVectorProperty>
+
+      ${DARKROOM_MSAA_WIDGETS}
 
       ${DEBUG_WIDGETS}
 
@@ -398,10 +444,8 @@
         <DoubleRangeDomain name="range" min="0" max="200" />
         <Documentation>Shininess.</Documentation>
       </DoubleVectorProperty>
-      <IntVectorProperty name="UseMSAA" label="Use MSAA" command="SetUseMSAA" number_of_elements="1" default_values="1">
-        <BooleanDomain name="bool" />
-        <Documentation>Enables/Disables 4xMSAA.</Documentation>
-      </IntVectorProperty>
+
+      ${DARKROOM_MSAA_WIDGETS}
 
       ${DEBUG_WIDGETS}
 
@@ -456,18 +500,8 @@
         <Documentation>The array that contains ambient occlusion values.</Documentation>
       </StringVectorProperty>
 
-      <DoubleVectorProperty name="Ambient" command="SetAmbient" number_of_elements="1" default_values="0.1">
-        <DoubleRangeDomain name="range" min="0" max="1" />
-        <Documentation>Ambient.</Documentation>
-      </DoubleVectorProperty>
-      <DoubleVectorProperty name="AOFactor" label="AO" command="SetAO" number_of_elements="1" default_values="0.4">
-        <DoubleRangeDomain name="range" min="0" max="1" />
-        <Documentation>AO.</Documentation>
-      </DoubleVectorProperty>
-      <DoubleVectorProperty name="Diffuse" command="SetDiffuse" number_of_elements="1" default_values="2.0">
-        <DoubleRangeDomain name="range" min="0" max="5" />
-        <Documentation>Diffuse.</Documentation>
-      </DoubleVectorProperty>
+      ${DARKROOM_SHADER_WIDGETS}
+
       <DoubleVectorProperty name="Metallic" command="SetMetallic" number_of_elements="1" default_values="0.1">
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>Metallic.</Documentation>
@@ -476,10 +510,8 @@
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>Roughness.</Documentation>
       </DoubleVectorProperty>
-      <IntVectorProperty name="UseMSAA" label="Use MSAA" command="SetUseMSAA" number_of_elements="1" default_values="1">
-        <BooleanDomain name="bool" />
-        <Documentation>Enables/Disables 4xMSAA.</Documentation>
-      </IntVectorProperty>
+
+      ${DARKROOM_MSAA_WIDGETS}
 
       ${DEBUG_WIDGETS}
 
@@ -524,6 +556,8 @@
         <Documentation>The array that contains color values.</Documentation>
       </StringVectorProperty>
 
+      ${DARKROOM_MSAA_WIDGETS}
+
       ${DEBUG_WIDGETS}
 
       <Hints>
@@ -557,7 +591,16 @@
         <Documentation>A vtkImageData object.</Documentation>
       </InputProperty>
 
-      <StringVectorProperty name="Color" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
+      <StringVectorProperty name="Depth" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
+        <ArrayListDomain attribute_type="Scalars" name="array_list">
+          <RequiredProperties>
+            <Property function="Input" name="Input" />
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>The array that contains depth values.</Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty name="Color" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
         <ArrayListDomain name="array_list">
           <RequiredProperties>
             <Property function="Input" name="Input" />
@@ -566,56 +609,24 @@
         <Documentation>The array that contains color values.</Documentation>
       </StringVectorProperty>
 
-      <StringVectorProperty name="Depth" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
-        <ArrayListDomain attribute_type="Scalars" name="array_list">
-          <RequiredProperties>
-            <Property function="Input" name="Input" />
-          </RequiredProperties>
-        </ArrayListDomain>
-        <Documentation>The array that contains depth values.</Documentation>
-      </StringVectorProperty>
-
       <DoubleVectorProperty name="Radius" command="SetRadius" number_of_elements="1" default_values="0.05">
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>The radius used for depth samplings defined as a fraction of the image height.</Documentation>
       </DoubleVectorProperty>
-      <DoubleVectorProperty name="Aperture" command="SetAperture" number_of_elements="1" default_values="1">
+      <DoubleVectorProperty name="Aperture" command="SetAperture" number_of_elements="1" default_values="0.1">
         <DoubleRangeDomain name="range" min="0" max="4" />
         <Documentation>Size of the aperture.</Documentation>
       </DoubleVectorProperty>
-      <DoubleVectorProperty name="FocalDepth" command="SetFocalDepth" number_of_elements="1" default_values="1">
+      <DoubleVectorProperty name="FocalDepth" command="SetFocalDepth" number_of_elements="1" default_values="0.5">
         <DoubleRangeDomain name="range" min="0" max="1" />
         <Documentation>Depth value that is completely in focus.</Documentation>
       </DoubleVectorProperty>
-      <DoubleVectorProperty name="MaxBlur" command="SetMaxBlur" number_of_elements="1" default_values="1">
+      <DoubleVectorProperty name="MaxBlur" command="SetMaxBlur" number_of_elements="1" default_values="0.5">
         <DoubleRangeDomain name="range" min="0" max="2" />
         <Documentation>Maximum depth blur.</Documentation>
       </DoubleVectorProperty>
 
-      ${DEBUG_WIDGETS}
-
-      <Hints>
-        <ShowInMenu category="TTK - Cinema" />
-      </Hints>
-    </SourceProxy>
-
-    <!-- ////////////////////////////////////////////////////////////////////-->
-
-    <SourceProxy name="ttkCinemaDarkroomNoise" class="ttkCinemaDarkroomNoise" label="TTK Darkroom Noise">
-      <Documentation long_help="Cinema Darkroom Noise" short_help="Cinema Darkroom Noise">
-        This filters generates noise of different types.
-      </Documentation>
-
-      <InputProperty name="Input" command="SetInputConnection">
-        <ProxyGroupDomain name="groups">
-          <Group name="sources" />
-          <Group name="filters" />
-        </ProxyGroupDomain>
-        <DataTypeDomain name="input_type">
-          <DataType value="vtkImageData" />
-        </DataTypeDomain>
-        <Documentation>A vtkImageData object.</Documentation>
-      </InputProperty>
+      ${DARKROOM_MSAA_WIDGETS}
 
       ${DEBUG_WIDGETS}
 
@@ -626,153 +637,9 @@
 
     <!-- ////////////////////////////////////////////////////////////////////-->
 
-    <SourceProxy name="ttkCinemaDarkroomIBS" class="ttkCinemaDarkroomIBS" label="TTK Darkroom IBS">
-      <Documentation long_help="Cinema Darkroom Image Based Shading" short_help="Cinema Darkroom Image Based Shading">
-        This filters computes Image Based Shading based on a depth, diffuse, and ambient occlusion buffer.
-
-        "Dynamic Nested Tracking Graphs".
-        J. Lukasczyk, C. Garth, G. H. Weber, T. Biedert, R. Maciejewski, H. Leitte.
-        IEEE Transactions on Visualization and Computer Graphics. 2019
-
-        "Cinema Darkroom: A Deferred Rendering Framework for Large-Scale Datasets".
-        J. Lukasczyk, C. Garth, M. Larsen, W. Engelke, I. Hotz, D. Rogers, J. Ahrens, and R. Maciejewski.
-        IEEE 10th Symposium on Large Data Analysis and Visualization (LDAV). 2020.
-      </Documentation>
-
-      <InputProperty name="Input" command="SetInputConnection">
-        <ProxyGroupDomain name="groups">
-          <Group name="sources" />
-          <Group name="filters" />
-        </ProxyGroupDomain>
-        <DataTypeDomain name="input_type">
-          <DataType value="vtkImageData" />
-        </DataTypeDomain>
-        <InputArrayDomain name="input_array" attribute_type="point" />
-        <Documentation>A vtkImageData object.</Documentation>
-      </InputProperty>
-
-      <StringVectorProperty name="Color" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
-        <ArrayListDomain attribute_type="Scalars" name="array_list">
-          <RequiredProperties>
-            <Property function="Input" name="Input" />
-          </RequiredProperties>
-        </ArrayListDomain>
-        <Documentation>The array that contains diffuse values.</Documentation>
-      </StringVectorProperty>
-      <StringVectorProperty name="Depth" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
-        <ArrayListDomain attribute_type="Scalars" name="array_list">
-          <RequiredProperties>
-            <Property function="Input" name="Input" />
-          </RequiredProperties>
-        </ArrayListDomain>
-        <Documentation>The array that contains depth values.</Documentation>
-      </StringVectorProperty>
-      <StringVectorProperty name="AO" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="2">
-        <ArrayListDomain attribute_type="Scalars" name="array_list">
-          <RequiredProperties>
-            <Property function="Input" name="Input" />
-          </RequiredProperties>
-        </ArrayListDomain>
-        <Documentation>The array that contains ambient occlusion values.</Documentation>
-      </StringVectorProperty>
-
-      <DoubleVectorProperty name="Strength" command="SetStrength" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="10000" />
-        <Documentation>Strength of the silhouette effect.</Documentation>
-      </DoubleVectorProperty>
-      <DoubleVectorProperty name="Luminance" command="SetLuminance" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Luminance factor.</Documentation>
-      </DoubleVectorProperty>
-      <DoubleVectorProperty name="Ambient" command="SetAmbient" number_of_elements="1" default_values="0.2">
-        <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Ambient light factor.</Documentation>
-      </DoubleVectorProperty>
-
-      ${DEBUG_WIDGETS}
-
-      <Hints>
-        <ShowInMenu category="TTK - Cinema" />
-      </Hints>
-    </SourceProxy>
-
-    <!-- ////////////////////////////////////////////////////////////////////-->
-
-    <SourceProxy name="ttkCinemaDarkroomIBS" class="ttkCinemaDarkroomIBS" label="TTK Darkroom IBS">
-      <Documentation long_help="Cinema Darkroom Image Based Shading" short_help="Cinema Darkroom Image Based Shading">
-        This filters computes Image Based Shading based on a depth, diffuse, and ambient occlusion buffer.
-
-        "Dynamic Nested Tracking Graphs".
-        J. Lukasczyk, C. Garth, G. H. Weber, T. Biedert, R. Maciejewski, H. Leitte.
-        IEEE Transactions on Visualization and Computer Graphics. 2019
-
-        "Cinema Darkroom: A Deferred Rendering Framework for Large-Scale Datasets".
-        J. Lukasczyk, C. Garth, M. Larsen, W. Engelke, I. Hotz, D. Rogers, J. Ahrens, and R. Maciejewski.
-        IEEE 10th Symposium on Large Data Analysis and Visualization (LDAV). 2020.
-      </Documentation>
-
-      <InputProperty name="Input" command="SetInputConnection">
-        <ProxyGroupDomain name="groups">
-          <Group name="sources" />
-          <Group name="filters" />
-        </ProxyGroupDomain>
-        <DataTypeDomain name="input_type">
-          <DataType value="vtkImageData" />
-        </DataTypeDomain>
-        <InputArrayDomain name="input_array" attribute_type="point" />
-        <Documentation>A vtkImageData object.</Documentation>
-      </InputProperty>
-
-      <StringVectorProperty name="Color" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
-        <ArrayListDomain attribute_type="Scalars" name="array_list">
-          <RequiredProperties>
-            <Property function="Input" name="Input" />
-          </RequiredProperties>
-        </ArrayListDomain>
-        <Documentation>The array that contains diffuse values.</Documentation>
-      </StringVectorProperty>
-      <StringVectorProperty name="Depth" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
-        <ArrayListDomain attribute_type="Scalars" name="array_list">
-          <RequiredProperties>
-            <Property function="Input" name="Input" />
-          </RequiredProperties>
-        </ArrayListDomain>
-        <Documentation>The array that contains depth values.</Documentation>
-      </StringVectorProperty>
-      <StringVectorProperty name="AO" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="2">
-        <ArrayListDomain attribute_type="Scalars" name="array_list">
-          <RequiredProperties>
-            <Property function="Input" name="Input" />
-          </RequiredProperties>
-        </ArrayListDomain>
-        <Documentation>The array that contains ambient occlusion values.</Documentation>
-      </StringVectorProperty>
-
-      <DoubleVectorProperty name="Strength" command="SetStrength" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="10000" />
-        <Documentation>Strength of the silhouette effect.</Documentation>
-      </DoubleVectorProperty>
-      <DoubleVectorProperty name="Luminance" command="SetLuminance" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Luminance factor.</Documentation>
-      </DoubleVectorProperty>
-      <DoubleVectorProperty name="Ambient" command="SetAmbient" number_of_elements="1" default_values="0.2">
-        <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Ambient light factor.</Documentation>
-      </DoubleVectorProperty>
-
-      ${DEBUG_WIDGETS}
-
-      <Hints>
-        <ShowInMenu category="TTK - Cinema" />
-      </Hints>
-    </SourceProxy>
-
-    <!-- ////////////////////////////////////////////////////////////////////-->
-
-    <SourceProxy name="ttkCinemaDarkroomShading" class="ttkCinemaDarkroomShading" label="TTK Darkroom Shading">
-      <Documentation long_help="Cinema Darkroom Image Based Shading" short_help="Cinema Darkroom Image Based Shading">
-        This filter is a combination of the ttkCinemaDarkroomColorMapping, ttkCinemaDarkroomSSSAO, ttkCinemaDarkroomIBS,a nd ttkCinemaDarkroomFXAA shader.
+    <SourceProxy name="ttkCinemaDarkroomMaster" class="ttkCinemaDarkroomMaster" label="TTK Darkroom Master">
+      <Documentation long_help="Cinema Darkroom Master" short_help="Cinema Darkroom Master">
+        This filter is a combination of many ttkCinemaDarkroom shaders to provide an all-in-one image-based rendering solution.
 
         "Cinema Darkroom: A Deferred Rendering Framework for Large-Scale Datasets".
         J. Lukasczyk, C. Garth, M. Larsen, W. Engelke, I. Hotz, D. Rogers, J. Ahrens, and R. Maciejewski.
@@ -791,7 +658,16 @@
         <Documentation>A vtkImageData object.</Documentation>
       </InputProperty>
 
-      <StringVectorProperty name="Scalars" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
+      <StringVectorProperty name="Depth" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="0">
+        <ArrayListDomain attribute_type="Scalars" name="array_list">
+          <RequiredProperties>
+            <Property function="Input" name="Input" />
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>The array that contains depth values.</Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty name="Scalars" command="SetInputArrayToProcess" element_types="0 0 0 0 2" number_of_elements="5" default_values="1">
         <ArrayListDomain attribute_type="Scalars" name="array_list">
           <RequiredProperties>
             <Property function="Input" name="Input" />
@@ -800,150 +676,153 @@
         <Documentation>The array that contains scalar values.</Documentation>
       </StringVectorProperty>
 
-      <!-- Color Mapping -->
-      <IntVectorProperty name="ColorMap" command="SetColorMap" number_of_elements="1" default_values="-3">
+      <IntVectorProperty name="Shader" command="SetShader" number_of_elements="1" animateable="0" default_values="1">
         <EnumerationDomain name="enum">
-          <Entry value="-3" text="ParaView" />
-          <Entry value="-2" text="Manual" />
-          <Entry value="-1" text="Single" />
-          <Entry value="0" text="R2B_EX" /><Entry value="1" text="Accent" /><Entry value="2" text="Blues" /><Entry value="3" text="BrBG" /><Entry value="4" text="BuGn" /><Entry value="5" text="BuPu" /><Entry value="6" text="Dark2" /><Entry value="7" text="GnBu" /><Entry value="8" text="Greens" /><Entry value="9" text="Greys" /><Entry value="10" text="OrRd" /><Entry value="11" text="Oranges" /><Entry value="12" text="PRGn" /><Entry value="13" text="Paired" /><Entry value="14" text="Pastel1" /><Entry value="15" text="Pastel2" /><Entry value="16" text="PiYG" /><Entry value="17" text="PuBu" /><Entry value="18" text="PuBuGn" /><Entry value="19" text="PuOr" /><Entry value="20" text="PuRd" /><Entry value="21" text="Purples" /><Entry value="22" text="RdBu" /><Entry value="23" text="RdGy" /><Entry value="24" text="RdPu" /><Entry value="25" text="RdYlBu" /><Entry value="26" text="RdYlGn" /><Entry value="27" text="Reds" /><Entry value="28" text="Set1" /><Entry value="29" text="Set2" /><Entry value="30" text="Set3" /><Entry value="31" text="Spectral" /><Entry value="32" text="YlGn" /><Entry value="33" text="YlGnBu" /><Entry value="34" text="YlOrBr" /><Entry value="35" text="YlOrRd" /><Entry value="36" text="autumn" /><Entry value="37" text="binary" /><Entry value="38" text="bone" /><Entry value="39" text="cool" /><Entry value="40" text="copper" /><Entry value="41" text="flag" /><Entry value="42" text="gist_earth" /><Entry value="43" text="gist_gray" /><Entry value="44" text="gist_heat" /><Entry value="45" text="gist_ncar" /><Entry value="46" text="gist_rainbow" /><Entry value="47" text="gist_stern" /><Entry value="48" text="gist_yarg" /><Entry value="49" text="gray" /><Entry value="50" text="hot" />
+          <Entry value="0" text="IBS"/>
+          <Entry value="1" text="PBR"/>
+          <Entry value="2" text="Phong"/>
         </EnumerationDomain>
-        <Documentation>This option controls if the filter uses a single color, a manually defined color map, or any predefined color map for the mapping.</Documentation>
+        <Documentation>Shader.</Documentation>
       </IntVectorProperty>
 
-      <DoubleVectorProperty name="NANColor" label="NAN Color" command="SetNANColor" number_of_elements="3" default_values="0 0 0" panel_widget="color_selector">
-        <Documentation>The color that is used for Not-A-Number values.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" inverse="1" property="ColorMap" value="-3" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="SingleColor" command="SetSingleColor" number_of_elements="3" default_values="0 0 0" panel_widget="color_selector">
-        <Documentation>The color that is going to be used for fixed color mapping.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="ColorMap" value="-1" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <StringVectorProperty name="ColorMapData" command="SetColorMapData" number_of_elements="1" default_values="0,0,0,0,1,1,1,1">
-        <Documentation>The manually defined color map in the from of a list of quadruples with normalized float values between 0 and 1: x0,r0,g0,b0, x1,r1,g1,b1, ...</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="ColorMap" value="-2" />
-        </Hints>
-      </StringVectorProperty>
-
-      <DoubleVectorProperty name="ScalarRange" command="SetScalarRange" number_of_elements="2" default_values="0 1">
-        <Documentation>Range of the Scalar Values.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" inverse="1" property="ColorMap" value="-3" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <!--SSSAO-->
-      <IntVectorProperty name="Samples" command="SetSamples" number_of_elements="1" default_values="32">
-        <IntRangeDomain name="range" min="1" max="1000" />
-        <Documentation>Number of depth samples.</Documentation>
-      </IntVectorProperty>
-
-      <DoubleVectorProperty name="Radius" command="SetRadius" number_of_elements="1" default_values="0.05">
-        <DoubleRangeDomain name="range" min="0" max="1" />
-        <Documentation>The radius used for depth sampling defined as a fraction of the image height.</Documentation>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="DiffArea" command="SetDiffArea" number_of_elements="1" default_values="0.5">
-        <DoubleRangeDomain name="range" min="0" max="1" />
-        <Documentation>Factor that controls self-shadowing.</Documentation>
-      </DoubleVectorProperty>
-
-      <!--IBS-->
-      <DoubleVectorProperty name="Strength" command="SetStrength" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="10000" />
-        <Documentation>Strength of the silhouette effect.</Documentation>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="Luminance" command="SetLuminance" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Luminance factor.</Documentation>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="Ambient" command="SetAmbient" number_of_elements="1" default_values="0.2">
-        <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Ambient light factor.</Documentation>
-      </DoubleVectorProperty>
-
-      <!-- DoF Parameters -->
-      <IntVectorProperty name="UseSSDoF" label="Use SSDoF" command="SetUseSSDoF" number_of_elements="1" default_values="0">
-        <BooleanDomain name="bool" />
-        <Documentation>Enables/Disables Screen Space Depth-of-Field.</Documentation>
-      </IntVectorProperty>
-
-      <DoubleVectorProperty name="DepthRadius" command="SetDepthRadius" number_of_elements="1" default_values="0.05">
-        <DoubleRangeDomain name="range" min="0" max="1" />
-        <Documentation>The radius used for depth samplings defined as a fraction of the image height.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="Aperture" command="SetAperture" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="4" />
-        <Documentation>Size of the aperture.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="FocalDepth" command="SetFocalDepth" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="1" />
-        <Documentation>Depth value that is completely in focus.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="MaxBlur" command="SetMaxBlur" number_of_elements="1" default_values="1">
-        <DoubleRangeDomain name="range" min="0" max="2" />
-        <Documentation>Maximum depth blur.</Documentation>
-        <Hints>
-          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />
-        </Hints>
-      </DoubleVectorProperty>
-
-      <!-- FXAA Parameters -->
-      <IntVectorProperty name="UseFXAA" label="Use FXAA" command="SetUseFXAA" number_of_elements="1" default_values="1">
-        <BooleanDomain name="bool" />
-        <Documentation>Enables/Disables Fast Approximate Anti-Aliasing.</Documentation>
-      </IntVectorProperty>
-
-      <PropertyGroup panel_widget="Line" label="Input Options">
-        <Property name="Scalars" />
-      </PropertyGroup>
-
+      ${DARKROOM_COLOR_MAPPING_WIDGETS}
       <PropertyGroup panel_widget="Line" label="Color Mapping">
         <Property name="ColorMap" />
         <Property name="ColorMapData" />
         <Property name="SingleColor" />
         <Property name="NANColor" />
         <Property name="ScalarRange" />
+        <Property name="TransparentNAN" />
       </PropertyGroup>
 
-      <PropertyGroup panel_widget="Line" label="SSSAO + IBS Parameters">
+      ${DARKROOM_SSSAO_WIDGETS}
+      <PropertyGroup panel_widget="Line" label="SSSAO">
         <Property name="Samples" />
         <Property name="Radius" />
         <Property name="DiffArea" />
-        <Property name="Strength" />
-        <Property name="Luminance" />
+      </PropertyGroup>
+
+      <!-- General Shader Parameters -->
+      ${DARKROOM_SHADER_WIDGETS}
+
+      <!--IBS-->
+      <DoubleVectorProperty name="Strength" command="SetStrength" number_of_elements="1" default_values="1">
+        <DoubleRangeDomain name="range" min="0" max="10000" />
+        <Documentation>Strength of the silhouette effect.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Shader" value="0" />
+        </Hints>
+      </DoubleVectorProperty>
+
+      <!--PBR-->
+      <DoubleVectorProperty name="Metallic" command="SetMetallic" number_of_elements="1" default_values="0.1">
+        <DoubleRangeDomain name="range" min="0" max="1" />
+        <Documentation>Metallic.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Shader" value="1" />
+        </Hints>
+      </DoubleVectorProperty>
+      <DoubleVectorProperty name="Roughness" command="SetRoughness" number_of_elements="1" default_values="0.1">
+        <DoubleRangeDomain name="range" min="0" max="1" />
+        <Documentation>Roughness.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Shader" value="1" />
+        </Hints>
+      </DoubleVectorProperty>
+
+      <!--Phong-->
+      <DoubleVectorProperty name="Specular" command="SetSpecular" number_of_elements="1" default_values="1.0">
+        <DoubleRangeDomain name="range" min="0" max="1" />
+        <Documentation>Shininess.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Shader" value="2" />
+        </Hints>
+      </DoubleVectorProperty>
+      <DoubleVectorProperty name="Exponent" command="SetExponent" number_of_elements="1" default_values="100">
+        <DoubleRangeDomain name="range" min="0" max="200" />
+        <Documentation>Shininess.</Documentation>
+        <Hints>
+          <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="Shader" value="2" />
+        </Hints>
+      </DoubleVectorProperty>
+
+      ${DARKROOM_MSAA_WIDGETS}
+
+      <IntVectorProperty name="UseFXAA" label="Use FXAA" command="SetUseFXAA" number_of_elements="1" default_values="1">
+        <BooleanDomain name="bool" />
+        <Documentation>Enables/Disables Fast Approximate Anti-Aliasing.</Documentation>
+      </IntVectorProperty>
+
+      <PropertyGroup panel_widget="Line" label="Rendering">
+        <Property name="Shader" />
+        <Property name="Diffuse" />
         <Property name="Ambient" />
+        <Property name="AOFactor" />
+        <Property name="Strength" />
+        <Property name="Metallic" />
+        <Property name="Roughness" />
+        <Property name="Specular" />
+        <Property name="Exponent" />
+        <Property name="UseMSAA" />
         <Property name="UseFXAA" />
       </PropertyGroup>
 
-      <PropertyGroup panel_widget="Line" label="DoF Parameters">
-        <Property name="UseSSDoF" />
-        <Property name="DepthRadius" />
-        <Property name="Aperture" />
-        <Property name="FocalDepth" />
-        <Property name="MaxBlur" />
-      </PropertyGroup>
+      <!-- DoF Parameters -->
+      <!--<IntVectorProperty name="UseSSDoF" label="Use SSDoF" command="SetUseSSDoF" number_of_elements="1" default_values="0">-->
+      <!--  <BooleanDomain name="bool" />-->
+      <!--  <Documentation>Enables/Disables Screen Space Depth-of-Field.</Documentation>-->
+      <!--</IntVectorProperty>-->
+
+      <!--<DoubleVectorProperty name="DepthRadius" command="SetDepthRadius" number_of_elements="1" default_values="0.05">-->
+      <!--  <DoubleRangeDomain name="range" min="0" max="1" />-->
+      <!--  <Documentation>The radius used for depth samplings defined as a fraction of the image height.</Documentation>-->
+      <!--  <Hints>-->
+      <!--    <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />-->
+      <!--  </Hints>-->
+      <!--</DoubleVectorProperty>-->
+
+      <!--<DoubleVectorProperty name="Aperture" command="SetAperture" number_of_elements="1" default_values="1">-->
+      <!--  <DoubleRangeDomain name="range" min="0" max="4" />-->
+      <!--  <Documentation>Size of the aperture.</Documentation>-->
+      <!--  <Hints>-->
+      <!--    <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />-->
+      <!--  </Hints>-->
+      <!--</DoubleVectorProperty>-->
+
+      <!--<DoubleVectorProperty name="FocalDepth" command="SetFocalDepth" number_of_elements="1" default_values="1">-->
+      <!--  <DoubleRangeDomain name="range" min="0" max="1" />-->
+      <!--  <Documentation>Depth value that is completely in focus.</Documentation>-->
+      <!--  <Hints>-->
+      <!--    <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />-->
+      <!--  </Hints>-->
+      <!--</DoubleVectorProperty>-->
+
+      <!--<DoubleVectorProperty name="MaxBlur" command="SetMaxBlur" number_of_elements="1" default_values="1">-->
+      <!--  <DoubleRangeDomain name="range" min="0" max="2" />-->
+      <!--  <Documentation>Maximum depth blur.</Documentation>-->
+      <!--  <Hints>-->
+      <!--    <PropertyWidgetDecorator type="GenericDecorator" mode="visibility" property="UseSSDoF" value="1" />-->
+      <!--  </Hints>-->
+      <!--</DoubleVectorProperty>-->
+
+      <!-- FXAA Parameters -->
+      <!--<IntVectorProperty name="UseFXAA" label="Use FXAA" command="SetUseFXAA" number_of_elements="1" default_values="1">-->
+      <!--  <BooleanDomain name="bool" />-->
+      <!--  <Documentation>Enables/Disables Fast Approximate Anti-Aliasing.</Documentation>-->
+      <!--</IntVectorProperty>-->
+
+      <!--<PropertyGroup panel_widget="Line" label="Input Options">-->
+      <!--  <Property name="Scalars" />-->
+      <!--</PropertyGroup>-->
+
+
+      <!--<PropertyGroup panel_widget="Line" label="DoF Parameters">-->
+      <!--  <Property name="UseSSDoF" />-->
+      <!--  <Property name="DepthRadius" />-->
+      <!--  <Property name="Aperture" />-->
+      <!--  <Property name="FocalDepth" />-->
+      <!--  <Property name="MaxBlur" />-->
+      <!--</PropertyGroup>-->
 
       ${DEBUG_WIDGETS}
 
