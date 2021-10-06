@@ -1,0 +1,12 @@
+<DoubleVectorProperty name="Diffuse" command="SetDiffuse" number_of_elements="1" default_values="1">
+  <DoubleRangeDomain name="range" min="0" max="2" />
+  <Documentation>Diffuse Light Factor.</Documentation>
+</DoubleVectorProperty>
+<DoubleVectorProperty name="Ambient" command="SetAmbient" number_of_elements="1" default_values="0.2">
+  <DoubleRangeDomain name="range" min="0" max="2" />
+  <Documentation>Ambient Light Factor.</Documentation>
+</DoubleVectorProperty>
+<DoubleVectorProperty name="AOFactor" label="AO" command="SetAO" number_of_elements="1" default_values="1.0">
+  <DoubleRangeDomain name="range" min="0" max="2" />
+  <Documentation>Ambient Occlusion Factor.</Documentation>
+</DoubleVectorProperty>

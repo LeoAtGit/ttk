@@ -1,0 +1,12 @@
+<IntVectorProperty name="Samples" command="SetSamples" number_of_elements="1" default_values="32">
+  <IntRangeDomain name="range" min="1" max="1000" />
+  <Documentation>Number of depth samples.</Documentation>
+</IntVectorProperty>
+<DoubleVectorProperty name="Radius" command="SetRadius" number_of_elements="1" default_values="0.05">
+  <DoubleRangeDomain name="range" min="0" max="1" />
+  <Documentation>The radius used for depth sampling defined as a fraction of the image height.</Documentation>
+</DoubleVectorProperty>
+<DoubleVectorProperty name="DiffArea" command="SetDiffArea" number_of_elements="1" default_values="0.5">
+  <DoubleRangeDomain name="range" min="0" max="1" />
+  <Documentation>Factor that controls self-shadowing.</Documentation>
+</DoubleVectorProperty>

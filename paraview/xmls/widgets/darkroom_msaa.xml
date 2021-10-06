@@ -1,0 +1,4 @@
+<IntVectorProperty name="UseMSAA" label="Use MSAA" command="SetUseMSAA" number_of_elements="1" default_values="1">
+  <BooleanDomain name="bool" />
+  <Documentation>Enables/Disables 4xMSAA.</Documentation>
+</IntVectorProperty>
