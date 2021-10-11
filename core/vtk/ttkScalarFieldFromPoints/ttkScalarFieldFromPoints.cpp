@@ -11,6 +11,9 @@
 #include <vtkStreamingDemandDrivenPipeline.h>
 #include <vtkPointSet.h>
 #include <vtkImageData.h>
+#include <vtkMultiBlockDataSet.h>
+#include <vtkDoubleArray.h>
+#include <vtkPolyData.h>
 
 #include <ttkMacros.h>
 #include <ttkUtils.h>
@@ -27,7 +30,7 @@ ttkScalarFieldFromPoints::~ttkScalarFieldFromPoints() {
 
 int ttkScalarFieldFromPoints::FillInputPortInformation(int port, vtkInformation *info) {
   if(port == 0)
-    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPointSet");
+    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkMultiBlockDataSet");
   else
     return 0;
 
@@ -36,7 +39,7 @@ int ttkScalarFieldFromPoints::FillInputPortInformation(int port, vtkInformation 
 
 int ttkScalarFieldFromPoints::FillOutputPortInformation(int port, vtkInformation *info) {
   if(port == 0)
-    info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
+    info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
   else
     return 0;
 
@@ -47,133 +50,102 @@ int ttkScalarFieldFromPoints::RequestInformation(vtkInformation *,
                                    vtkInformationVector **,
                                    vtkInformationVector * outputVector) {
 
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
-
-  // Extent
-  int wholeExtent[6]
-    = {0, (int)this->Resolution[0]-1,
-       0, (int)this->Resolution[1]-1,
-       0, (int)this->Resolution[2]-1};
-  outInfo->Set(
-      vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), wholeExtent, 6);
-
   return 1;
 }
 
 int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
                                vtkInformationVector **inputVector,
                                vtkInformationVector *outputVector) {
+  
+  auto inputMB = vtkMultiBlockDataSet::GetData(inputVector[0]);
+  if(!inputMB) {
+    this->printErr("No input data available.");
+    return 0;
+  }
 
-  auto inputPointSet = vtkPointSet::GetData(inputVector[0]);
-  const size_t nPoints = inputPointSet->GetNumberOfPoints();
+  // Get points for current timestep
+  auto tBlock = inputMB->GetBlock(0);
+  auto curPoints = vtkSmartPointer<vtkPolyData>::New();
+  curPoints->ShallowCopy(tBlock);
+  const size_t nPoints = curPoints->GetNumberOfPoints();
 
-  auto categoryIndex = inputPointSet->GetPointData()->GetArray("CategoryIndex");
-  double range[2];
-  categoryIndex->GetRange(range);
-  size_t nTypes = range[1] + 1; // +1 inc range bounds
-
-  auto output = vtkImageData::GetData(outputVector);
-  output->SetDimensions(
+  auto image = vtkSmartPointer<vtkImageData>::New();
+  image->SetDimensions(
     this->Resolution[0],
     this->Resolution[1],
     this->Resolution[2]
   );
-  output->SetOrigin(
+  image->SetOrigin(
     this->ImageBounds[0],
     this->ImageBounds[2],
     this->ImageBounds[4]
   );
-  output->SetSpacing(
+  image->SetSpacing(
     this->Resolution[0]>1 ? (this->ImageBounds[1]-this->ImageBounds[0])/(this->Resolution[0]-1) : 0,
     this->Resolution[1]>1 ? (this->ImageBounds[3]-this->ImageBounds[2])/(this->Resolution[1]-1) : 0,
     this->Resolution[2]>1 ? (this->ImageBounds[5]-this->ImageBounds[4])/(this->Resolution[2]-1) : 0
   );
+  image->AllocateScalars(VTK_DOUBLE, 1);
 
-  output->AllocateScalars( VTK_FLOAT, 1 );
-  // output->AllocateScalars( VTK_FLOAT, nTypes );
+  auto scalarArray = image->GetPointData()->GetArray(0);
+  scalarArray->SetName("Scalars");
+  auto scalarArrayData = ttkUtils::GetPointer<double>(scalarArray);
 
-  auto kdeArray = output->GetPointData()->GetArray(0);
-  kdeArray->SetName("KDE");
-  auto kdeArrayData = ttkUtils::GetPointer<float>(kdeArray);
+  // auto nPixels = scalarArray->GetNumberOfTuples();
 
-  auto nPixels = kdeArray->GetNumberOfTuples();
-
-  auto kdeCatArray = vtkSmartPointer<vtkFloatArray>::New();
-  kdeCatArray->SetName("KDE_ByType");
-  kdeCatArray->SetNumberOfComponents(nTypes);
-  kdeCatArray->SetNumberOfTuples(nPixels);
-  output->GetPointData()->AddArray(kdeCatArray);
-  auto kdeCatArrayData = ttkUtils::GetPointer<float>(kdeCatArray);
-
-  auto countArray = vtkSmartPointer<vtkIntArray>::New();
-  countArray->SetName("Count");
-  countArray->SetNumberOfComponents( nTypes );
-  countArray->SetNumberOfTuples( nPixels );
-  output->GetPointData()->AddArray(countArray);
-  auto countArrayData = ttkUtils::GetPointer<int>(countArray);
+  // Get a triangulation
+  ttk::Triangulation *triangulation = ttkAlgorithm::GetTriangulation(image);
+  if(!triangulation) {
+    this->printErr("No triangulation could be created.");
+    return 0;
+  }
 
   int status = 0;
-
-  status = this->computeCounts(
-    countArrayData,
-
-    ttkUtils::GetPointer<float>(inputPointSet->GetPoints()->GetData()),
-    ttkUtils::GetPointer<unsigned char>(categoryIndex),
-    nTypes,
-    this->ImageBounds,
-    this->Resolution,
-    nPoints,
-    nPixels
-  );
-  if(!status)
-    return 0;
-
   switch(this->Kernel){
     case 0: {
-      status = this->computeKDE2<ScalarFieldFromPoints::Gaussian>(
-        kdeCatArrayData,
-        countArrayData,
-        nTypes,
+      ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
+      (status = this->computeKDE<TTK_TT, ScalarFieldFromPoints::Gaussian>(
+        scalarArrayData,
+        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        nPoints,
         this->Bandwidth,
-        this->ImageBounds,
-        this->Resolution
-      );
+        (TTK_TT *)triangulation->getData()
+      )));
       break;
     }
     case 1: {
-      status = this->computeKDE2<ScalarFieldFromPoints::Linear>(
-        kdeCatArrayData,
-        countArrayData,
-        nTypes,
+      ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
+      (status = this->computeKDE<TTK_TT, ScalarFieldFromPoints::Linear>(
+        scalarArrayData,
+        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        nPoints,
         this->Bandwidth,
-        this->ImageBounds,
-        this->Resolution
-      );
+        (TTK_TT *)triangulation->getData()
+      )));
       break;
     }
     case 2: {
-      status = this->computeKDE2<ScalarFieldFromPoints::Epanechnikov>(
-        kdeCatArrayData,
-        countArrayData,
-        nTypes,
+      ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
+      (status = this->computeKDE<TTK_TT, ScalarFieldFromPoints::Epanechnikov>(
+        scalarArrayData,
+        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        nPoints,
         this->Bandwidth,
-        this->ImageBounds,
-        this->Resolution
-      );
+        (TTK_TT *)triangulation->getData()
+      )));
       break;
     }
   }
 
-  status = this->computeTotalKDE(
-    kdeArrayData,
-    kdeCatArrayData,
-    nPixels,
-    nTypes
-  );
-
   // On error cancel filter execution
   if(status == 0)
     return 0;
+  
+  auto outputMB = vtkMultiBlockDataSet::GetData(outputVector);
+  // Set image to a block in the output dataset
+  size_t nBlocks = outputMB->GetNumberOfBlocks();
+  outputMB->SetBlock(nBlocks, image);
+
 
   return 1;
 }

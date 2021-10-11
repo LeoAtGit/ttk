@@ -34,18 +34,18 @@ namespace ttk {
 
   public:
 
-    typedef float(*KERNEL)(const float&);
+    typedef double(*KERNEL)(const double&);
 
-    static float Linear(const float& u) {
+    static double Linear(const double& u) {
       return u>=1 ? 0 : 1-u;
     };
 
-    static float Epanechnikov(const float& u) {
+    static double Epanechnikov(const double& u) {
       return u>=1 ? 0 : 0.75 - 0.75*u*u;
     };
 
-    static float Gaussian(const float& u) {
-      constexpr float c = (1.0/std::sqrt(2.0*3.14159265359));
+    static double Gaussian(const double& u) {
+      constexpr double c = (1.0/std::sqrt(2.0*3.14159265359));
       return c * exp(-0.5*u*u);
     };
 
@@ -68,8 +68,8 @@ namespace ttk {
 
     template<typename TT, KERNEL k>
     int computeKDE(
-      float* outputData,
-      const float* pointCoordiantes,
+      double* outputData,
+      const double* pointCoordiantes,
       const size_t nPoints,
       const float bandwidth,
       const TT* triangulation
@@ -81,7 +81,7 @@ namespace ttk {
                        0, // elapsed time so far
                        this->threadNumber_, ttk::debug::LineMode::REPLACE);
 
-      float c = 1.0 / (((float)nPoints)*bandwidth*bandwidth);
+      double c = 1.0 / (((double)nPoints)*bandwidth*bandwidth);
 
       // compute the average of each vertex in parallel
       size_t nVertices = triangulation->getNumberOfVertices();
@@ -92,17 +92,17 @@ namespace ttk {
         float x,y,z;
         triangulation->getVertexPoint(i, x,y,z);
 
-        float& f = outputData[i];
+        double& f = outputData[i];
         f = 0;
 
         for(size_t j=0; j<nPoints; j++){
           const size_t& j3 = j*3;
 
-          float dx = x - pointCoordiantes[j3+0];
-          float dy = y - pointCoordiantes[j3+1];
-          float dz = z - pointCoordiantes[j3+2];
+          double dx = x - pointCoordiantes[j3+0];
+          double dy = y - pointCoordiantes[j3+1];
+          double dz = z - pointCoordiantes[j3+2];
 
-          float u = std::sqrt(dx*dx + dy*dy + dz*dz)/bandwidth;
+          double u = std::sqrt(dx*dx + dy*dy + dz*dz)/bandwidth;
 
           f += k(u);
         }
@@ -118,8 +118,8 @@ namespace ttk {
     }
 
     int computeTotalKDE(
-      float* outputData,
-      const float* kdeByType,
+      double* outputData,
+      const double* kdeByType,
 
       const size_t& nPixels,
       const size_t& nTypes
@@ -151,7 +151,7 @@ namespace ttk {
 
     template<KERNEL k>
     int computeKDE2(
-      float* outputData,
+      double* outputData,
 
       const int* count,
       const size_t& nTypes,
@@ -168,18 +168,18 @@ namespace ttk {
 
       const int nPixels = res[0]*res[1];
 
-      const float width = bounds[1]-bounds[0];
-      const float height = bounds[3]-bounds[2];
+      const double width = bounds[1]-bounds[0];
+      const double height = bounds[3]-bounds[2];
 
-      const float resXm1 = res[0]-1;
-      const float resYm1 = res[1]-1;
+      const double resXm1 = res[0]-1;
+      const double resYm1 = res[1]-1;
       const int iResX = res[0];
       const int iResY = res[1];
       const int iResXm1 = iResX-1;
       const int iResYm1 = iResY-1;
 
-      const float dx = width / resXm1;
-      const float dy = height / resYm1;
+      const double dx = width / resXm1;
+      const double dy = height / resYm1;
 
       const int kdx = floor(bandwidth/dx+0.5);
       const int kdy = floor(bandwidth/dy+0.5);
@@ -197,7 +197,7 @@ namespace ttk {
 
         for(int i = 0; i < nPixels; i++) {
 
-          float count_it = count[i*nTypes+t];
+          double count_it = count[i*nTypes+t];
           if(count_it<1.0)
             continue;
 
@@ -214,10 +214,10 @@ namespace ttk {
           for(int x = x0; x<=x1; x++){
             for(int y = y0; y<=y1; y++){
 
-              float xxx = (x-xi)*dx;
-              float yyy = (y-yi)*dy;
-              const float u = std::sqrt(xxx*xxx + yyy*yyy)/bandwidth;
-              const float ku = k(u);
+              double xxx = (x-xi)*dx;
+              double yyy = (y-yi)*dy;
+              const double u = std::sqrt(xxx*xxx + yyy*yyy)/bandwidth;
+              const double ku = k(u);
 
               outputData[ y*xSize + x*nTypes +t ] += count_it*ku;
             }
@@ -232,7 +232,7 @@ namespace ttk {
         nTotalEvents += count[i];
       }
 
-      float fac = nTotalEvents*bandwidth;
+      double fac = nTotalEvents*bandwidth;
       for(int i=0, j=nPixels*nTypes; i<j; i++){
         outputData[i] /= fac;
       }
@@ -247,9 +247,7 @@ namespace ttk {
 
     int computeCounts(
       int* counts,
-
-      const float* pointCoordiantes,
-      const unsigned char* types,
+      const double* pointCoordiantes,
       const size_t& nTypes,
       const double* bounds,
       const double* res,
@@ -305,7 +303,7 @@ namespace ttk {
         );
 
         const int pixelIndex = yi * iResX + xi;
-        const int countIndex = pixelIndex*nTypes + ((int)types[i]);
+        const int countIndex = pixelIndex*nTypes;
 
         #ifdef TTK_ENABLE_OPENMP
         #pragma omp atomic update
