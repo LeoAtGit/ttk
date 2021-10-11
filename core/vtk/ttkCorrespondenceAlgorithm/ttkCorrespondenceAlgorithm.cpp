@@ -7,7 +7,7 @@
 #include <vtkPointSet.h>
 
 #include <vtkStringArray.h>
-
+#include <vtkIntArray.h>
 #include <vtkDoubleArray.h>
 #include <vtkPointData.h>
 

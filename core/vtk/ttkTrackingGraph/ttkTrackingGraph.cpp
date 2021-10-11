@@ -11,6 +11,7 @@
 #include <vtkPolyData.h>
 #include <vtkSmartPointer.h>
 #include <vtkStringArray.h>
+#include <vtkCellTypes.h>
 
 #include <ttkCorrespondenceAlgorithm.h>
 #include <ttkMacros.h>
