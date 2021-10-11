@@ -9,6 +9,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkPolyData.h>
 #include <vtkDoubleArray.h>
+#include <vtkMultiBlockDataSet.h>
 
 #include <ttkMacros.h>
 #include <ttkUtils.h>
@@ -35,7 +36,7 @@ int ttkPerlinPathIntegrator::FillInputPortInformation(int port, vtkInformation *
 
 int ttkPerlinPathIntegrator::FillOutputPortInformation(int port, vtkInformation *info) {
   if(port == 0) {
-    info->Set(ttkAlgorithm::SAME_DATA_TYPE_AS_INPUT_PORT(), 0);
+    info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkMultiBlockDataSet");
     return 1;
   }
   return 0;
@@ -114,53 +115,54 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
     return 0;
   }
 
-  // Create all new points
-  int nPoints = nInitPoints;
-  for (int i = 1; i < this->nTimesteps; i++) {
-    nPoints += pointsPerTimestep[i].size();
-  }
-  auto newPoints = vtkSmartPointer<vtkPoints>::New();
-  newPoints->SetDataType(VTK_DOUBLE);
-  newPoints->SetNumberOfPoints(nPoints);
+  // Create output
+  auto outputMB = vtkMultiBlockDataSet::GetData(outputVector);
 
-  // Create cell arrays off offset array and connectivity array.
-  // Our cells are just vertices
-  auto offsetArray = vtkSmartPointer<vtkIntArray>::New();
-  offsetArray->SetNumberOfTuples(nPoints+1);
-  auto offsetArrayData = static_cast<int*>(ttkUtils::GetVoidPointer(offsetArray));
-
-  auto connectivityArray = vtkSmartPointer<vtkIntArray>::New();
-  connectivityArray->SetNumberOfTuples(nPoints);
-  auto connectivityArrayData = static_cast<int*>(ttkUtils::GetVoidPointer(connectivityArray));
-
-  auto cellArray = vtkSmartPointer<vtkCellArray>::New();
-  cellArray->SetData(offsetArray, connectivityArray);
-
-
-  // Create new arrays for output data
+  // Function for formatting data arrays
   auto prepArray = [](vtkDataArray* array, std::string name, int nTuples, int nComponents){
     array->SetName(name.data());
     array->SetNumberOfComponents(nComponents);
     array->SetNumberOfTuples(nTuples);
     return ttkUtils::GetVoidPointer(array);
-  };
+  };  
 
-  auto timeArray = vtkSmartPointer<vtkIntArray>::New();
-  auto timeArrayData = static_cast<int*>(prepArray(timeArray, "Timestep", nPoints, 1));
-  auto id2Array = vtkSmartPointer<vtkIntArray>::New();
-  auto id2ArrayData = static_cast<int*>(prepArray(id2Array, "PointId", nPoints, 1));
-  auto velocityArray = vtkSmartPointer<vtkDoubleArray>::New();
-  auto velocityArrayData = static_cast<double*>(prepArray(velocityArray,"Velocity", nPoints, 3));
-
-  // Add data to points and arrays
-  int idx = 0;
   for (int i = 0; i < this->nTimesteps; i++) {
-    for (size_t j = 0; j < pointsPerTimestep[i].size(); j++) {
+    // Create vtkPolyData for current timestep
+    auto polyData = vtkSmartPointer<vtkPolyData>::New();
+    auto dataPoints = vtkSmartPointer<vtkPoints>::New();
+    int nPoints = pointsPerTimestep[i].size();
+
+    dataPoints->SetDataType(VTK_DOUBLE);
+    dataPoints->SetNumberOfPoints(nPoints);
+
+    // Create cell arrays off offset array and connectivity array.
+    // Our cells are just vertices
+    auto offsetArray = vtkSmartPointer<vtkIntArray>::New();
+    offsetArray->SetNumberOfTuples(nPoints+1);
+    auto offsetArrayData = static_cast<int*>(ttkUtils::GetVoidPointer(offsetArray));
+
+    auto connectivityArray = vtkSmartPointer<vtkIntArray>::New();
+    connectivityArray->SetNumberOfTuples(nPoints);
+    auto connectivityArrayData = static_cast<int*>(ttkUtils::GetVoidPointer(connectivityArray));
+
+    auto cellArray = vtkSmartPointer<vtkCellArray>::New();
+    cellArray->SetData(offsetArray, connectivityArray);
+
+    auto timeArray = vtkSmartPointer<vtkIntArray>::New();
+    auto timeArrayData = static_cast<int*>(prepArray(timeArray, "Timestep", nPoints, 1));
+    auto id2Array = vtkSmartPointer<vtkIntArray>::New();
+    auto id2ArrayData = static_cast<int*>(prepArray(id2Array, "PointId", nPoints, 1));
+    auto velocityArray = vtkSmartPointer<vtkDoubleArray>::New();
+    auto velocityArrayData = static_cast<double*>(prepArray(velocityArray,"Velocity", nPoints, 3));
+
+    // Add data to points and arrays
+    int idx = 0;
+    for (int j = 0; j < nPoints; j++) {
       auto p = pointsPerTimestep[i][j];
 
       // Set position
       double pos[3] = {p.x, p.y, p.z};
-      newPoints->SetPoint(idx, pos);
+      dataPoints->SetPoint(idx, pos);
 
       // Set data arrays
       timeArrayData[idx] = p.timestep;
@@ -175,22 +177,24 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
       offsetArrayData[idx] = idx;
       idx++;
     }
+
+    // Set offset array last index to the number of elements in the connectivity array
+    offsetArrayData[nPoints] = nPoints;
+
+
+    // Format the output data structure into a dataset of vtkPolyData
+    polyData->SetPoints(dataPoints);
+    polyData->SetVerts(cellArray);
+
+    auto pointData = polyData->GetPointData();
+    pointData->AddArray(id2Array);
+    pointData->AddArray(timeArray);
+    pointData->AddArray(velocityArray);
+
+    // Set data to a block in the output dataset
+    size_t nBlocks = outputMB->GetNumberOfBlocks();
+    outputMB->SetBlock(nBlocks, polyData);
   }
-  // Set offset array last index to the number of elements in the connectivity array
-  offsetArrayData[nPoints] = nPoints;
-
-
-  // Format the output data structure into a dataset of vtkPolyData
-  auto output = vtkPolyData::GetData(outputVector);
-  output->SetPoints(newPoints);
-  output->SetVerts(cellArray);
-
-  auto pointData = output->GetPointData();
-  pointData->AddArray(id2Array);
-  pointData->AddArray(timeArray);
-  pointData->AddArray(velocityArray);
-
-
 
   // return success
   return 1;
