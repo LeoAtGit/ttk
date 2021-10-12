@@ -1,0 +1,9 @@
+NAME
+  ttkCorrespondenceByGradient
+SOURCES
+  ttkCorrespondenceByGradient.cpp
+HEADERS
+  ttkCorrespondenceByGradient.h
+DEPENDS
+  correspondenceByGradient
+  ttkCorrespondenceAlgorithm

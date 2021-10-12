@@ -1,0 +1,8 @@
+NAME
+  ttkCorrespondenceAlgorithm
+SOURCES
+  ttkCorrespondenceAlgorithm.cpp
+HEADERS
+  ttkCorrespondenceAlgorithm.h
+DEPENDS
+  ttkAlgorithm

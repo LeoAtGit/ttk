@@ -1,0 +1,9 @@
+NAME
+  ttkCorrespondenceByOverlap
+SOURCES
+  ttkCorrespondenceByOverlap.cpp
+HEADERS
+  ttkCorrespondenceByOverlap.h
+DEPENDS
+  correspondenceByOverlap
+  ttkCorrespondenceAlgorithm
