@@ -91,48 +91,64 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
   scalarArray->SetName("Scalars");
   auto scalarArrayData = ttkUtils::GetPointer<double>(scalarArray);
 
-  // auto nPixels = scalarArray->GetNumberOfTuples();
+  auto nPixels = scalarArray->GetNumberOfTuples();
 
   // Get a triangulation
-  ttk::Triangulation *triangulation = ttkAlgorithm::GetTriangulation(image);
-  if(!triangulation) {
-    this->printErr("No triangulation could be created.");
-    return 0;
-  }
+  // ttk::Triangulation *triangulation = ttkAlgorithm::GetTriangulation(image);
+  // if(!triangulation) {
+  //   this->printErr("No triangulation could be created.");
+  //   return 0;
+  // }
+
+  auto countArray = vtkSmartPointer<vtkIntArray>::New();
+  countArray->SetName("Count");
+  countArray->SetNumberOfComponents(1);
+  countArray->SetNumberOfTuples(nPixels);
+  image->GetPointData()->AddArray(countArray);
+  auto countArrayData = ttkUtils::GetPointer<int>(countArray);
 
   int status = 0;
+
+  status = this->computeCounts(
+    countArrayData,
+    ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+    this->ImageBounds,
+    this->Resolution,
+    nPoints,
+    nPixels
+  );
+  if(!status)
+    return 0;
+
   switch(this->Kernel){
     case 0: {
-      ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
-      (status = this->computeKDE<TTK_TT, ScalarFieldFromPoints::Gaussian>(
+      status = this->computeScalarField3D<ScalarFieldFromPoints::Gaussian>(
         scalarArrayData,
-        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
-        nPoints,
+        countArrayData,
         this->Bandwidth,
-        (TTK_TT *)triangulation->getData()
-      )));
+        this->ImageBounds,
+        this->Resolution
+      );
       break;
     }
     case 1: {
-      ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
-      (status = this->computeKDE<TTK_TT, ScalarFieldFromPoints::Linear>(
+      status = this->computeScalarField3D<ScalarFieldFromPoints::Linear>(
         scalarArrayData,
-        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
-        nPoints,
+        countArrayData,
         this->Bandwidth,
-        (TTK_TT *)triangulation->getData()
-      )));
+        this->ImageBounds,
+        this->Resolution
+      );
       break;
     }
     case 2: {
-      ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
-      (status = this->computeKDE<TTK_TT, ScalarFieldFromPoints::Epanechnikov>(
+        status = this->computeScalarField3D<ScalarFieldFromPoints::Epanechnikov>(
         scalarArrayData,
-        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
-        nPoints,
+        countArrayData,
         this->Bandwidth,
-        (TTK_TT *)triangulation->getData()
-      )));
+        this->ImageBounds,
+        this->Resolution
+      );
       break;
     }
   }
