@@ -59,34 +59,55 @@ int ttkRandomPointsGenerator::RequestData(vtkInformation *request,
   // Get random number engine and seed it with user provided seed
   std::mt19937 posGen(RandomSeed);
 
-  std::uniform_real_distribution<> disX(0.0, (double)PositionDomain[0]);
-  std::uniform_real_distribution<> disY(0.0, (double)PositionDomain[1]);
-  std::uniform_real_distribution<> disZ(0.0, (double)PositionDomain[2]);
+  // Position distributions
+  std::uniform_real_distribution<> disX(0.0, (double)this->PositionDomain[0]);
+  std::uniform_real_distribution<> disY(0.0, (double)this->PositionDomain[1]);
+  std::uniform_real_distribution<> disZ(0.0, (double)this->PositionDomain[2]);
+
+  // Point data distributions
+  std::uniform_real_distribution<> disAmp(this->Amplitude[0], this->Amplitude[1]);
+  std::uniform_real_distribution<> disSpread(this->Spread[0], this->Spread[1]);
+
+
+  // Function for formatting data arrays
+  auto prepArray = [](vtkDataArray* array, std::string name, int nTuples, int nComponents){
+    array->SetName(name.data());
+    array->SetNumberOfComponents(nComponents);
+    array->SetNumberOfTuples(nTuples);
+  };  
 
   // Create an array to store dimensions in
   auto dimArray = vtkSmartPointer<vtkIntArray>::New();
-  dimArray->SetName("DomainDimension");
-  dimArray->SetNumberOfComponents(3);
-  dimArray->SetNumberOfTuples(1);
+  prepArray(dimArray, "DomainDimension", 1, 3);
   dimArray->SetTuple3(0, PositionDomain[0], PositionDomain[1], PositionDomain[2]);
 
   // Create array with point Ids for viz purposes
-  vtkSmartPointer<vtkIntArray> idArray = vtkIntArray::New();
-  idArray->SetNumberOfComponents(1);
-  idArray->SetNumberOfTuples(nPoints);
-  idArray->SetName("PointId");
+  auto idArray = vtkSmartPointer<vtkIntArray>::New();
+  prepArray(idArray, "PointId", nPoints, 1);
+
+  // Create amplitude and spread array to be used when creating scalar fields
+  auto ampArray = vtkSmartPointer<vtkDoubleArray>::New();
+  prepArray(ampArray, "Amplitude", nPoints, 1);
+  auto spreadArray = vtkSmartPointer<vtkDoubleArray>::New();
+  prepArray(spreadArray, "Spread", nPoints, 1);
 
   for (int i = 0; i < nPoints; i++) {
     double pos[3] = {disX(posGen), disY(posGen), disZ(posGen)};
     points->SetPoint(i, pos);
-    //int data = i;
+
+    // Set point data
     idArray->SetTuple1(i, i);
+    ampArray->SetTuple1(i, disAmp(posGen));
+    spreadArray->SetTuple1(i, disSpread(posGen));
   }
 
   // Get output data and add arrays
   auto output = vtkPolyData::GetData(outputVector);
   output->SetPoints(points);
-  output->GetPointData()->AddArray(idArray);
+  auto outputPD = output->GetPointData();
+  outputPD->AddArray(idArray);
+  outputPD->AddArray(ampArray);
+  outputPD->AddArray(spreadArray);
   output->GetFieldData()->AddArray(dimArray);
 
   // return success

@@ -15,6 +15,14 @@
           <Documentation>?</Documentation>
       </IntVectorProperty>
 
+      <DoubleVectorProperty name="Amplitude" command="SetAmplitude" default_values="0 1" number_of_elements="2">
+          <Documentation>?</Documentation>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="Spread" command="SetSpread" default_values="0 1" number_of_elements="2">
+          <Documentation>?</Documentation>
+      </DoubleVectorProperty>
+
       <IntVectorProperty name="RandomSeed" command="SetRandomSeed" number_of_elements="1" default_values="1">
           <Documentation>?</Documentation>
       </IntVectorProperty>

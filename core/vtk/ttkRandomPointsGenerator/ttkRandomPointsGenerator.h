@@ -25,6 +25,8 @@ class TTKRANDOMPOINTSGENERATOR_EXPORT ttkRandomPointsGenerator
 private:
   int nPoints{0};
   int PositionDomain[3]{0, 0, 0};
+  double Amplitude[2]{0.0, 1.0};
+  double Spread[2]{0.0, 1.0};
   int RandomSeed{0};
 
 public:
@@ -34,6 +36,12 @@ public:
 
   vtkSetVector3Macro(PositionDomain, int);
   vtkGetVector3Macro(PositionDomain, int);
+
+  vtkSetVector2Macro(Amplitude, double);
+  vtkGetVector2Macro(Amplitude, double);
+
+  vtkSetVector2Macro(Spread, double);
+  vtkGetVector2Macro(Spread, double);
 
   vtkSetMacro(RandomSeed, int);
   vtkGetMacro(RandomSeed, int);
