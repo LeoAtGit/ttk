@@ -68,12 +68,23 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
   dims[1] = dimArray->GetTuple(0)[1];
   dims[2] = dimArray->GetTuple(0)[2];
 
-  // Check if input has a pointId array. If there exists none, we'll create our
-  // own
+  // Check if all required input arrays exist
   auto idArray = GetInputArrayToProcess(0, input);
   if(!idArray) {
     this->printErr("No id array with point ids was provided.");
     return 0;
+  }
+
+  auto ampArray = GetInputArrayToProcess(2, input);
+  if(!ampArray) {
+    this->printErr("No amplitude array was provided.");
+    //return 0;
+  }
+
+  auto spreadArray = GetInputArrayToProcess(3, input);
+  if(!spreadArray) {
+    this->printErr("No spread array was provided.");
+    //return 0;
   }
 
   // Initialize size of vector of points per timestep
@@ -86,6 +97,8 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
   for (int i=0; i < nInitPoints; i++) {
     auto& p =  pointsPerTimestep[0][i];
     p.pointId = idArray->GetTuple(i)[0];
+    p.amplitude = ampArray->GetTuple(i)[0];
+    p.spread = spreadArray->GetTuple(i)[0];
     p.timestep = 0;
     double pos[3];
     initPoints->GetPoint(i, pos);
@@ -152,8 +165,12 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
     auto timeArrayData = static_cast<int*>(prepArray(timeArray, "Timestep", nPoints, 1));
     auto id2Array = vtkSmartPointer<vtkIntArray>::New();
     auto id2ArrayData = static_cast<int*>(prepArray(id2Array, "PointId", nPoints, 1));
+    auto amp2Array = vtkSmartPointer<vtkDoubleArray>::New();
+    auto amp2ArrayData = static_cast<double*>(prepArray(amp2Array, "Amplitude", nPoints, 1));
+    auto spread2Array = vtkSmartPointer<vtkDoubleArray>::New();
+    auto spread2ArrayData = static_cast<double*>(prepArray(spread2Array, "Spread", nPoints, 1));
     auto velocityArray = vtkSmartPointer<vtkDoubleArray>::New();
-    auto velocityArrayData = static_cast<double*>(prepArray(velocityArray,"Velocity", nPoints, 3));
+    auto velocityArrayData = static_cast<double*>(prepArray(velocityArray, "Velocity", nPoints, 3));
 
     // Add data to points and arrays
     int idx = 0;
@@ -167,6 +184,8 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
       // Set data arrays
       timeArrayData[idx] = p.timestep;
       id2ArrayData[idx] = p.pointId;
+      amp2ArrayData[idx] = p.amplitude;
+      spread2ArrayData[idx] = p.spread;
 
       velocityArrayData[3 * idx] = p.v[0];
       velocityArrayData[3 * idx + 1] = p.v[1];
@@ -188,6 +207,8 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
 
     auto pointData = polyData->GetPointData();
     pointData->AddArray(id2Array);
+    pointData->AddArray(amp2Array);
+    pointData->AddArray(spread2Array);
     pointData->AddArray(timeArray);
     pointData->AddArray(velocityArray);
 

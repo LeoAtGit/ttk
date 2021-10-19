@@ -42,7 +42,43 @@
           </RequiredProperties>
         </ArrayListDomain>
         <Documentation>The array that contains the point ids.</Documentation>
-      </StringVectorProperty>    
+      </StringVectorProperty>
+
+      <StringVectorProperty 
+        name="AmpArray"
+        label="Amplitude"
+        command="SetInputArrayToProcess"
+        element_types="0 0 0 0 2"
+        number_of_elements="5" 
+        default_values="2 0 0 0 Amps">
+        <ArrayListDomain 
+          name="amps"
+          input_domain_name="point_array"
+          >
+          <RequiredProperties>
+            <Property function="Input" name="Input" />
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>The array that contains the amplitude.</Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty 
+        name="SpArray"
+        label="Spread"
+        command="SetInputArrayToProcess"
+        element_types="0 0 0 0 2"
+        number_of_elements="5" 
+        default_values="3 0 0 0 Spreads">
+        <ArrayListDomain 
+          name="spreads"
+          input_domain_name="point_array"
+          >
+          <RequiredProperties>
+            <Property function="Input" name="Input" />
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>The array that contains the spread.</Documentation>
+      </StringVectorProperty>       
 
       <StringVectorProperty 
         name="DimArray" 

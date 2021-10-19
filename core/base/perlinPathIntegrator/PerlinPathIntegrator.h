@@ -28,6 +28,8 @@ namespace ttk {
       double y{0.0};
       double z{0.0};
       double v[3]{0.0, 0.0, 0.0};
+      double amplitude{0.0};
+      double spread{0.0};
 
       Point() {
 
@@ -42,12 +44,16 @@ namespace ttk {
         v[0] = p.v[0];
         v[1] = p.v[1];
         v[2] = p.v[2];
+        amplitude = p.amplitude;
+        spread = p.spread;
       }
 
       Point operator+(const Point& a) const {
           Point p;
           p.pointId = pointId;
           p.timestep = timestep;
+          p.amplitude = amplitude;
+          p.spread = spread;
           p.x = x + a.x;
           p.y = y + a.y;
           p.z = z + a.z;
@@ -59,6 +65,8 @@ namespace ttk {
           Point p;
           p.pointId = pointId;
           p.timestep = timestep;
+          p.amplitude = amplitude;
+          p.spread = spread;
           p.x = k * x;
           p.y = k * y;
           p.z = k * z;
