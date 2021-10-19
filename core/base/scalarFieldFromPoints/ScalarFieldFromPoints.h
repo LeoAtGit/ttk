@@ -34,26 +34,29 @@ namespace ttk {
 
   public:
 
-    typedef double(*KERNEL)(const double&);
+    typedef double(*KERNEL)(const double&, const int&, const double&);
 
-    static double Linear(const double& u) {
-      return u>=1 ? 0 : 1-u;
+    static double Linear(const double& u, const int& dim, 
+      const double& bandwidth
+    ) {
+      double su = std::sqrt(u)/bandwidth;
+      return su>=1 ? 0 : 1-su;
     };
 
-    static double Epanechnikov(const double& u) {
-      return u>=1 ? 0 : 0.75 - 0.75*u*u;
+    static double Epanechnikov(const double& u, const int& dim,
+      const double& bandwidth
+    ) {
+      double su = std::sqrt(u)/bandwidth;
+      return su>=1 ? 0 : 0.75 - 0.75*su*su;
     };
 
-    static double Gaussian(const double& u) {
-      constexpr double c = (1.0/std::sqrt(pow(2.0*3.14159265359, 3)));
-      return c * exp(-0.5*u*u);
+    static double Gaussian(const double& u, const int& dim, 
+      const double& bandwidth
+    ) {
+      // double c = (1.0/std::sqrt(std::pow(2.0*3.14159265359, dim) * std::pow(bandwidth, dim)));
+      // return c * exp(-0.5*(u/bandwidth));
+      return exp(-0.5*(u/bandwidth));
     };
-
-
-    // static float Gaussian(const float& x, const float& y) {
-    //   constexpr float c = (1.0/std::sqrt(2.0*3.14159265359));
-    //   return c * exp(-0.5*u);
-    // };
 
     ScalarFieldFromPoints() {
       this->setDebugMsgPrefix(
@@ -61,11 +64,7 @@ namespace ttk {
     };
     ~ScalarFieldFromPoints(){};
 
-
-    // float Epanechnikov(const float& u) const {
-    //   return u>=1 ? 0 : 0.75 - 0.75*u*u;
-    // };
-
+/*
     template<typename TT, KERNEL k>
     int computeScalarField(
       double* outputData,
@@ -147,20 +146,20 @@ namespace ttk {
       return 1;
     }
 
-
+*/
     template<KERNEL k>
-    int computeKDE2(
+    int computeScalarField2D(
       double* outputData,
-
-      const int* count,
-      const size_t& nTypes,
+      // int* idData,
+      const double* pointCoordiantes,
       const float bandwidth,
       const double* bounds,
-      const double* res
+      const double* res,
+      const size_t& nPoints
     ) const {
       ttk::Timer timer;
 
-      this->printMsg("Computing KDEs by Category",
+      this->printMsg("Computing Scalar Field 2D",
                        0, // progress form 0-1
                        0, // elapsed time so far
                        this->threadNumber_, ttk::debug::LineMode::REPLACE);
@@ -181,66 +180,69 @@ namespace ttk {
       // in each direction that should be given scalar values
       const double dx = width / resXm1;
       const double dy = height / resYm1;
+      const double dx2 = dx/2.0;
+      const double dy2 = dy/2.0;
 
-      const int kdx = floor(bandwidth/dx+0.5);
-      const int kdy = floor(bandwidth/dy+0.5);
+      const double xBound = bounds[0] - dx2;
+      const double yBound = bounds[2] - dy2;
+
+      const int kdx = floor(3 * sqrt(bandwidth)/dx+0.5);
+      const int kdy = floor(3 * sqrt(bandwidth)/dy+0.5);
 
       // clear
-      for(int i=0, j=nPixels*nTypes; i<j; i++){
-        outputData[i] = 0;
+      for(int i=0, j=nPixels; i<j; i++){
+        outputData[i] = 0.0;
+        // idData[i] = 0;
       }
 
-      // compute kde
+      // compute scalar field
       #ifdef TTK_ENABLE_OPENMP
       #pragma omp parallel for num_threads(this->threadNumber_)
       #endif
-      for(size_t t=0; t<nTypes; t++){
+      for(size_t i = 0; i < nPoints; i++) {
+        const double& xP = pointCoordiantes[i*3+0];
+        const double& yP = pointCoordiantes[i*3+1];
 
-        for(int i = 0; i < nPixels; i++) {
+        const int xi = std::min(
+          resXm1,
+          std::max(
+            0.0,
+            floor( (xP - xBound)/dx )
+          )
+        );
+        const int yi = std::min(
+          resYm1,
+          std::max(
+            0.0,
+            floor( (yP - yBound)/dy )
+          )
+        );
 
-          double count_it = count[i*nTypes+t];
-          if(count_it<1.0)
-            continue;
+        const int x0 = std::max(0, std::min(iResXm1, xi - kdx));
+        const int x1 = std::max(0, std::min(iResXm1, xi + kdx));
+        const int y0 = std::max(0, std::min(iResYm1, yi - kdy));
+        const int y1 = std::max(0, std::min(iResYm1, yi + kdy));
+        
+        // for all points in the bandwidth interval, calculate scalar value
+        for(int x = x0; x<=x1; x++){
+          for(int y = y0; y<=y1; y++){
 
-          const int xi = i%iResX;
-          const int yi = i/iResX;
+            double xxx = (x-xi)*dx;
+            double yyy = (y-yi)*dy;
+            const double u = (xxx*xxx + yyy*yyy);
+            const double ku = k(u, 2, bandwidth);
 
-          const int x0 = std::max(0, std::min(iResXm1, xi - kdx));
-          const int x1 = std::max(0, std::min(iResXm1, xi + kdx));
-          const int y0 = std::max(0, std::min(iResYm1, yi - kdy));
-          const int y1 = std::max(0, std::min(iResYm1, yi + kdy));
-
-          const int xSize = iResX*nTypes;
-          
-          // for all points in the bandwidth interval, calculate scalar value
-          for(int x = x0; x<=x1; x++){
-            for(int y = y0; y<=y1; y++){
-
-              double xxx = (x-xi)*dx;
-              double yyy = (y-yi)*dy;
-              const double u = std::sqrt(xxx*xxx + yyy*yyy)/bandwidth;
-              const double ku = k(u);
-
-              outputData[ y*xSize + x*nTypes +t ] += count_it*ku;
-            }
+            #ifdef TTK_ENABLE_OPENMP
+            #pragma omp atomic update
+            #endif
+            outputData[y * iResX + x] += ku;
+            // idData[y * iResX + x] = i + 1;
           }
         }
       }
 
-      // normalize
-      // sum up total number of events
-      int nTotalEvents = 0;
-      for(int i=0, j=nPixels*nTypes; i<j; i++){
-        nTotalEvents += count[i];
-      }
-
-      double fac = nTotalEvents*bandwidth;
-      for(int i=0, j=nPixels*nTypes; i<j; i++){
-        outputData[i] /= fac;
-      }
-
       // print the progress of the current subprocedure with elapsed time
-      this->printMsg("Computing KDEs by Category",
+      this->printMsg("Computing Scalar Field 2D",
                      1, // progress
                      timer.getElapsedTime(), this->threadNumber_);
 
@@ -250,10 +252,14 @@ namespace ttk {
     template<KERNEL k>
     int computeScalarField3D(
       double* outputData,
-      const int* count,
-      const double bandwidth,
+      // int* idData,
+      const double* pointCoordiantes,
+      const double* amplitudes,
+      const double* spreads,
+      const float bandwidth,
       const double* bounds,
-      const double* res
+      const double* res,
+      const size_t& nPoints
     ) const {
       ttk::Timer timer;
 
@@ -282,42 +288,54 @@ namespace ttk {
       const double dx = width / resXm1;
       const double dy = height / resYm1;
       const double dz = depth / resZm1;
+      const double dx2 = dx/2.0;
+      const double dy2 = dy/2.0;
+      const double dz2 = dz/2.0;
 
-      const int kdx = 4 * floor(bandwidth/dx+0.5);
-      const int kdy = 4 * floor(bandwidth/dy+0.5);
-      const int kdz = 4 * floor(bandwidth/dz+0.5);
-
-      // bandwidth is the same for each dimension --> same variance
-      const double variance = bandwidth;
-      const double stdev = sqrt(variance);
-
-      // const int kdx = 8 * stdev;
-      // const int kdy = 8 * stdev;
-      // const int kdz = 8 * stdev;
-
-      this->printMsg(std::to_string(kdx));
-      this->printMsg(std::to_string(dx));
-      this->printMsg(std::to_string(variance));
-      this->printMsg("-------");
+      const double xBound = bounds[0] - dx2;
+      const double yBound = bounds[2] - dy2;
+      const double zBound = bounds[4] - dz2;
 
       // clear
       for(int i=0, j=nPixels; i<j; i++){
-        outputData[i] = 0;
+        outputData[i] = 0.0;
+        // idData[i] = 0;
       }
 
       // compute scalar field
       #ifdef TTK_ENABLE_OPENMP
       #pragma omp parallel for num_threads(this->threadNumber_)
       #endif
-      for(int i = 0; i < nPixels; i++) {
+      for(size_t i = 0; i < nPoints; i++) {
+        const double& xP = pointCoordiantes[i*3+0];
+        const double& yP = pointCoordiantes[i*3+1];
+        const double& zP = pointCoordiantes[i*3+2];
 
-        double count_it = count[i];
-        if(count_it<1.0)
-          continue;
+        const int xi = std::min(
+          resXm1,
+          std::max(
+            0.0,
+            floor( (xP - xBound)/dx )
+          )
+        );
+        const int yi = std::min(
+          resYm1,
+          std::max(
+            0.0,
+            floor( (yP - yBound)/dy )
+          )
+        );
+        const int zi = std::min(
+          resZm1,
+          std::max(
+            0.0,
+            floor( (zP - zBound)/dz )
+          )
+        );
 
-        const int xi = i % iResX;
-        const int yi = (i / iResX) % iResY;
-        const int zi = (i / (iResX * iResY));
+        const int kdx = floor(3 * sqrt(spreads[i])/dx+0.5);
+        const int kdy = floor(3 * sqrt(spreads[i])/dy+0.5);
+        const int kdz = floor(3 * sqrt(spreads[i])/dz+0.5);
 
         const int x0 = std::max(0, std::min(iResXm1, xi - kdx));
         const int x1 = std::max(0, std::min(iResXm1, xi + kdx));
@@ -325,13 +343,6 @@ namespace ttk {
         const int y1 = std::max(0, std::min(iResYm1, yi + kdy));
         const int z0 = std::max(0, std::min(iResZm1, zi - kdz));
         const int z1 = std::max(0, std::min(iResZm1, zi + kdz));
-
-        if (i == 1977138) {
-          this->printMsg(std::to_string(x0));
-          this->printMsg(std::to_string(x1));
-          this->printMsg(std::to_string(xi));
-          this->printMsg("-------");
-        }
         
         // for all points in the bandwidth interval, calculate scalar value
         for(int x = x0; x <= x1; x++){
@@ -340,16 +351,14 @@ namespace ttk {
               double xxx = (x - xi) * dx;
               double yyy = (y - yi) * dy;
               double zzz = (z - zi) * dz;
-              const double u = std::sqrt(xxx * xxx + yyy * yyy + zzz * zzz)/variance;
-              const double ku = k(u);// / pow(stdev, 3);
-              if (x == x0 && y == y0 && z == z0 && i == 1977138) {
-                this->printMsg(std::to_string(xxx));
-                this->printMsg(std::to_string(u));
-                this->printMsg(std::to_string(ku));
-                this->printMsg("-------");
-              }
+              const double u = (xxx * xxx + yyy * yyy + zzz * zzz);
+              const double ku = k(u, 3, spreads[i]);
 
-              outputData[z * iResY * iResX + y * iResX + x ] += ku;
+              #ifdef TTK_ENABLE_OPENMP
+              #pragma omp atomic update
+              #endif
+              outputData[z * iResY * iResX + y * iResX + x] += amplitudes[i] * ku;
+              // idData[z * iResY * iResX + y * iResX + x] = i + 1;
             }
           }
         }
@@ -363,7 +372,81 @@ namespace ttk {
       return 1; // return success
     }
 
-    int computeCounts(
+/*
+int computeCounts2D(
+      int* counts,
+      const double* pointCoordiantes,
+      const double* bounds,
+      const double* res,
+      const size_t& nPoints,
+      const size_t& nPixels
+    ) const {
+      ttk::Timer timer;
+
+      this->printMsg("Computing Counts", 0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE);
+
+      // clear
+      size_t nTotal = nPixels;
+      for(size_t i=0; i<nTotal; i++){
+        counts[i] = 0;
+      }
+
+      const float width = bounds[1]-bounds[0];
+      const float height = bounds[3]-bounds[2];
+      const float resX = res[0];
+      const float resXm1 = res[0]-1;
+      const float resYm1 = res[1]-1;
+
+      const int iResX = resX;
+      const float dx = width / resXm1;
+      const float dy = height / resYm1;
+      const float dx2 = dx/2.0;
+      const float dy2 = dy/2.0;
+
+      const float x0 = bounds[0] - dx2;
+      const float y0 = bounds[2] - dy2;
+
+      #ifdef TTK_ENABLE_OPENMP
+      #pragma omp parallel for num_threads(this->threadNumber_)
+      #endif
+      for(size_t i=0; i<nPoints; i++){
+
+        const float& x = pointCoordiantes[i*3+0];
+        const float& y = pointCoordiantes[i*3+1];
+
+        const int xi = std::min(
+          resXm1,
+          std::max(
+            0.0f,
+            floor( (x - x0)/dx )
+          )
+        );
+        const int yi = std::min(
+          resYm1,
+          std::max(
+            0.0f,
+            floor( (y - y0)/dy )
+          )
+        );
+
+        const int pixelIndex = yi * iResX + xi;
+        const int countIndex = pixelIndex;
+
+        #ifdef TTK_ENABLE_OPENMP
+        #pragma omp atomic update
+        #endif
+        counts[countIndex]++;
+      }
+
+      // print the progress of the current subprocedure with elapsed time
+      this->printMsg("Computing Counts",
+                     1, // progress
+                     timer.getElapsedTime(), this->threadNumber_);
+
+      return 1; // return success
+    }
+
+    int computeCounts3D(
       int* counts,
       const double* pointCoordiantes,
       const double* bounds,
@@ -401,6 +484,7 @@ namespace ttk {
       const float x0 = bounds[0] - dx2;
       const float y0 = bounds[2] - dy2;
       const float z0 = bounds[4] - dz2;
+
 
 
       #ifdef TTK_ENABLE_OPENMP
@@ -450,6 +534,7 @@ namespace ttk {
 
       return 1; // return success
     }
+  */
 
   }; // ScalarFieldFromPoints class
 

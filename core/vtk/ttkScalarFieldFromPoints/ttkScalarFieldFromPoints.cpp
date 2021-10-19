@@ -69,6 +69,19 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
   curPoints->ShallowCopy(tBlock);
   const size_t nPoints = curPoints->GetNumberOfPoints();
 
+  // Get amplitude and spread for points in the timestep
+  auto ampArray = GetInputArrayToProcess(2, curPoints);
+  if(!ampArray) {
+    this->printErr("No amplitude array was provided.");
+    //return 0;
+  }
+
+  auto spreadArray = GetInputArrayToProcess(3, curPoints);
+  if(!spreadArray) {
+    this->printErr("No spread array was provided.");
+    //return 0;
+  }
+
   auto image = vtkSmartPointer<vtkImageData>::New();
   image->SetDimensions(
     this->Resolution[0],
@@ -92,62 +105,65 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
   auto scalarArrayData = ttkUtils::GetPointer<double>(scalarArray);
 
   auto nPixels = scalarArray->GetNumberOfTuples();
+  this->printMsg("nPixels: " + std::to_string(nPixels));
 
-  // Get a triangulation
-  // ttk::Triangulation *triangulation = ttkAlgorithm::GetTriangulation(image);
-  // if(!triangulation) {
-  //   this->printErr("No triangulation could be created.");
-  //   return 0;
-  // }
-
-  auto countArray = vtkSmartPointer<vtkIntArray>::New();
-  countArray->SetName("Count");
-  countArray->SetNumberOfComponents(1);
-  countArray->SetNumberOfTuples(nPixels);
-  image->GetPointData()->AddArray(countArray);
-  auto countArrayData = ttkUtils::GetPointer<int>(countArray);
+  // auto countArray = vtkSmartPointer<vtkIntArray>::New();
+  // countArray->SetName("Count");
+  // countArray->SetNumberOfComponents(1);
+  // countArray->SetNumberOfTuples(nPixels);
+  // image->GetPointData()->AddArray(countArray);
+  // auto countArrayData = ttkUtils::GetPointer<int>(countArray);
 
   int status = 0;
 
-  status = this->computeCounts(
-    countArrayData,
-    ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
-    this->ImageBounds,
-    this->Resolution,
-    nPoints,
-    nPixels
-  );
-  if(!status)
-    return 0;
+  // status = this->computeCounts2D(
+  //   countArrayData,
+  //   ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+  //   this->ImageBounds,
+  //   this->Resolution,
+  //   nPoints,
+  //   nPixels
+  // );
+  // if(!status)
+  //   return 0;
 
   switch(this->Kernel){
     case 0: {
       status = this->computeScalarField3D<ScalarFieldFromPoints::Gaussian>(
         scalarArrayData,
-        countArrayData,
+        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        ttkUtils::GetPointer<double>(ampArray),
+        ttkUtils::GetPointer<double>(spreadArray),
         this->Bandwidth,
         this->ImageBounds,
-        this->Resolution
+        this->Resolution,
+        nPoints
       );
       break;
     }
     case 1: {
       status = this->computeScalarField3D<ScalarFieldFromPoints::Linear>(
         scalarArrayData,
-        countArrayData,
+        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        ttkUtils::GetPointer<double>(ampArray),
+        ttkUtils::GetPointer<double>(spreadArray),
         this->Bandwidth,
         this->ImageBounds,
-        this->Resolution
+        this->Resolution,
+        nPoints
       );
       break;
     }
     case 2: {
         status = this->computeScalarField3D<ScalarFieldFromPoints::Epanechnikov>(
         scalarArrayData,
-        countArrayData,
+        ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        ttkUtils::GetPointer<double>(ampArray),
+        ttkUtils::GetPointer<double>(spreadArray),
         this->Bandwidth,
         this->ImageBounds,
-        this->Resolution
+        this->Resolution,
+        nPoints
       );
       break;
     }
