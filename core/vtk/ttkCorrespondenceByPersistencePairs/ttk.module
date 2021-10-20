@@ -1,0 +1,9 @@
+NAME
+  ttkCorrespondenceByPersistencePairs
+SOURCES
+  ttkCorrespondenceByPersistencePairs.cpp
+HEADERS
+  ttkCorrespondenceByPersistencePairs.h
+DEPENDS
+  correspondenceByPersistencePairs
+  ttkCorrespondenceAlgorithm
