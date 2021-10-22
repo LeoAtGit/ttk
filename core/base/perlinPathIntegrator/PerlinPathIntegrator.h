@@ -48,6 +48,20 @@ namespace ttk {
         spread = p.spread;
       }
 
+      Point& operator=(const Point& p) {
+        pointId = p.pointId;
+        timestep = p.timestep;
+        x = p.x;
+        y = p.y;
+        z = p.z;
+        v[0] = p.v[0];
+        v[1] = p.v[1];
+        v[2] = p.v[2];
+        amplitude = p.amplitude;
+        spread = p.spread;
+        return *this;
+      }
+
       Point operator+(const Point& a) const {
           Point p;
           p.pointId = pointId;
@@ -128,7 +142,6 @@ namespace ttk {
 
     template <class dataType>
     int integrate(
-      const std::vector<Point>& initPoints,
       std::vector<std::vector<Point>>& outPoints,
       const int nTimesteps,
       const double timeInterval,

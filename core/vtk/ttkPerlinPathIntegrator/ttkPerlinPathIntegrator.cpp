@@ -113,7 +113,6 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
   switch(idArray->GetDataType()) {
     vtkTemplateMacro(
       status = this->integrate<VTK_TT>(
-        pointsPerTimestep[0],
         pointsPerTimestep,
         this->nTimesteps,
         this->TimeInterval,

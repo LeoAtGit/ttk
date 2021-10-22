@@ -34,28 +34,28 @@ namespace ttk {
 
   public:
 
-    typedef double(*KERNEL)(const double&, const int&, const double&);
+    typedef double(*KERNEL) (const double&, const double&, const double&);
 
-    static double Linear(const double& u, const int& dim, 
-      const double& bandwidth
+    static double Linear(
+      const double& u, const double& bandwidth, const double& amp
     ) {
       double su = std::sqrt(u)/bandwidth;
       return su>=1 ? 0 : 1-su;
     };
 
-    static double Epanechnikov(const double& u, const int& dim,
-      const double& bandwidth
+    static double Epanechnikov(
+      const double& u, const double& bandwidth, const double& amp
     ) {
       double su = std::sqrt(u)/bandwidth;
       return su>=1 ? 0 : 0.75 - 0.75*su*su;
     };
 
-    static double Gaussian(const double& u, const int& dim, 
-      const double& bandwidth
+    static double Gaussian(
+      const double& u, const double& bandwidth, const double& amp
     ) {
       // double c = (1.0/std::sqrt(std::pow(2.0*3.14159265359, dim) * std::pow(bandwidth, dim)));
       // return c * exp(-0.5*(u/bandwidth));
-      return exp(-0.5*(u/bandwidth));
+      return amp * exp(-0.5*(u/bandwidth));
     };
 
     ScalarFieldFromPoints() {
@@ -152,6 +152,8 @@ namespace ttk {
       double* outputData,
       // int* idData,
       const double* pointCoordiantes,
+      const double* amplitudes,
+      const double* spreads,
       const float bandwidth,
       const double* bounds,
       const double* res,
@@ -186,8 +188,8 @@ namespace ttk {
       const double xBound = bounds[0] - dx2;
       const double yBound = bounds[2] - dy2;
 
-      const int kdx = floor(3 * sqrt(bandwidth)/dx+0.5);
-      const int kdy = floor(3 * sqrt(bandwidth)/dy+0.5);
+      // const int kdx = floor(3 * sqrt(bandwidth)/dx+0.5);
+      // const int kdy = floor(3 * sqrt(bandwidth)/dy+0.5);
 
       // clear
       for(int i=0, j=nPixels; i<j; i++){
@@ -218,6 +220,9 @@ namespace ttk {
           )
         );
 
+        const int kdx = floor(3 * sqrt(spreads[i])/dx+0.5);
+        const int kdy = floor(3 * sqrt(spreads[i])/dy+0.5);
+
         const int x0 = std::max(0, std::min(iResXm1, xi - kdx));
         const int x1 = std::max(0, std::min(iResXm1, xi + kdx));
         const int y0 = std::max(0, std::min(iResYm1, yi - kdy));
@@ -230,7 +235,7 @@ namespace ttk {
             double xxx = (x-xi)*dx;
             double yyy = (y-yi)*dy;
             const double u = (xxx*xxx + yyy*yyy);
-            const double ku = k(u, 2, bandwidth);
+            const double ku = k(u, spreads[i], amplitudes[i]);
 
             #ifdef TTK_ENABLE_OPENMP
             #pragma omp atomic update
@@ -352,12 +357,12 @@ namespace ttk {
               double yyy = (y - yi) * dy;
               double zzz = (z - zi) * dz;
               const double u = (xxx * xxx + yyy * yyy + zzz * zzz);
-              const double ku = k(u, 3, spreads[i]);
+              const double ku = k(u, spreads[i], amplitudes[i]);
 
               #ifdef TTK_ENABLE_OPENMP
               #pragma omp atomic update
               #endif
-              outputData[z * iResY * iResX + y * iResX + x] += amplitudes[i] * ku;
+              outputData[z * iResY * iResX + y * iResX + x] += ku;
               // idData[z * iResY * iResX + y * iResX + x] = i + 1;
             }
           }
