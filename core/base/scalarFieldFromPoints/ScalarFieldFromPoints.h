@@ -40,14 +40,14 @@ namespace ttk {
       const double& u, const double& bandwidth, const double& amp
     ) {
       double su = std::sqrt(u)/bandwidth;
-      return su>=1 ? 0 : 1-su;
+      return su >= 1 ? 0 : 1-su;
     };
 
     static double Epanechnikov(
       const double& u, const double& bandwidth, const double& amp
     ) {
       double su = std::sqrt(u)/bandwidth;
-      return su>=1 ? 0 : 0.75 - 0.75*su*su;
+      return su >= 1 ? 0 : 0.75 - 0.75*su*su;
     };
 
     static double Gaussian(
@@ -58,17 +58,32 @@ namespace ttk {
       return amp * exp(-0.5*(u/bandwidth));
     };
 
+    static double Constant(
+      const double& u, const double& bandwidth, const double& amp
+    ) {
+      double su = std::sqrt(u) / bandwidth;
+      // if (u < 0.0) {
+      //   ttk::ScalarFieldFromPoints hm; 
+      //   hm.printMsg("ha");
+      // }
+      return su < 1.0 ? 1.0 : 0;
+    }
+
     ScalarFieldFromPoints() {
       this->setDebugMsgPrefix(
         "ScalarFieldFromPoints");
     };
     ~ScalarFieldFromPoints(){};
 
-/*
+
     template<typename TT, KERNEL k>
     int computeScalarField(
       double* outputData,
+      int* voronoiData,
+      int* weightedVoronoiData,
       const double* pointCoordiantes,
+      const double* amplitudes,
+      const double* spreads,      
       const size_t nPoints,
       const float bandwidth,
       const TT* triangulation
@@ -82,6 +97,14 @@ namespace ttk {
 
       // compute the average of each vertex in parallel
       size_t nVertices = triangulation->getNumberOfVertices();
+
+      #ifdef TTK_ENABLE_OPENMP
+      #pragma omp parallel for num_threads(this->threadNumber_)
+      #endif
+      for(size_t i=0; i < nVertices; i++){
+        outputData[i] = 0.0;
+      }
+
       #ifdef TTK_ENABLE_OPENMP
       #pragma omp parallel for num_threads(this->threadNumber_)
       #endif
@@ -90,7 +113,14 @@ namespace ttk {
         triangulation->getVertexPoint(i, x,y,z);
 
         double& f = outputData[i];
-        f = 0;
+        int& vCell = voronoiData[i];
+        int& wvCell = weightedVoronoiData[i];
+        // f = 0;
+        vCell = -1;
+        wvCell = -1;
+
+        double minDistance = std::numeric_limits<double>::max();
+        double wMinDistance = std::numeric_limits<double>::max();
 
         for(size_t j=0; j<nPoints; j++){
           const size_t& j3 = j*3;
@@ -101,9 +131,22 @@ namespace ttk {
 
           // Calculate norm of vector to be used in kernel
           // Divide with bandwidth bc. KDE
-          double u = std::sqrt(dx*dx + dy*dy + dz*dz)/bandwidth;
+          const double u = (dx * dx + dy * dy + dz * dz);
+          const double ku = k(u, spreads[j], amplitudes[j]);
+          f += ku;
 
-          f += k(u);
+          // Check if distance is the smallest to save that point
+          // for the voronoi segmentation
+          if (std::sqrt(u) < minDistance) {
+            minDistance = std::sqrt(u);
+            vCell = j;
+          }
+
+          if ((std::sqrt(u) / amplitudes[j]) < wMinDistance) {
+            wMinDistance = std::sqrt(u) / amplitudes[j];
+            wvCell = j;
+          }
+
         }
       }
 
@@ -115,38 +158,6 @@ namespace ttk {
       return 1; // return success
     }
 
-    int computeTotalKDE(
-      double* outputData,
-      const double* kdeByType,
-
-      const size_t& nPixels,
-      const size_t& nTypes
-    ) const {
-      ttk::Timer timer;
-
-      this->printMsg("Computing Total KDE",
-                       0, // progress form 0-1
-                       0, // elapsed time so far
-                       this->threadNumber_, ttk::debug::LineMode::REPLACE);
-
-      #ifdef TTK_ENABLE_OPENMP
-      #pragma omp parallel for num_threads(this->threadNumber_)
-      #endif
-      for(size_t i=0; i<nPixels; i++){
-        float sum = 0;
-        for(size_t t=0; t<nTypes; t++)
-          sum+=kdeByType[i*nTypes+t];
-        outputData[i] = sum;
-      }
-
-      this->printMsg("Computing KDEs by Category",
-             1, // progress
-             timer.getElapsedTime(), this->threadNumber_);
-
-      return 1;
-    }
-
-*/
     template<KERNEL k>
     int computeScalarField2D(
       double* outputData,
@@ -357,6 +368,7 @@ namespace ttk {
               double yyy = (y - yi) * dy;
               double zzz = (z - zi) * dz;
               const double u = (xxx * xxx + yyy * yyy + zzz * zzz);
+              this->printMsg(std::to_string(std::sqrt(u)));
               const double ku = k(u, spreads[i], amplitudes[i]);
 
               #ifdef TTK_ENABLE_OPENMP

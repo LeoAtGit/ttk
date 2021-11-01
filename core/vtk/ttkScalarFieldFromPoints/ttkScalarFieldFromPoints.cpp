@@ -108,6 +108,21 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
     auto nPixels = scalarArray->GetNumberOfTuples();
     this->printMsg("nPixels: " + std::to_string(nPixels));
 
+    auto voronoiArray = vtkSmartPointer<vtkIntArray>::New();
+    voronoiArray->SetName("Voronoi");
+    voronoiArray->SetNumberOfComponents(1);
+    voronoiArray->SetNumberOfTuples(nPixels);
+    image->GetPointData()->AddArray(voronoiArray);
+    auto voronoiArrayData = ttkUtils::GetPointer<int>(voronoiArray);
+
+    auto weightedVoronoiArray = vtkSmartPointer<vtkIntArray>::New();
+    weightedVoronoiArray->SetName("WeightedVoronoi");
+    weightedVoronoiArray->SetNumberOfComponents(1);
+    weightedVoronoiArray->SetNumberOfTuples(nPixels);
+    image->GetPointData()->AddArray(weightedVoronoiArray);
+    auto weightedVoronoiArrayData = ttkUtils::GetPointer<int>(weightedVoronoiArray);
+
+
     // auto countArray = vtkSmartPointer<vtkIntArray>::New();
     // countArray->SetName("Count");
     // countArray->SetNumberOfComponents(1);
@@ -128,44 +143,117 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
     // if(!status)
     //   return 0;
 
+    ttk::Triangulation *triangulation = ttkAlgorithm::GetTriangulation(image);
+    if(!triangulation)
+      return 0;
+
     switch(this->Kernel){
       case 0: {
-        status = this->computeScalarField3D<ScalarFieldFromPoints::Gaussian>(
-          scalarArrayData,
-          ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
-          ttkUtils::GetPointer<double>(ampArray),
-          ttkUtils::GetPointer<double>(spreadArray),
-          this->Bandwidth,
-          this->ImageBounds,
-          this->Resolution,
-          nPoints
+        // status = this->computeScalarField3D<ScalarFieldFromPoints::Gaussian>(
+        //   scalarArrayData,
+        //   ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        //   ttkUtils::GetPointer<double>(ampArray),
+        //   ttkUtils::GetPointer<double>(spreadArray),
+        //   this->Bandwidth,
+        //   this->ImageBounds,
+        //   this->Resolution,
+        //   nPoints
+        // );
+        ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
+          (status = this->computeScalarField<TTK_TT, ScalarFieldFromPoints::Gaussian>(
+            scalarArrayData,
+            voronoiArrayData,
+            weightedVoronoiArrayData,
+            ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+            ttkUtils::GetPointer<double>(ampArray),
+            ttkUtils::GetPointer<double>(spreadArray),
+            nPoints,
+            this->Bandwidth,
+            (TTK_TT *)triangulation->getData()
+            )
+          )
         );
         break;
       }
       case 1: {
-        status = this->computeScalarField3D<ScalarFieldFromPoints::Linear>(
-          scalarArrayData,
-          ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
-          ttkUtils::GetPointer<double>(ampArray),
-          ttkUtils::GetPointer<double>(spreadArray),
-          this->Bandwidth,
-          this->ImageBounds,
-          this->Resolution,
-          nPoints
+      //   status = this->computeScalarField3D<ScalarFieldFromPoints::Linear>(
+      //     scalarArrayData,
+      //     ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+      //     ttkUtils::GetPointer<double>(ampArray),
+      //     ttkUtils::GetPointer<double>(spreadArray),
+      //     this->Bandwidth,
+      //     this->ImageBounds,
+      //     this->Resolution,
+      //     nPoints
+      //   );
+        ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
+          (status = this->computeScalarField<TTK_TT, ScalarFieldFromPoints::Linear>(
+            scalarArrayData,
+            voronoiArrayData,
+            weightedVoronoiArrayData,
+            ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+            ttkUtils::GetPointer<double>(ampArray),
+            ttkUtils::GetPointer<double>(spreadArray),
+            nPoints,
+            this->Bandwidth,
+            (TTK_TT *)triangulation->getData()
+            )
+          )
         );
         break;
       }
       case 2: {
-          status = this->computeScalarField3D<ScalarFieldFromPoints::Epanechnikov>(
-          scalarArrayData,
-          ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
-          ttkUtils::GetPointer<double>(ampArray),
-          ttkUtils::GetPointer<double>(spreadArray),
-          this->Bandwidth,
-          this->ImageBounds,
-          this->Resolution,
-          nPoints
+        // status = this->computeScalarField3D<ScalarFieldFromPoints::Epanechnikov>(
+        //   scalarArrayData,
+        //   ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        //   ttkUtils::GetPointer<double>(ampArray),
+        //   ttkUtils::GetPointer<double>(spreadArray),
+        //   this->Bandwidth,
+        //   this->ImageBounds,
+        //   this->Resolution,
+        //   nPoints
+        // );
+        ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
+          (status = this->computeScalarField<TTK_TT, ScalarFieldFromPoints::Epanechnikov>(
+            scalarArrayData,
+            voronoiArrayData,
+            weightedVoronoiArrayData,
+            ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+            ttkUtils::GetPointer<double>(ampArray),
+            ttkUtils::GetPointer<double>(spreadArray),
+            nPoints,
+            this->Bandwidth,
+            (TTK_TT *)triangulation->getData()
+            )
+          )
         );
+        break;
+      }
+      case 3: {
+        // status = this->computeScalarField3D<ScalarFieldFromPoints::Constant>(
+        //   scalarArrayData,
+        //   ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+        //   ttkUtils::GetPointer<double>(ampArray),
+        //   ttkUtils::GetPointer<double>(spreadArray),
+        //   this->Bandwidth,
+        //   this->ImageBounds,
+        //   this->Resolution,
+        //   nPoints
+        // );
+        ttkVtkTemplateMacro(scalarArray->GetDataType(), triangulation->getType(),
+          (status = this->computeScalarField<TTK_TT, ScalarFieldFromPoints::Constant>(
+            scalarArrayData,
+            voronoiArrayData,
+            weightedVoronoiArrayData,
+            ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
+            ttkUtils::GetPointer<double>(ampArray),
+            ttkUtils::GetPointer<double>(spreadArray),
+            nPoints,
+            this->Bandwidth,
+            (TTK_TT *)triangulation->getData()
+            )
+          )
+        );        
         break;
       }
     }
