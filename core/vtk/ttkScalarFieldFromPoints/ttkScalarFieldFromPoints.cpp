@@ -83,6 +83,24 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
       //return 0;
     }
 
+    auto rateArray = GetInputArrayToProcess(4, curPoints);
+    if(!rateArray) {
+      this->printErr("No rate array was provided.");
+      //return 0;
+    }
+
+    auto birthTimeArray = GetInputArrayToProcess(5, curPoints);
+    if(!birthTimeArray) {
+      this->printErr("No birth time array was provided.");
+      //return 0;
+    }
+
+    auto deathTimeArray = GetInputArrayToProcess(6, curPoints);
+    if(!deathTimeArray) {
+      this->printErr("No death time array was provided.");
+      //return 0;
+    }
+
     auto image = vtkSmartPointer<vtkImageData>::New();
     image->SetDimensions(
       this->Resolution[0],
@@ -121,6 +139,13 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
     weightedVoronoiArray->SetNumberOfTuples(nPixels);
     image->GetPointData()->AddArray(weightedVoronoiArray);
     auto weightedVoronoiArrayData = ttkUtils::GetPointer<int>(weightedVoronoiArray);
+
+    auto powerDiagramArray = vtkSmartPointer<vtkIntArray>::New();
+    powerDiagramArray->SetName("PowerDiagram");
+    powerDiagramArray->SetNumberOfComponents(1);
+    powerDiagramArray->SetNumberOfTuples(nPixels);
+    image->GetPointData()->AddArray(powerDiagramArray);
+    auto powerDiagramArrayData = ttkUtils::GetPointer<int>(powerDiagramArray);
 
 
     // auto countArray = vtkSmartPointer<vtkIntArray>::New();
@@ -164,10 +189,15 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
             scalarArrayData,
             voronoiArrayData,
             weightedVoronoiArrayData,
+            powerDiagramArrayData,
             ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
             ttkUtils::GetPointer<double>(ampArray),
             ttkUtils::GetPointer<double>(spreadArray),
+            ttkUtils::GetPointer<double>(rateArray),
+            ttkUtils::GetPointer<int>(birthTimeArray),
+            ttkUtils::GetPointer<int>(deathTimeArray),
             nPoints,
+            t,
             this->Bandwidth,
             (TTK_TT *)triangulation->getData()
             )
@@ -191,10 +221,15 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
             scalarArrayData,
             voronoiArrayData,
             weightedVoronoiArrayData,
+            powerDiagramArrayData,
             ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
             ttkUtils::GetPointer<double>(ampArray),
             ttkUtils::GetPointer<double>(spreadArray),
+            ttkUtils::GetPointer<double>(rateArray),
+            ttkUtils::GetPointer<int>(birthTimeArray),
+            ttkUtils::GetPointer<int>(deathTimeArray),           
             nPoints,
+            t,
             this->Bandwidth,
             (TTK_TT *)triangulation->getData()
             )
@@ -218,10 +253,15 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
             scalarArrayData,
             voronoiArrayData,
             weightedVoronoiArrayData,
+            powerDiagramArrayData,
             ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
             ttkUtils::GetPointer<double>(ampArray),
             ttkUtils::GetPointer<double>(spreadArray),
+            ttkUtils::GetPointer<double>(rateArray),
+            ttkUtils::GetPointer<int>(birthTimeArray),
+            ttkUtils::GetPointer<int>(deathTimeArray),
             nPoints,
+            t,
             this->Bandwidth,
             (TTK_TT *)triangulation->getData()
             )
@@ -245,10 +285,15 @@ int ttkScalarFieldFromPoints::RequestData(vtkInformation *request,
             scalarArrayData,
             voronoiArrayData,
             weightedVoronoiArrayData,
+            powerDiagramArrayData,
             ttkUtils::GetPointer<double>(curPoints->GetPoints()->GetData()),
             ttkUtils::GetPointer<double>(ampArray),
             ttkUtils::GetPointer<double>(spreadArray),
+            ttkUtils::GetPointer<double>(rateArray),
+            ttkUtils::GetPointer<int>(birthTimeArray),
+            ttkUtils::GetPointer<int>(deathTimeArray),
             nPoints,
+            t,
             this->Bandwidth,
             (TTK_TT *)triangulation->getData()
             )

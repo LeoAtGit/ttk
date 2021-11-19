@@ -78,7 +78,25 @@
           </RequiredProperties>
         </ArrayListDomain>
         <Documentation>The array that contains the spread.</Documentation>
-      </StringVectorProperty>       
+      </StringVectorProperty>
+
+      <StringVectorProperty 
+        name="rArray"
+        label="Rate"
+        command="SetInputArrayToProcess"
+        element_types="0 0 0 0 2"
+        number_of_elements="5" 
+        default_values="4 0 0 0 Rates">
+        <ArrayListDomain 
+          name="rates"
+          input_domain_name="point_array"
+          >
+          <RequiredProperties>
+            <Property function="Input" name="Input" />
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>The array that contains the rate.</Documentation>
+      </StringVectorProperty>         
 
       <StringVectorProperty 
         name="DimArray" 

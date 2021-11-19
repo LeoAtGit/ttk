@@ -81,10 +81,15 @@ namespace ttk {
       double* outputData,
       int* voronoiData,
       int* weightedVoronoiData,
+      int* powerDiagramArrayData,
       const double* pointCoordiantes,
       const double* amplitudes,
-      const double* spreads,      
+      const double* spreads,
+      const double* rates,
+      const int* births,
+      const int* deaths,      
       const size_t nPoints,
+      const int t,
       const float bandwidth,
       const TT* triangulation
     ) const {
@@ -115,12 +120,15 @@ namespace ttk {
         double& f = outputData[i];
         int& vCell = voronoiData[i];
         int& wvCell = weightedVoronoiData[i];
+        int& pdCell = powerDiagramArrayData[i];
         // f = 0;
         vCell = -1;
         wvCell = -1;
+        pdCell = -1;
 
         double minDistance = std::numeric_limits<double>::max();
         double wMinDistance = std::numeric_limits<double>::max();
+        double minPower = std::numeric_limits<double>::max();
 
         for(size_t j=0; j<nPoints; j++){
           const size_t& j3 = j*3;
@@ -129,11 +137,15 @@ namespace ttk {
           double dy = y - pointCoordiantes[j3+1];
           double dz = z - pointCoordiantes[j3+2];
 
+          // S_j(t) decides how the feature emerges and decays based on rate, birth time, death time and the current timestep
+          double Sj_t = (1 / (1 + std::exp(-1 * rates[j] * (t - births[j])))) + (1 / (1 + std::exp(-1 * rates[j] * (deaths[j] - t)))) - 1;
+          double amp_j = Sj_t * amplitudes[j];
+
           // Calculate norm of vector to be used in kernel
-          // Divide with bandwidth bc. KDE
           const double u = (dx * dx + dy * dy + dz * dz);
-          const double ku = k(u, spreads[j], amplitudes[j]);
-          f += ku;
+          const double ku = k(u, spreads[j], amp_j);
+          //f += ku;
+          f = std::max(f, ku);
 
           // Check if distance is the smallest to save that point
           // for the voronoi segmentation
@@ -142,9 +154,14 @@ namespace ttk {
             vCell = j;
           }
 
-          if ((std::sqrt(u) / amplitudes[j]) < wMinDistance) {
+          if ((std::sqrt(u) / amplitudes[j]) < wMinDistance) { // weighted voronoi
             wMinDistance = std::sqrt(u) / amplitudes[j];
             wvCell = j;
+          }
+
+          if ((u - amplitudes[j] * amplitudes[j]) < minPower) { // power diagram  
+            minPower = u - amplitudes[j] * amplitudes[j];
+            pdCell = j;
           }
 
         }

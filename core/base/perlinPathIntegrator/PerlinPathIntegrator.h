@@ -30,6 +30,7 @@ namespace ttk {
       double v[3]{0.0, 0.0, 0.0};
       double amplitude{0.0};
       double spread{0.0};
+      double rate{0.0};
 
       Point() {
 
@@ -46,6 +47,7 @@ namespace ttk {
         v[2] = p.v[2];
         amplitude = p.amplitude;
         spread = p.spread;
+        rate = p.rate;
       }
 
       Point& operator=(const Point& p) {
@@ -59,6 +61,7 @@ namespace ttk {
         v[2] = p.v[2];
         amplitude = p.amplitude;
         spread = p.spread;
+        rate = p.rate;
         return *this;
       }
 
@@ -68,6 +71,7 @@ namespace ttk {
           p.timestep = timestep;
           p.amplitude = amplitude;
           p.spread = spread;
+          p.rate = rate;
           p.x = x + a.x;
           p.y = y + a.y;
           p.z = z + a.z;
@@ -81,6 +85,7 @@ namespace ttk {
           p.timestep = timestep;
           p.amplitude = amplitude;
           p.spread = spread;
+          p.rate = rate;
           p.x = k * x;
           p.y = k * y;
           p.z = k * z;
@@ -154,6 +159,8 @@ namespace ttk {
       setStepLength(stepLength);
       setPerlinScaleFactor(psf);
 
+      int maxPointId = outPoints[0].size() - 1;
+
 
       // Integrate the paths of the initial points by moving the points
       // along the vector field for all timesteps
@@ -177,6 +184,19 @@ namespace ttk {
             newP.pointId = curPoint.pointId;
             outPoints[i+1].push_back(newP);
 
+          }
+          else {
+            double perX = newP.x - floor(newP.x / dimensions_[0]) * dimensions_[0];
+            double perY = newP.y - floor(newP.y / dimensions_[1]) * dimensions_[1];
+            double perZ = newP.z - floor(newP.z / dimensions_[2]) * dimensions_[2];
+            newP.timestep = i+1;
+            newP.pointId = maxPointId + 1;
+            maxPointId++;
+            newP.x = perX;
+            newP.y = perY;
+            newP.z = perZ;
+            outPoints[i+1].push_back(newP);
+      
           }
         }
       }

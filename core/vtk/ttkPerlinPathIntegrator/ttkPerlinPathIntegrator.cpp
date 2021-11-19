@@ -14,6 +14,9 @@
 #include <ttkMacros.h>
 #include <ttkUtils.h>
 
+// std includes
+#include <random>
+
 // A VTK macro that enables the instantiation of this class via ::New()
 // You do not have to modify this
 vtkStandardNewMacro(ttkPerlinPathIntegrator);
@@ -87,6 +90,12 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
     //return 0;
   }
 
+  auto rateArray = GetInputArrayToProcess(4, input);
+  if(!rateArray) {
+    this->printErr("No rate array was provided.");
+    //return 0;
+  }
+
   // Initialize size of vector of points per timestep
   pointsPerTimestep.resize(this->nTimesteps);
 
@@ -99,6 +108,7 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
     p.pointId = idArray->GetTuple(i)[0];
     p.amplitude = ampArray->GetTuple(i)[0];
     p.spread = spreadArray->GetTuple(i)[0];
+    p.rate = rateArray->GetTuple(i)[0];
     p.timestep = 0;
     double pos[3];
     initPoints->GetPoint(i, pos);
@@ -168,8 +178,18 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
     auto amp2ArrayData = static_cast<double*>(prepArray(amp2Array, "Amplitude", nPoints, 1));
     auto spread2Array = vtkSmartPointer<vtkDoubleArray>::New();
     auto spread2ArrayData = static_cast<double*>(prepArray(spread2Array, "Spread", nPoints, 1));
+    auto rate2Array = vtkSmartPointer<vtkDoubleArray>::New();
+    auto rate2ArrayData = static_cast<double*>(prepArray(rate2Array, "Rate", nPoints, 1));    
     auto velocityArray = vtkSmartPointer<vtkDoubleArray>::New();
     auto velocityArrayData = static_cast<double*>(prepArray(velocityArray, "Velocity", nPoints, 3));
+    auto birthTimeArray = vtkSmartPointer<vtkIntArray>::New();
+    auto birthTimeArrayData = static_cast<int*>(prepArray(birthTimeArray, "BirthTime", nPoints, 1));
+    auto deathTimeArray = vtkSmartPointer<vtkIntArray>::New();
+    auto deathTimeArrayData = static_cast<int*>(prepArray(deathTimeArray, "DeathTime", nPoints, 1));
+
+    std::mt19937 randGen(1);
+    std::uniform_int_distribution<> disBirth(-floor(this->nTimesteps/2), this->nTimesteps);
+    std::uniform_int_distribution<> disDeath(0, this->nTimesteps);
 
     // Add data to points and arrays
     int idx = 0;
@@ -185,6 +205,15 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
       id2ArrayData[idx] = p.pointId;
       amp2ArrayData[idx] = p.amplitude;
       spread2ArrayData[idx] = p.spread;
+      rate2ArrayData[idx] = p.rate;
+
+      int birth = disBirth(randGen);
+      int death = disDeath(randGen);
+      while(death < birth) {
+        death = disDeath(randGen);
+      }
+      birthTimeArrayData[idx] = birth;
+      deathTimeArrayData[idx] = death;
 
       velocityArrayData[3 * idx] = p.v[0];
       velocityArrayData[3 * idx + 1] = p.v[1];
@@ -208,8 +237,11 @@ int ttkPerlinPathIntegrator::RequestData(vtkInformation *request,
     pointData->AddArray(id2Array);
     pointData->AddArray(amp2Array);
     pointData->AddArray(spread2Array);
+    pointData->AddArray(rate2Array);
     pointData->AddArray(timeArray);
     pointData->AddArray(velocityArray);
+    pointData->AddArray(birthTimeArray);
+    pointData->AddArray(deathTimeArray);
 
     // Set data to a block in the output dataset
     size_t nBlocks = outputMB->GetNumberOfBlocks();

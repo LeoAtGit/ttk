@@ -67,6 +67,7 @@ int ttkRandomPointsGenerator::RequestData(vtkInformation *request,
   // Point data distributions
   std::uniform_real_distribution<> disAmp(this->Amplitude[0], this->Amplitude[1]);
   std::uniform_real_distribution<> disSpread(this->Spread[0], this->Spread[1]);
+  std::uniform_real_distribution<> disRate(0, 1);
 
 
   // Function for formatting data arrays
@@ -85,11 +86,13 @@ int ttkRandomPointsGenerator::RequestData(vtkInformation *request,
   auto idArray = vtkSmartPointer<vtkIntArray>::New();
   prepArray(idArray, "PointId", nPoints, 1);
 
-  // Create amplitude and spread array to be used when creating scalar fields
+  // Create amplitude, spread and rate array to be used when creating scalar fields
   auto ampArray = vtkSmartPointer<vtkDoubleArray>::New();
   prepArray(ampArray, "Amplitude", nPoints, 1);
   auto spreadArray = vtkSmartPointer<vtkDoubleArray>::New();
   prepArray(spreadArray, "Spread", nPoints, 1);
+  auto rateArray = vtkSmartPointer<vtkDoubleArray>::New();
+  prepArray(rateArray, "Rate", nPoints, 1);
 
   for (int i = 0; i < nPoints; i++) {
     double pos[3] = {disX(posGen), disY(posGen), disZ(posGen)};
@@ -99,6 +102,7 @@ int ttkRandomPointsGenerator::RequestData(vtkInformation *request,
     idArray->SetTuple1(i, i);
     ampArray->SetTuple1(i, disAmp(posGen));
     spreadArray->SetTuple1(i, disSpread(posGen));
+    rateArray->SetTuple1(i, disRate(posGen));
   }
 
   // Get output data and add arrays
@@ -108,6 +112,7 @@ int ttkRandomPointsGenerator::RequestData(vtkInformation *request,
   outputPD->AddArray(idArray);
   outputPD->AddArray(ampArray);
   outputPD->AddArray(spreadArray);
+  outputPD->AddArray(rateArray);
   output->GetFieldData()->AddArray(dimArray);
 
   // return success
