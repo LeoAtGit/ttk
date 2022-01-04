@@ -1,0 +1,10 @@
+NAME
+  ttkPathIntegrator
+SOURCES
+  ttkPathIntegrator.cpp
+HEADERS
+  ttkPathIntegrator.h
+DEPENDS
+  pathIntegrator
+  perlinNoise
+  ttkAlgorithm

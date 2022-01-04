@@ -1,0 +1,9 @@
+ttk_add_base_library(pathIntegrator
+  SOURCES
+    PathIntegrator.cpp
+  HEADERS
+    PathIntegrator.h
+  DEPENDS
+    triangulation
+    perlinNoise
+)
