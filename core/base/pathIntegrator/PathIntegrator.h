@@ -231,21 +231,26 @@ namespace ttk {
         if(!prevP.outsideDomain) {
           // Set new velocity direction depending on what face the point has
           // exited
-          prevP.v[0] = (prevP.x < 0.0)              ? -1
-                       : (prevP.x > dimensions_[0]) ? 1
-                                                    : 0;
-          prevP.v[1] = (prevP.y < 0.0)              ? -1
-                       : (prevP.y > dimensions_[1]) ? 1
-                                                    : 0;
-          prevP.v[2] = (prevP.z < 0.0)              ? -1
-                       : (prevP.z > dimensions_[2]) ? 1
-                                                    : 0;
+          Point v;
+          v.x = (prevP.x < 0.0) ? -1 : (prevP.x > dimensions_[0]) ? 1 : 0;
+
+          v.y = (prevP.y < 0.0) ? -1 : (prevP.y > dimensions_[1]) ? 1 : 0;
+
+          v.z = (prevP.z < 0.0) ? -1 : (prevP.z > dimensions_[2]) ? 1 : 0;
+
+          // Integration
+          Point vel = (v + v * 2 + v * 2 + v) * h_ * (1.0 / 6);
+
+          double prevPvel[3] = {vel.x, vel.y, vel.z};
+          prevP.setVelocity(prevPvel);
 
           // Set point to be outside domain
           prevP.outsideDomain = true;
         }
 
-        newP = prevP + Point(prevP.v[0], prevP.v[1], prevP.v[2]) * (1.0 / 6);
+        // Integration is same for each timestep so just using the previous
+        // integrated velocity
+        newP = prevP + Point(prevP.v[0], prevP.v[1], prevP.v[2]);
 
         // Transform coordinates into virtual box coordinates and make periodic,
         // then transform back to domain coordinates
