@@ -9,6 +9,7 @@
 #include <vtkStringArray.h>
 
 #include <vtkDoubleArray.h>
+#include <vtkIntArray.h>
 #include <vtkPointData.h>
 
 #include <ttkMacros.h>

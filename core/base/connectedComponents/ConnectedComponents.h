@@ -25,6 +25,10 @@ typedef ttk::SimplexId TID;
 namespace ttk {
   class ConnectedComponents : virtual public Debug {
 
+  private:
+    static const int UNLABELED{-2};
+    static const int IGNORE{-1};
+
   public:
     struct Component {
       int seed = -1;
@@ -42,8 +46,8 @@ namespace ttk {
       return triangulation->preconditionVertexNeighbors();
     };
 
-    template <class DT, class TT = ttk::AbstractTriangulation>
-    int computeFloodFill(DT *labels,
+    template <typename TT = ttk::AbstractTriangulation>
+    int computeFloodFill(int *labels,
                          std::vector<Component> &components,
                          std::vector<TID> &stack,
 
@@ -51,8 +55,6 @@ namespace ttk {
                          const TID seed) const {
       // get component id
       const TID componentId = components.size();
-
-      constexpr DT featureLabel = -2;
 
       int stackSize = 1;
       stack[0] = seed;
@@ -78,7 +80,7 @@ namespace ttk {
         size_t nNeighbors = triangulation->getVertexNeighborNumber(cIndex);
         for(size_t i = 0; i < nNeighbors; i++) {
           triangulation->getVertexNeighbor(cIndex, i, nIndex);
-          if(labels[nIndex] == featureLabel) {
+          if(labels[nIndex] == this->UNLABELED) {
             labels[nIndex] = componentId;
             stack[stackSize++] = nIndex;
           }
@@ -98,10 +100,22 @@ namespace ttk {
       return 1;
     }
 
-    template <class DT, class TT = ttk::AbstractTriangulation>
+    template <typename DT>
+    int initializeOutputLabels(int *labels, const TID nVertices, const DT *featureMask=nullptr) const {
+      if(featureMask){
+        for(TID i = 0; i < nVertices; i++)
+          labels[i] = featureMask[i] > 0 ? this->UNLABELED : this->IGNORE;
+      } else {
+        for(TID i = 0; i < nVertices; i++)
+          labels[i] = this->UNLABELED;
+      }
+
+      return 1;
+    }
+
+    template <typename TT = ttk::AbstractTriangulation>
     int computeConnectedComponents(std::vector<Component> &components,
                                    int *outputLabels,
-                                   const DT *featureMask,
                                    const TT *triangulation,
                                    const bool useSeedAsComponentId
                                    = false) const {
@@ -113,21 +127,12 @@ namespace ttk {
       // init stack
       std::vector<TID> stack(nVertices);
 
-      constexpr int backgroundLabel = -1;
-      constexpr int featureLabel = -2;
-
       std::string msg = "Computing Connected Components";
       this->printMsg(msg, 0, 0, 1, ttk::debug::LineMode::REPLACE);
 
-#ifdef TTK_ENABLE_OPENMP
-#pragma omp parallel for num_threads(this->threadNumber_)
-#endif
       for(TID i = 0; i < nVertices; i++)
-        outputLabels[i] = featureMask[i] <= 0 ? backgroundLabel : featureLabel;
-
-      for(TID i = 0; i < nVertices; i++)
-        if(outputLabels[i] == featureLabel)
-          this->computeFloodFill<int, TT>(
+        if(outputLabels[i] == this->UNLABELED)
+          this->computeFloodFill<TT>(
             outputLabels, components, stack, triangulation, i);
 
       this->printMsg(msg, 1, timer.getElapsedTime(), 1);
@@ -136,18 +141,15 @@ namespace ttk {
         timer.reStart();
         msg = "Labeling Components by Seed Id";
         this->printMsg(
-          msg, 0, 0, this->threadNumber_, ttk::debug::LineMode::REPLACE);
+          msg, 0, 0, 1, ttk::debug::LineMode::REPLACE);
 
-#ifdef TTK_ENABLE_OPENMP
-#pragma omp parallel for num_threads(this->threadNumber_)
-#endif
         for(TID i = 0; i < nVertices; i++) {
           auto &cid = outputLabels[i];
           if(cid >= 0)
             cid = components[cid].seed;
         }
 
-        this->printMsg(msg, 1, timer.getElapsedTime(), this->threadNumber_);
+        this->printMsg(msg, 1, timer.getElapsedTime(), 1);
       }
 
       return 1;

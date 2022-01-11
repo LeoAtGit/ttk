@@ -16,7 +16,7 @@
 vtkStandardNewMacro(ttkConnectedComponents);
 
 ttkConnectedComponents::ttkConnectedComponents() {
-  this->SetNumberOfInputPorts(2);
+  this->SetNumberOfInputPorts(1);
   this->SetNumberOfOutputPorts(2);
 }
 
@@ -27,10 +27,6 @@ int ttkConnectedComponents::FillInputPortInformation(int port,
                                                      vtkInformation *info) {
   if(port == 0) {
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
-    return 1;
-  } else if(port == 1) {
-    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
-    info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 1);
     return 1;
   }
   return 0;
@@ -57,20 +53,15 @@ int ttkConnectedComponents::RequestData(vtkInformation *,
   if(!inputDataSet)
     return 0;
 
-  auto inputArray = this->GetInputArrayToProcess(0, inputVector);
-  if(!inputArray) {
-    this->printErr("Unable to retrieve input array.");
-    return 0;
-  }
+  const auto nPoints = inputDataSet->GetNumberOfPoints();
 
-  if(this->GetInputArrayAssociation(0, inputVector) != 0) {
-    this->printErr("Input array needs to be a point data array.");
-    return 0;
-  }
-  if(inputArray->GetNumberOfComponents() != 1) {
-    this->printErr("Input array needs to be a scalar array.");
-    return 0;
-  }
+  auto featureMask = this->GetInputArrayToProcess(0, inputVector);
+
+  if(featureMask && this->GetInputArrayAssociation(0, inputVector) != 0)
+    return !this->printErr("Input array needs to be a point data array.");
+
+  if(featureMask && featureMask->GetNumberOfComponents() != 1)
+    return !this->printErr("Input array needs to be a scalar array.");
 
   auto triangulation = ttkAlgorithm::GetTriangulation(inputDataSet);
   if(!triangulation)
@@ -79,23 +70,31 @@ int ttkConnectedComponents::RequestData(vtkInformation *,
   // Allocate Output Label Data
   auto outputArray = vtkSmartPointer<vtkIntArray>::New();
   outputArray->SetName("ComponentId");
-  outputArray->SetNumberOfTuples(inputArray->GetNumberOfTuples());
+  outputArray->SetNumberOfTuples(nPoints);
 
   // Compute Connected Components
   std::vector<ttk::ConnectedComponents::Component> components;
   {
+    int status = 0;
+
+    ttkTypeMacroA(
+      featureMask ? featureMask->GetDataType() : VTK_INT,
+      (status = this->initializeOutputLabels<T0>(
+         ttkUtils::GetPointer<int>(outputArray),
+         nPoints,
+         ttkUtils::GetPointer<const T0>(featureMask)
+       ))
+    );
+    if(status != 1)
+      return 0;
 
     this->preconditionTriangulation(triangulation);
-
-    int status = 0;
-    ttkVtkTemplateMacro(
-      inputArray->GetDataType(), triangulation->getType(),
-      (status = this->computeConnectedComponents<VTK_TT, TTK_TT>(
+    ttkTypeMacroT(
+      triangulation->getType(),
+      (status = this->computeConnectedComponents<T0>(
          components, ttkUtils::GetPointer<int>(outputArray),
-         ttkUtils::GetPointer<const VTK_TT>(inputArray),
-         static_cast<const TTK_TT *>(triangulation->getData()),
+         static_cast<const T0*>(triangulation->getData()),
          this->UseSeedIdAsComponentId)));
-
     if(status != 1)
       return 0;
   }
