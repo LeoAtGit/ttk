@@ -21,6 +21,7 @@ namespace ttk {
   public:
     PathIntegrator();
 
+    // Struct Point used for integration along the vector field
     struct Point {
       int pointId{-1};
       int timestep{-1};
@@ -109,6 +110,7 @@ namespace ttk {
       }
     };
 
+    // Class used to determine which vector fields exist and can be used
     enum class VectorField {
       PerlinPerturbed,
       PerlinGradient,
@@ -206,7 +208,8 @@ namespace ttk {
 
     int RK4(Point &prevP, Point &newP, double time) {
       // Call perlin function to execute vector field
-      // add const point&
+
+      // If point is within domain, use RK4 in given vector field
       if((prevP.x > 0.0 && prevP.x < dimensions_[0])
          && (prevP.y > 0.0 && prevP.y < dimensions_[1])
          && (prevP.z > 0.0 && prevP.z < dimensions_[2])) {
@@ -218,6 +221,7 @@ namespace ttk {
           prevP.outsideDomain = false;
         }
 
+        // RK4 integration
         Point q1 = sampleVectorField(prevP, time) * h_;
         Point q2 = sampleVectorField(prevP + (q1 * 0.5), time) * h_;
         Point q3 = sampleVectorField(prevP + (q2 * 0.5), time) * h_;
@@ -230,7 +234,7 @@ namespace ttk {
         double v[3] = {vel.x, vel.y, vel.z};
         prevP.setVelocity(v);
       } else {
-        // Check if domain has been left for this point
+        // Check if domain has been left before for this point
         if(!prevP.outsideDomain) {
           // Set new velocity direction depending on what face the point has
           // exited
@@ -241,7 +245,7 @@ namespace ttk {
 
           v.z = (prevP.z < 0.0) ? -1 : (prevP.z > dimensions_[2]) ? 1 : 0;
 
-          // Integration
+          // RK4 integration
           Point vel = (v + v * 2 + v * 2 + v) * h_ * (1.0 / 6);
 
           double prevPvel[3] = {vel.x, vel.y, vel.z};
@@ -251,8 +255,7 @@ namespace ttk {
           prevP.outsideDomain = true;
         }
 
-        // Integration is same for each timestep so just using the previous
-        // integrated velocity
+        // Integration is same for each timestep, use the previous velocity
         newP = prevP + Point(prevP.v[0], prevP.v[1], prevP.v[2]);
 
         // Transform coordinates into virtual box coordinates and make periodic,
@@ -299,6 +302,7 @@ namespace ttk {
       setPerlinScaleFactor(psf);
       setVectorField(vf);
 
+      // Store current maximum point id
       maxPointId_ = outPoints[0].size() - 1;
 
       // Integrate the paths of the initial points by moving the points

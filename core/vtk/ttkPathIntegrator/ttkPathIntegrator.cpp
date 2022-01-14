@@ -18,8 +18,6 @@
 #include <limits>
 #include <random>
 
-// A VTK macro that enables the instantiation of this class via ::New()
-// You do not have to modify this
 vtkStandardNewMacro(ttkPathIntegrator);
 
 ttkPathIntegrator::ttkPathIntegrator() {
@@ -84,19 +82,19 @@ int ttkPathIntegrator::RequestData(vtkInformation *request,
   auto ampArray = GetInputArrayToProcess(2, input);
   if(!ampArray) {
     this->printErr("No amplitude array was provided.");
-    // return 0;
+    return 0;
   }
 
   auto spreadArray = GetInputArrayToProcess(3, input);
   if(!spreadArray) {
     this->printErr("No spread array was provided.");
-    // return 0;
+    return 0;
   }
 
   auto rateArray = GetInputArrayToProcess(4, input);
   if(!rateArray) {
     this->printErr("No rate array was provided.");
-    // return 0;
+    return 0;
   }
 
   // Initialize size of vector of points per timestep
@@ -114,8 +112,9 @@ int ttkPathIntegrator::RequestData(vtkInformation *request,
     p.amplitude = ampArray->GetTuple(i)[0];
     p.rate = rateArray->GetTuple(i)[0];
     p.timestep = 0;
-
     p.spread = spreadArray->GetTuple(i)[0];
+
+    // Check if spread is over max, if so save
     if(p.spread > maxSpread)
       maxSpread = p.spread;
 
@@ -173,6 +172,7 @@ int ttkPathIntegrator::RequestData(vtkInformation *request,
         return ttkUtils::GetVoidPointer(array);
       };
 
+  // Go through all timesteps and create output vtkPolyData
   for(int i = 0; i < this->nTimesteps; i++) {
     // Create vtkPolyData for current timestep
     auto polyData = vtkSmartPointer<vtkPolyData>::New();
@@ -197,6 +197,7 @@ int ttkPathIntegrator::RequestData(vtkInformation *request,
     auto cellArray = vtkSmartPointer<vtkCellArray>::New();
     cellArray->SetData(offsetArray, connectivityArray);
 
+    // Create arrays for output data
     auto timeArray = vtkSmartPointer<vtkIntArray>::New();
     auto timeArrayData
       = static_cast<int *>(prepArray(timeArray, "Timestep", nPoints, 1));
@@ -222,6 +223,8 @@ int ttkPathIntegrator::RequestData(vtkInformation *request,
     auto deathTimeArrayData
       = static_cast<int *>(prepArray(deathTimeArray, "DeathTime", nPoints, 1));
 
+    // Create a random engine which is used to randomly sample different birth
+    // and death times for the points
     std::mt19937 randGen(1);
     std::uniform_int_distribution<> disBirth(
       -floor(this->nTimesteps / 2), this->nTimesteps);
@@ -243,6 +246,7 @@ int ttkPathIntegrator::RequestData(vtkInformation *request,
       spread2ArrayData[idx] = p.spread;
       rate2ArrayData[idx] = p.rate;
 
+      // Generate birth and death data randomly
       int birth = disBirth(randGen);
       int death = disDeath(randGen);
       while(death < birth) {
@@ -251,6 +255,7 @@ int ttkPathIntegrator::RequestData(vtkInformation *request,
       birthTimeArrayData[idx] = birth;
       deathTimeArrayData[idx] = death;
 
+      // Store velocity
       velocityArrayData[3 * idx] = p.v[0];
       velocityArrayData[3 * idx + 1] = p.v[1];
       velocityArrayData[3 * idx + 2] = p.v[2];

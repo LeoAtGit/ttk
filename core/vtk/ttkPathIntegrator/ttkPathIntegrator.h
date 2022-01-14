@@ -6,8 +6,8 @@
 /// \brief TTK VTK-filter that wraps the ttk::PathIntegrator module.
 ///
 ///
-/// \param Input vtkPolyDataset.
-/// \param Output vtkPolyDataset.
+/// \param Input vtkPolyDataSet.
+/// \param Output vtkMultiBlockDataSet of vtkPolyDataset.
 
 #pragma once
 

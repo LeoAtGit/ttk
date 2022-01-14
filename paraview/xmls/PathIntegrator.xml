@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- TODO 11: Add widgets to the ParaView UI that control the member variables of the vtk filter -->
-<!-- NOTE: Unfortunately the widget types and their properties are not well documented. -->
-<!--       The best thing you can do is to look at filters that have similar widgets you require and copy their source code. -->
-<!--       Good resources are: IcoSphere.xml, PersistenceDiagram.xml, and ArrayEditor.xml -->
+
 <ServerManagerConfiguration>
   <ProxyGroup name="filters">
     <SourceProxy name="ttkPathIntegrator" class="ttkPathIntegrator" label="TTK PathIntegrator">
-      <Documentation long_help="PathIntegrator Long" short_help="PathIntegrator Short">This filter is a well documented ttk example filter that computes for each vertex of a vtkDataSet the average scalar value of itself and its neighbors.</Documentation>
+      <Documentation long_help="PathIntegrator Long" short_help="PathIntegrator Short">
+      This filter takes points and integrates them using RK4 along a vector field for a user provided time series and time interval. Note that the input arrays are required and the filter will not work without them.
+      </Documentation>
 
       <!-- INPUT DATA OBJECTS -->
       <InputProperty name="Input" command="SetInputConnection">
@@ -19,7 +18,7 @@
         </DataTypeDomain>
         <InputArrayDomain name="field_array" attribute_type="field" number_of_components="3"/>
         <InputArrayDomain name="point_array" attribute_type="point" number_of_components="1"/>
-        <Documentation>Set of seeding points for path integrator.</Documentation>
+        <Documentation>Set of seeding points for the path integrator.</Documentation>
       </InputProperty>
 
       <!-- INPUT PARAMETER WIDGETS -->
@@ -59,7 +58,7 @@
             <Property function="Input" name="Input" />
           </RequiredProperties>
         </ArrayListDomain>
-        <Documentation>The array that contains the amplitude.</Documentation>
+        <Documentation>The array that contains the amplitude, which is the scalar value of the feature in its center. </Documentation>
       </StringVectorProperty>
 
       <StringVectorProperty 
@@ -77,7 +76,7 @@
             <Property function="Input" name="Input" />
           </RequiredProperties>
         </ArrayListDomain>
-        <Documentation>The array that contains the spread.</Documentation>
+        <Documentation>The array that contains the spread of the feature, which determines the area of the feature. The scalar value decreases from the center to given boundary in this array..</Documentation>
       </StringVectorProperty>
 
       <StringVectorProperty 
@@ -95,7 +94,7 @@
             <Property function="Input" name="Input" />
           </RequiredProperties>
         </ArrayListDomain>
-        <Documentation>The array that contains the rate.</Documentation>
+        <Documentation>The array that contains the rate of how fast the feature is born and dies.</Documentation>
       </StringVectorProperty>         
 
       <StringVectorProperty 
@@ -120,23 +119,26 @@
       <PropertyGroup panel_widget="Line" label="Input Options">
         <Property name="DimArray" />
         <Property name="IdArray" />
+        <Property name="AmpArray" />
+        <Property name="SpArray" />
+        <Property name="rArray" />
       </PropertyGroup>
 
       <!-- OUTPUT PARAMETER WIDGETS -->
       <IntVectorProperty name="nTimesteps" label="Number of timesteps" command="SetnTimesteps" number_of_elements="1" default_values="10">
-          <Documentation>?</Documentation>
+          <Documentation>The length of the time series.</Documentation>
       </IntVectorProperty>
 
       <DoubleVectorProperty name="TimeInterval" label="Time Interval" command="SetTimeInterval" number_of_elements="1" default_values="0.1">
-          <Documentation>?</Documentation>
+          <Documentation>The interval between each timestep.</Documentation>
       </DoubleVectorProperty>
 
       <DoubleVectorProperty name="StepLength" label="Step Length" command="SetStepLength" number_of_elements="1" default_values="0.1">
-          <Documentation>?</Documentation>
+          <Documentation>The length of steps taken along the vector field during the path integration.</Documentation>
       </DoubleVectorProperty>
 
       <DoubleVectorProperty name="PerlinScaleFactor" label="Perlin Scale Factor" command="SetPerlinScaleFactor" number_of_elements="1" default_values="10.0">
-          <Documentation>?</Documentation>
+          <Documentation>How much vector fields from perlin are scaled. Lower values yield lower resolution for the perlin fields.</Documentation>
       </DoubleVectorProperty>
 
       <IntVectorProperty name="VecField" label="Vector Field" command="SetVecField" number_of_elements="1" default_values="0">
@@ -146,7 +148,7 @@
           <Entry value="2" text="Positive Diagonal" />
           <Entry value="3" text="Positive X" />
         </EnumerationDomain>
-        <Documentation>Vector field.</Documentation>
+        <Documentation>The list of vector fields which can be used during the integration.</Documentation>
       </IntVectorProperty>   
 
       <!-- Create a UI group that contains all output parameter widgets (here only one) -->
