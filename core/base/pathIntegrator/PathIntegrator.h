@@ -212,6 +212,9 @@ namespace ttk {
          && (prevP.z > 0.0 && prevP.z < dimensions_[2])) {
         // Check if point has been outside domain and set that it has re-entered
         if(prevP.outsideDomain) {
+          // Create new pointId when point enters domain
+          prevP.pointId = ++maxPointId_;
+
           prevP.outsideDomain = false;
         }
 
@@ -296,12 +299,12 @@ namespace ttk {
       setPerlinScaleFactor(psf);
       setVectorField(vf);
 
-      int maxPointId = outPoints[0].size() - 1;
+      maxPointId_ = outPoints[0].size() - 1;
 
       // Integrate the paths of the initial points by moving the points
       // along the vector field for all timesteps
       ttk::Timer timer;
-      this->printMsg("Integrating " + std::to_string(maxPointId + 1)
+      this->printMsg("Integrating " + std::to_string(maxPointId_ + 1)
                        + " particles along vector field",
                      0, 0, this->threadNumber_, debug::LineMode::REPLACE);
 
@@ -322,7 +325,7 @@ namespace ttk {
         }
       }
 
-      this->printMsg("Integrating " + std::to_string(maxPointId + 1)
+      this->printMsg("Integrating " + std::to_string(maxPointId_ + 1)
                        + " particles along vector field",
                      1, timer.getElapsedTime(), this->threadNumber_);
 
@@ -334,6 +337,7 @@ namespace ttk {
     int vbDimensions_[6]{};
     double h_{};
     double psf_[3]{};
+    int maxPointId_;
     VectorField vf_{};
     PerlinNoise pn;
 
