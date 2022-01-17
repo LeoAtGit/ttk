@@ -164,7 +164,7 @@
 
       <!-- MENU CATEGORY -->
       <Hints>
-        <ShowInMenu category="TTK - Misc" />
+        <ShowInMenu category="TTK - Time-Varying Scalar Data" />
       </Hints>
     </SourceProxy>
   </ProxyGroup>
