@@ -2,13 +2,25 @@ class TreeRenderer {
   constructor(treeContainer){
     this.treeContainer = treeContainer;
 
+    this.scale = 200;
+    this.padding = 50;
+    this.width = 500;
+    this.height = 500;
+
     this.treeContainer.append("<svg></svg>");
     this.svg = d3.select("svg")
-        .attr("height", 500)
-        .attr("width", 500);
+        .attr("height", this.width)
+        .attr("width", this.height)
+        .attr("style", "border:1px solid black");
 
     this.root = this.svg.append("g");
     this.nodelayer = this.root.append("g");
+
+    this.svg.call(d3.zoom()
+        // .extent([[0, 0], [500, 500]])
+        // .scaleExtent([1, 8])
+        .on("zoom", ({transform}) => this.root.attr("transform", transform))
+    );
 
     this.vtkDataSet = null;
     this.points = [];
@@ -16,8 +28,6 @@ class TreeRenderer {
 
   setVtkDataSet(dataset){
     this.vtkDataSet = dataset;
-
-    const scale = 150;
 
     // point information
     const _coords = this.vtkDataSet.points.coordinates.data;
@@ -27,8 +37,20 @@ class TreeRenderer {
     const kde_i0 = this.vtkDataSet.pointData.KDE_ByType_I0.data;
     const kde_i1 = this.vtkDataSet.pointData.KDE_ByType_I1.data;
 
+    // change the y coordinates, because ttk and svg use a different coordinate system
+    let _y = [];
+    for (let i = 1; i < coords.length; i+=3) {
+      _y.push(coords[i]);
+    }
+    const _y_max = Math.max(..._y);
+    const _y_min = Math.min(..._y);
+
     while(coords.length > 0) {
-      this.points.push(new Point(coords.shift() * scale, coords.shift() * scale, coords.shift() * scale));
+      this.points.push(new Point(
+          coords.shift() * this.scale,
+          ((Math.abs(_y_max - _y_min)) - (coords.shift() - _y_min)) * this.scale,
+          coords.shift() * this.scale)
+      );
     }
 
     for(let i = 0; i < this.points.length; i++) {
@@ -37,6 +59,20 @@ class TreeRenderer {
       this.points[i].setKDE_I0(kde_i0[i]);
       this.points[i].setKDE_I1(kde_i1[i]);
     }
+
+    // center the tree with viewBox
+    const x_max = Math.max(...this.points.map(p => p.x));
+    const x_min = Math.min(...this.points.map(p => p.x));
+    const y_max = Math.max(...this.points.map(p => p.y));
+    const y_min = Math.min(...this.points.map(p => p.y));
+
+    this.svg
+        .attr("viewBox", [
+            x_min - this.padding,
+            y_min - this.padding,
+            2 * this.padding + (x_max - x_min),
+            2 * this.padding + (y_max - y_min)]
+        );
 
     // cell information
     this.connectivityArray = this.vtkDataSet.cells.connectivityArray.data;
