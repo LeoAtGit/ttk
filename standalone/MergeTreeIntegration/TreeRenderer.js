@@ -56,8 +56,8 @@ class TreeRenderer {
     for(let i = 0; i < this.points.length; i++) {
       this.points[i].setBranchId(branchid[i]);
       this.points[i].setKDE(kde[i]);
-      this.points[i].setKDE_I0(kde_i0[i]);
-      this.points[i].setKDE_I1(kde_i1[i]);
+      this.points[i].setKDE_I0([kde_i0[i * 3], kde_i0[i * 3 + 1], kde_i0[i * 3 + 2]]);  // 3 components for each entry
+      this.points[i].setKDE_I1([kde_i1[i * 3], kde_i1[i * 3 + 1], kde_i1[i * 3 + 2]]);  // 3 components for each entry
     }
 
     // cell information
@@ -88,6 +88,7 @@ class TreeRenderer {
       const max = Math.min(...branch.map(p => p.y));
       const pos = this.points.findIndex(p => p.branchId === unique_branchIds[i] && p.y === max);
       this.points[pos].drawDonut = true;
+      this.points[pos].drawPoint = true;
     }
 
     for (let i = 0; i < this.connectivityArray.length; i+=2) {
@@ -96,14 +97,18 @@ class TreeRenderer {
       if (p1.branchId !== p2.branchId) {
         let idx = (p2.y > p1.y) ? 1 : 0;
         this.points[this.connectivityArray[i + idx]].drawDonut = true;
+        this.points[this.connectivityArray[i + idx]].drawPoint = true;
       }
     }
+
+    // at the absolute minimum, we also want to draw a point
+    const y_max = Math.max(...this.points.map(p => p.y));
+    this.points[this.points.findIndex(p => p.y === y_max)].drawPoint = true;
 
     // center the tree with viewBox
     const x_max = Math.max(...this.points.map(p => p.x));
     const x_min = Math.min(...this.points.map(p => p.x));
-    const y_max = Math.max(...this.points.map(p => p.y));
-    const y_min = Math.min(...this.points.map(p => p.y));
+    const y_min = Math.min(...this.points.map(p => p.y));  // y_max calculated above
 
     this.svg
         .attr("viewBox", [
@@ -130,21 +135,47 @@ class TreeRenderer {
     for (let i = 0; i < this.connectivityArray.length; i+=2) {
       this.nodelayer.append("path")
           .attr("fill", "none")
-          .attr("stroke", "steelblue")
-          .attr("stroke-width", 1.5)
+          .attr("stroke", "black")
+          .attr("stroke-width", 2)
           .attr("stroke-miterlimit", 1)
           .attr("d", line([this.points[this.connectivityArray[i]], this.points[this.connectivityArray[i+1]]]));
     }
 
     for (let i = 0; i < this.points.length; i++) {
       if (this.points[i].drawDonut) {
+        this.Donut(this.points[i]);
+      }
+
+      if (this.points[i].drawPoint) {
         this.nodelayer.append("circle")
             .attr("cx", this.points[i].x)
             .attr("cy", this.points[i].y)
-            .attr("r", 3)
-            .attr("fill", this.points[i].branchId === 0 ? "red" : "green");
+            .attr("r", 4)
+            .attr("fill", "black");
       }
     }
+  }
+
+  Donut(point) {
+    // adapted from https://www.geeksforgeeks.org/d3-js-pie-function/
+    let g = this.nodelayer.append("g")
+        .attr("transform", `translate(${point.x}, ${point.y})`);
+
+    const pie = d3.pie().sort(null);
+    const arc = d3.arc()
+        .innerRadius(8)
+        .outerRadius(20);
+
+    const arcs = g.selectAll("arcs")
+        .data(pie(point.kde_i1))
+        .enter()
+        .append("g");
+
+    arcs.append("path")
+        .attr("fill", (data, i) => d3.schemeSet1[i])
+        .attr("d", arc)
+        .attr("stroke", "black")
+        .style("stroke-width", 1);
   }
 }
 
