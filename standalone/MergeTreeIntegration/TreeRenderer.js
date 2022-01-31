@@ -11,7 +11,7 @@ class TreeRenderer {
     this.svg = d3.select("svg")
         .attr("height", this.width)
         .attr("width", this.height)
-        .attr("style", "border:1px solid black");
+        .attr("style", "border:5px solid #eaeaea");
 
     this.root = this.svg.append("g");
     this.nodelayer = this.root.append("g");
@@ -45,13 +45,25 @@ class TreeRenderer {
     const _y_max = Math.max(..._y);
     const _y_min = Math.min(..._y);
 
+    // also change the x coordinates, so our bounding box starts at (0,0). This helps for e.g. the coordinate axis rendering
+    let _x = [];
+    for (let i = 0; i < coords.length; i+=3) {
+      _x.push(coords[i]);
+    }
+    const _x_min = Math.min(..._x);
+
     while(coords.length > 0) {
       this.points.push(new Point(
-          coords.shift() * this.scale,
+          (coords.shift() - _x_min) * this.scale,
           ((Math.abs(_y_max - _y_min)) - (coords.shift() - _y_min)) * this.scale,
           coords.shift() * this.scale)
       );
     }
+
+    this.x_max = Math.max(...this.points.map(p => p.x));
+    this.x_min = Math.min(...this.points.map(p => p.x));
+    this.y_max = Math.max(...this.points.map(p => p.y));
+    this.y_min = Math.min(...this.points.map(p => p.y));
 
     for(let i = 0; i < this.points.length; i++) {
       this.points[i].setBranchId(branchid[i]);
@@ -102,20 +114,15 @@ class TreeRenderer {
     }
 
     // at the absolute minimum, we also want to draw a point
-    const y_max = Math.max(...this.points.map(p => p.y));
-    this.points[this.points.findIndex(p => p.y === y_max)].drawPoint = true;
+    this.points[this.points.findIndex(p => p.y === this.y_max)].drawPoint = true;
 
     // center the tree with viewBox
-    const x_max = Math.max(...this.points.map(p => p.x));
-    const x_min = Math.min(...this.points.map(p => p.x));
-    const y_min = Math.min(...this.points.map(p => p.y));  // y_max calculated above
-
     this.svg
         .attr("viewBox", [
-            x_min - this.padding,
-            y_min - this.padding,
-            2 * this.padding + (x_max - x_min),
-            2 * this.padding + (y_max - y_min)]
+            this.x_min - this.padding,
+            this.y_min - this.padding,
+            2 * this.padding + (this.x_max - this.x_min),
+            2 * this.padding + (this.y_max - this.y_min)]
         );
   }
 
@@ -126,6 +133,31 @@ class TreeRenderer {
     }
 
     this.nodelayer.empty();
+
+    // draw the coordinate system
+    this.coordinate_system = this.nodelayer.append("g")
+        .attr("transform", `translate(${-2 * this.padding} , 0)`);
+
+    const yScale = d3.scaleLinear()
+        .domain([0, 1])
+        .range([this.y_max, 0]);
+    this.coordinate_system
+        .call(d3.axisRight(yScale)
+            .tickSize(this.width - 2 * this.padding))
+        .call(g => g.select(".domain")
+            .remove())
+        .call(g => g.selectAll(".tick line")
+            .attr("stroke-opacity", 0.25))
+        .call(g => g.selectAll(".tick text")
+            .attr("x", -20))
+            .attr("font-weight", "lighter");
+
+    this.nodelayer.append("text")
+        .attr("x", -2 * this.padding - 40)
+        .attr("y", -20)
+        .attr("font-size", 10)
+        .attr("font-weight", "lighter")
+        .text("Density");
 
     // draw the lines of the graph (in an unoptimized way)
     const line = d3.line()
