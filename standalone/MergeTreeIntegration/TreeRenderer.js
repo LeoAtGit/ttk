@@ -60,20 +60,6 @@ class TreeRenderer {
       this.points[i].setKDE_I1(kde_i1[i]);
     }
 
-    // center the tree with viewBox
-    const x_max = Math.max(...this.points.map(p => p.x));
-    const x_min = Math.min(...this.points.map(p => p.x));
-    const y_max = Math.max(...this.points.map(p => p.y));
-    const y_min = Math.min(...this.points.map(p => p.y));
-
-    this.svg
-        .attr("viewBox", [
-            x_min - this.padding,
-            y_min - this.padding,
-            2 * this.padding + (x_max - x_min),
-            2 * this.padding + (y_max - y_min)]
-        );
-
     // cell information
     this.connectivityArray = this.vtkDataSet.cells.connectivityArray.data;
     const offsetsArray = this.vtkDataSet.cells.offsetsArray.data;
@@ -90,6 +76,42 @@ class TreeRenderer {
         return;
       }
     }
+
+    // for donut chart, we have to find out at which points we want to draw the donuts.
+    // the locations are:
+    //    - at the maximum of each branch
+    //    - if two branches connect with each other, at the lower point we'd want a donut
+    const unique_branchIds = [...new Set(this.points.map(p => p.branchId))];
+    for (let i = 0; i < unique_branchIds.length; i++) {
+      let branch = this.points.filter(p => p.branchId === unique_branchIds[i]);
+      // point with lowest y-value is the maximum, i.e. the "highest" point in the view of that branch
+      const max = Math.min(...branch.map(p => p.y));
+      const pos = this.points.findIndex(p => p.branchId === unique_branchIds[i] && p.y === max);
+      this.points[pos].drawDonut = true;
+    }
+
+    for (let i = 0; i < this.connectivityArray.length; i+=2) {
+      const p1 = this.points[this.connectivityArray[i]];
+      const p2 = this.points[this.connectivityArray[i+1]];
+      if (p1.branchId !== p2.branchId) {
+        let idx = (p2.y > p1.y) ? 1 : 0;
+        this.points[this.connectivityArray[i + idx]].drawDonut = true;
+      }
+    }
+
+    // center the tree with viewBox
+    const x_max = Math.max(...this.points.map(p => p.x));
+    const x_min = Math.min(...this.points.map(p => p.x));
+    const y_max = Math.max(...this.points.map(p => p.y));
+    const y_min = Math.min(...this.points.map(p => p.y));
+
+    this.svg
+        .attr("viewBox", [
+            x_min - this.padding,
+            y_min - this.padding,
+            2 * this.padding + (x_max - x_min),
+            2 * this.padding + (y_max - y_min)]
+        );
   }
 
   render() {
@@ -115,11 +137,13 @@ class TreeRenderer {
     }
 
     for (let i = 0; i < this.points.length; i++) {
-      this.nodelayer.append("circle")
-          .attr("cx", this.points[i].x)
-          .attr("cy", this.points[i].y)
-          .attr("r", 3)
-          .attr("fill", this.points[i].branchId === 0 ? "red" : "green");
+      if (this.points[i].drawDonut) {
+        this.nodelayer.append("circle")
+            .attr("cx", this.points[i].x)
+            .attr("cy", this.points[i].y)
+            .attr("r", 3)
+            .attr("fill", this.points[i].branchId === 0 ? "red" : "green");
+      }
     }
   }
 }
@@ -129,6 +153,8 @@ class Point {
     this.x = x;
     this.y = y;
     this.z = z;
+
+    this.drawDonut = false;
   }
 
   setBranchId(id) {
