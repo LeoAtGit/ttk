@@ -7,8 +7,9 @@ class TreeRenderer {
     this.width = 500;
     this.height = 500;
 
-    this.treeContainer.append("<svg></svg>");
-    this.svg = d3.select("svg")
+    this.streamgraph_options = new StreamgraphOptions(50, 10);
+
+    this.svg = this.treeContainer.append("svg")
         .attr("height", this.width)
         .attr("width", this.height)
         .attr("style", "border:5px solid #eaeaea");
@@ -108,8 +109,9 @@ class TreeRenderer {
       }
     }
 
-    // at the absolute minimum, we also want to draw a point
-    this.points[this.points.findIndex(p => p.y === this.y_max)].drawPoint = true;
+    // at the absolute minimum (the root node of the tree), we also want to draw a point
+    this.treeRoot = this.points[this.points.findIndex(p => p.y === this.y_max)];
+    this.treeRoot.drawPoint = true;
 
     // center the tree with viewBox
     this.svg
@@ -121,7 +123,7 @@ class TreeRenderer {
         );
   }
 
-  render() {
+  render(type) {
     if (!this.vtkDataSet) {
       console.error("trying to render without dataset");
       return;
@@ -177,6 +179,64 @@ class TreeRenderer {
         .x(d => d.x)
         .y(d => d.y);
 
+    if (type === 'streamgraph') {
+      const branches = this.points
+          .map(p => p.x)
+          .filter((v, i, self) => self.indexOf(v) === i)
+          .sort()
+          .reverse();
+
+      // TODO documentation
+      // we want to order the colors in the streamgraph
+      // see https://stackoverflow.com/questions/3730510/javascript-sort-array-and-return-an-array-of-indices-that-indicates-the-positio
+      const color_order = Array.from(Array(this.treeRoot.kde_i1.length).keys())  // create array [0, ..., this.treeRoot.kde_i1.length - 1]
+          .sort((a, b) => this.treeRoot.kde_i1[b] - this.treeRoot.kde_i1[a]);  // sort the array according to the entries in this.treeRoot.kde_i1
+
+      console.log(this.treeRoot.kde_i1);
+      console.log(color_order);
+      console.log("##########")
+
+      branches.forEach((branch, i) => {
+        // calculate maximum space between the edges of the graph
+        const maximum_space = (i === 0) ? this.streamgraph_options.maxwidth_root : branches[i - 1] - branch;
+
+        const current_branch = this.points
+            .filter(p => p.x === branch)
+            .sort((p1, p2) => p2.y - p1.y);
+
+        const data = current_branch
+            .map(p => p.kde_i1)
+            .map(kde => color_order
+                .map(i => kde[i])
+            )
+            .map(kde => d3.cumsum(kde));
+
+        const no_of_categories = data[0].length;
+
+        // create a scale for mapping of the points
+        const mapping = d3.scaleLinear()
+            .domain([0, data[0][no_of_categories - 1]])
+            .range([0, maximum_space]);
+
+        // draw the streamgraph
+        for (let i = 0; i < no_of_categories; i++) {
+          let path = d3.path();
+          path.moveTo(current_branch[0].x, current_branch[0].y);
+          current_branch.forEach((point, j) => {
+            path.lineTo(point.x + mapping(data[j][no_of_categories - 1 - i]), point.y);
+          });
+          path.lineTo(current_branch[current_branch.length - 1].x, current_branch[current_branch.length - 1].y);
+          path.closePath();
+
+          this.nodelayer.append("path")
+              .attr("d", path)
+              .attr("fill", d3.schemeSet1[i]);
+
+          // return;
+        }
+      });
+    }
+
     for (let i = 0; i < this.connectivityArray.length; i+=2) {
       this.nodelayer.append("path")
           .attr("fill", "none")
@@ -186,11 +246,15 @@ class TreeRenderer {
           .attr("d", line([this.points[this.connectivityArray[i]], this.points[this.connectivityArray[i+1]]]));
     }
 
-    for (let i = 0; i < this.points.length; i++) {
-      if (this.points[i].drawDonut) {
-        this.Donut(this.points[i]);
+    if (type === 'donut') {
+      for (let i = 0; i < this.points.length; i++) {
+        if (this.points[i].drawDonut) {
+          this.Donut(this.points[i]);
+        }
       }
+    }
 
+    for (let i = 0; i < this.points.length; i++) {
       if (this.points[i].drawPoint) {
         this.nodelayer.append("circle")
             .attr("cx", this.points[i].x)
@@ -247,5 +311,12 @@ class Point {
 
   setKDE_I1(kde) {
     this.kde_i1 = kde;
+  }
+}
+
+class StreamgraphOptions {
+  constructor(maxwidth_root, padding) {
+    this.maxwidth_root = maxwidth_root;
+    this.padding = padding;
   }
 }

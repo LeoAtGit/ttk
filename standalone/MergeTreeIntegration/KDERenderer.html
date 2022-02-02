@@ -9,7 +9,6 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.3.0/d3.min.js" integrity="sha512-NMhzM2RHzbCRO0s5VPaRC+2bW6nmNXimzC9p5sp2x19M+zzuSJ2T50dEQ7hpHkNjnX1mt8nQg1NNthwRZgsoIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r117/three.min.js"></script>
 
@@ -42,7 +41,10 @@
   </head>
     <body>
 
-    <div id="treeContainer" style="width: 600px; height: 600px;margin:0 auto;"></div>
+    <div>
+      <div id="treeContainerDonut" style="float: left; width: 600px; height: 600px;margin:0 auto;"></div>
+      <div id="treeContainerStreamgraph" style="float: left; width: 600px; height: 600px;margin:0 auto;"></div>
+    </div>
     <div id="mapContainer" style="width: 600px; height: 600px;margin:0 auto;"></div>
 
       <script id='sourceCode'>
@@ -55,14 +57,18 @@ const translink = '<a href="http://thunderforest.com/">Thunderforest</a>';
 }).addTo(map);
 
 const kdeRenderer = new KDERenderer(map);
-const treeRenderer = new TreeRenderer($("#treeContainer"));
+// const treeRendererDonut = new TreeRenderer($("#treeContainerDonut"));
+const treeRendererDonut = new TreeRenderer(d3.select("#treeContainerDonut"));
+const treeRendererStreamgraph = new TreeRenderer(d3.select("#treeContainerStreamgraph"));
 
 const connection = new TTK.ttkWebSocketIO();
 connection.on( 'messageSequence',  msgs=>{
   TTK.vtkDataSet.createFromMessageSequence(msgs).then( objects=>{
     console.log(objects[0]);
-    treeRenderer.setVtkDataSet(objects[0]);
-    treeRenderer.render();
+    treeRendererDonut.setVtkDataSet(objects[0]);
+    treeRendererStreamgraph.setVtkDataSet(objects[0]);
+    treeRendererDonut.render("donut");
+    treeRendererStreamgraph.render("streamgraph");
   });
 });
 connection.on('open',()=>connection.sendString('RequestInputVtkDataSet'));
