@@ -14,13 +14,8 @@ class TreeRenderer {
         .attr("style", "border:5px solid #eaeaea");
 
     this.root = this.svg.append("g");
+    this.coordinate_system = this.root.append("g");
     this.nodelayer = this.root.append("g");
-
-    this.svg.call(d3.zoom()
-        // .extent([[0, 0], [500, 500]])
-        // .scaleExtent([1, 8])
-        .on("zoom", ({transform}) => this.root.attr("transform", transform))
-    );
 
     this.vtkDataSet = null;
     this.points = [];
@@ -135,15 +130,24 @@ class TreeRenderer {
     this.nodelayer.empty();
 
     // draw the coordinate system
-    this.coordinate_system = this.nodelayer.append("g")
+    this.coordinate_system
         .attr("transform", `translate(${-2 * this.padding} , 0)`);
+
+    this.coordinate_system.append("text")
+        .attr("x", -40)
+        .attr("y", -20)
+        .attr("font-size", 10)
+        .attr("font-weight", "lighter")
+        .text("Density");
 
     const yScale = d3.scaleLinear()
         .domain([0, 1])
         .range([this.y_max, 0]);
-    this.coordinate_system
-        .call(d3.axisRight(yScale)
-            .tickSize(this.width - 2 * this.padding))
+    const yAxis = d3.axisRight(yScale)
+        .ticks(10)
+        .tickSize(this.width - 2 * this.padding);
+    const gY = this.coordinate_system.append("g")
+        .call(yAxis)
         .call(g => g.select(".domain")
             .remove())
         .call(g => g.selectAll(".tick line")
@@ -152,12 +156,21 @@ class TreeRenderer {
             .attr("x", -20))
             .attr("font-weight", "lighter");
 
-    this.nodelayer.append("text")
-        .attr("x", -2 * this.padding - 40)
-        .attr("y", -20)
-        .attr("font-size", 10)
-        .attr("font-weight", "lighter")
-        .text("Density");
+    this.svg.call(d3.zoom()
+        // .extent([[0, 0], [500, 500]])
+        // .scaleExtent([1, 8])
+        .on("zoom", ({transform}) => {
+          this.nodelayer.attr("transform", transform);
+          gY.call(yAxis.scale(transform.rescaleY(yScale)))
+              .call(g => g.select(".domain")
+                  .remove())
+              .call(g => g.selectAll(".tick line")
+                  .attr("stroke-opacity", 0.25))
+              .call(g => g.selectAll(".tick text")
+                  .attr("x", -20))
+                  .attr("font-weight", "lighter");
+        })
+    );
 
     // draw the lines of the graph (in an unoptimized way)
     const line = d3.line()
