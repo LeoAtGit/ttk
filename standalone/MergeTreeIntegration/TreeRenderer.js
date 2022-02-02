@@ -7,7 +7,7 @@ class TreeRenderer {
     this.width = 500;
     this.height = 500;
 
-    this.streamgraph_options = new StreamgraphOptions(50, 10);
+    this.streamgraph_options = new StreamgraphOptions(100, 10);
 
     this.svg = this.treeContainer.append("svg")
         .attr("height", this.width)
@@ -174,11 +174,7 @@ class TreeRenderer {
         })
     );
 
-    // draw the lines of the graph (in an unoptimized way)
-    const line = d3.line()
-        .x(d => d.x)
-        .y(d => d.y);
-
+    // draw the streamgraph
     if (type === 'streamgraph') {
       const branches = this.points
           .map(p => p.x)
@@ -186,18 +182,14 @@ class TreeRenderer {
           .sort()
           .reverse();
 
-      // TODO documentation
-      // we want to order the colors in the streamgraph
+      // We want each subtree to have the same order of categories (i.e. "colors") as
+      // the main tree. The order is specified by the size at the root node
       // see https://stackoverflow.com/questions/3730510/javascript-sort-array-and-return-an-array-of-indices-that-indicates-the-positio
       const color_order = Array.from(Array(this.treeRoot.kde_i1.length).keys())  // create array [0, ..., this.treeRoot.kde_i1.length - 1]
           .sort((a, b) => this.treeRoot.kde_i1[b] - this.treeRoot.kde_i1[a]);  // sort the array according to the entries in this.treeRoot.kde_i1
 
-      console.log(this.treeRoot.kde_i1);
-      console.log(color_order);
-      console.log("##########")
-
       branches.forEach((branch, i) => {
-        // calculate maximum space between the edges of the graph
+        // calculate maximum space between the edge of current branch to the branch that is to the right of it
         const maximum_space = (i === 0) ? this.streamgraph_options.maxwidth_root : branches[i - 1] - branch;
 
         const current_branch = this.points
@@ -207,7 +199,7 @@ class TreeRenderer {
         const data = current_branch
             .map(p => p.kde_i1)
             .map(kde => color_order
-                .map(i => kde[i])
+                .map(i => kde[i])  // reorder the kde_i1 arrays according to the indices in color_order
             )
             .map(kde => d3.cumsum(kde));
 
@@ -216,7 +208,7 @@ class TreeRenderer {
         // create a scale for mapping of the points
         const mapping = d3.scaleLinear()
             .domain([0, data[0][no_of_categories - 1]])
-            .range([0, maximum_space]);
+            .range([0, maximum_space - this.streamgraph_options.padding]);
 
         // draw the streamgraph
         for (let i = 0; i < no_of_categories; i++) {
@@ -230,13 +222,17 @@ class TreeRenderer {
 
           this.nodelayer.append("path")
               .attr("d", path)
-              .attr("fill", d3.schemeSet1[i]);
-
-          // return;
+              .attr("fill", d3.schemeSet1[i])
+              .attr("stroke", "black")
+              .attr("stroke-width", 0.5);
         }
       });
     }
 
+    // draw the lines of the graph (in an unoptimized way)
+    const line = d3.line()
+        .x(d => d.x)
+        .y(d => d.y);
     for (let i = 0; i < this.connectivityArray.length; i+=2) {
       this.nodelayer.append("path")
           .attr("fill", "none")
@@ -246,6 +242,7 @@ class TreeRenderer {
           .attr("d", line([this.points[this.connectivityArray[i]], this.points[this.connectivityArray[i+1]]]));
     }
 
+    // draw the donut plots
     if (type === 'donut') {
       for (let i = 0; i < this.points.length; i++) {
         if (this.points[i].drawDonut) {
@@ -254,6 +251,7 @@ class TreeRenderer {
       }
     }
 
+    // draw the points in the graph
     for (let i = 0; i < this.points.length; i++) {
       if (this.points[i].drawPoint) {
         this.nodelayer.append("circle")
