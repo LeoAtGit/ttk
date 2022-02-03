@@ -177,9 +177,9 @@ class TreeRenderer {
     // draw the streamgraph
     if (type === 'streamgraph') {
       const branches = this.points
-          .map(p => p.x)
+          .map(p => p.branchId)
           .filter((v, i, self) => self.indexOf(v) === i)
-          .sort()
+          .sort((a, b) => this.xCoordOfBranchID(a) - this.xCoordOfBranchID(b))  // sort by the x coordinate of the branches
           .reverse();
 
       // We want each subtree to have the same order of categories (i.e. "colors") as
@@ -190,10 +190,12 @@ class TreeRenderer {
 
       branches.forEach((branch, i) => {
         // calculate maximum space between the edge of current branch to the branch that is to the right of it
-        const maximum_space = (i === 0) ? this.streamgraph_options.maxwidth_root : branches[i - 1] - branch;
+        const maximum_space = (i === 0)
+            ? this.streamgraph_options.maxwidth_root
+            : this.xCoordOfBranchID(branches[i - 1]) - this.xCoordOfBranchID(branch);
 
         const current_branch = this.points
-            .filter(p => p.x === branch)
+            .filter(p => p.branchId === branch)
             .sort((p1, p2) => p2.y - p1.y);
 
         const data = current_branch
@@ -283,6 +285,10 @@ class TreeRenderer {
         .attr("d", arc)
         .attr("stroke", "black")
         .style("stroke-width", 1);
+  }
+
+  xCoordOfBranchID(branchId) {
+    return this.points.filter(p => p.branchId === branchId).map(p => p.x)[0];
   }
 }
 
