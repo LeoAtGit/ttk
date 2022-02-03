@@ -231,18 +231,38 @@ class TreeRenderer {
       });
     }
 
-    // draw the lines of the graph (in an unoptimized way)
-    const line = d3.line()
-        .x(d => d.x)
-        .y(d => d.y);
-    for (let i = 0; i < this.connectivityArray.length; i+=2) {
+    // draw the lines of the graph
+    const unique_branchIds = this.points
+        .map(p => p.branchId)
+        .filter((v, i, self) => self.indexOf(v) === i);
+
+    unique_branchIds.forEach(bId => {
+      const pointsOnBranch = this.points
+          .filter(p => p.branchId === bId)
+          .sort((a, b) => a.y - b.y);
+
+      const x1 = pointsOnBranch[0].x;
+      const y1 = pointsOnBranch[0].y;
+      const y2 = pointsOnBranch[pointsOnBranch.length - 1].y;
+
+      let path = d3.path();
+      path.moveTo(x1, y1);
+      path.lineTo(x1, y2);
+
+      const x = this.points.indexOf(pointsOnBranch[pointsOnBranch.length - 1]);
+      const _id = this.connectivityArray.filter((c, i) => i % 2 === 0).indexOf(BigInt(x));
+      if (_id !== -1) {  // if _id === -1, then we are at the root node.
+        const x3 = this.points[this.connectivityArray[_id * 2 + 1]].x;
+        const y3 = this.points[this.connectivityArray[_id * 2 + 1]].y;
+        path.lineTo(x3, y3);
+      }
+
       this.nodelayer.append("path")
+          .attr("d", path)
           .attr("fill", "none")
           .attr("stroke", "black")
-          .attr("stroke-width", 2)
-          .attr("stroke-miterlimit", 1)
-          .attr("d", line([this.points[this.connectivityArray[i]], this.points[this.connectivityArray[i+1]]]));
-    }
+          .attr("stroke-width", 2);
+    });
 
     // draw the donut plots
     if (type === 'donut') {
