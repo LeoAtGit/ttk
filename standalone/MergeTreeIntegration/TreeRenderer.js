@@ -7,7 +7,8 @@ class TreeRenderer {
     this.width = 500;
     this.height = 500;
 
-    this.streamgraph_options = new StreamgraphOptions(100, 10);
+    this.streamgraph_options = new StreamgraphOptions(100, 10, 1, 3);
+    this.donut_options = new DonutOptions(8, 20, 10);
 
     this.svg = this.treeContainer.append("svg")
         .attr("height", this.width)
@@ -164,140 +165,37 @@ class TreeRenderer {
         })
     );
 
+    const tree = new Tree(this.points, this.connectivityArray, this.streamgraph_options, this.donut_options, this.nodelayer);
+
     // draw the streamgraph
     if (type === 'streamgraph') {
-      const branches = this.points
-          .map(p => p.branchId)
-          .filter((v, i, self) => self.indexOf(v) === i)
-          .sort((a, b) => this.layoutXCoordOfBranchID(a) - this.layoutXCoordOfBranchID(b))  // sort by the x coordinate of the branches
-          .reverse();
+      tree.calculateLayoutStreamgraph();
+      tree.drawStreamGraph();
 
-      // We want each subtree to have the same order of categories (i.e. "colors") as
-      // the main tree. The order is specified by the size at the root node
-      // see https://stackoverflow.com/questions/3730510/javascript-sort-array-and-return-an-array-of-indices-that-indicates-the-positio
-      const color_order = Array.from(Array(this.treeRoot.kde_i1.length).keys())  // create array [0, ..., this.treeRoot.kde_i1.length - 1]
-          .sort((a, b) => this.treeRoot.kde_i1[b] - this.treeRoot.kde_i1[a]);  // sort the array according to the entries in this.treeRoot.kde_i1
-
-      // create a scale for mapping of the points, which is shared at each subbranch
-      const mapping = d3.scaleLinear()
-          .domain([0, this.treeRoot.kde_i1.reduce((c, k) => c + k, 0)])  // this reduction just calculates the sum of the array
-          .range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding]);
-
-      branches.forEach((branch, i) => {
-        let current_branch = this.points
-            .filter(p => p.branchId === branch)
-            .sort((p1, p2) => p2.y - p1.y);
-
-        const data = current_branch
-            .map(p => p.kde_i1)
-            .map(kde => color_order
-                .map(i => kde[i])  // reorder the kde_i1 arrays according to the indices in color_order
-            )
-            .map(kde => d3.cumsum(kde));
-
-        const no_of_categories = data[0].length;
-
-        // calculate the layout, i.e. the x-values of the graph
-        if (i !== 0) {  // don't need to do it for root branch
-          current_branch.forEach(point => {
-            const maximum_space = mapping(data[0][no_of_categories - 1]) + this.streamgraph_options.padding;
-            const new_x = this.layoutXCoordOfBranchID(branches[i - 1]) - maximum_space;
-            this.points[this.points.indexOf(point)].setLayoutX(new_x);
-          });
-
-          // update current_branch with the new points
-          current_branch = this.points
-              .filter(p => p.branchId === branch)
-              .sort((p1, p2) => p2.y - p1.y);
-        }
-
-        // draw the streamgraph
-        for (let i = 0; i < no_of_categories; i++) {
-          let path = d3.path();
-          path.moveTo(current_branch[0].layout_x, current_branch[0].layout_y);
-          current_branch.forEach((point, j) => {
-            path.lineTo(point.layout_x + mapping(data[j][no_of_categories - 1 - i]), point.layout_y);
-          });
-          path.lineTo(current_branch[current_branch.length - 1].layout_x, current_branch[current_branch.length - 1].layout_y);
-          path.closePath();
-
-          this.nodelayer.append("path")
-              .attr("d", path)
-              .attr("fill", d3.schemeSet1[i])
-              .attr("stroke", "black")
-              .attr("stroke-width", 0.5);
-        }
-      });
+      tree.drawEdges();
+      tree.drawPoints();
     }
-
-    // draw the lines of the graph
-    const unique_branchIds = this.points
-        .map(p => p.branchId)
-        .filter((v, i, self) => self.indexOf(v) === i);
-
-    unique_branchIds.forEach(bId => {
-      const pointsOnBranch = this.points
-          .filter(p => p.branchId === bId)
-          .sort((a, b) => a.y - b.y);
-
-      const x1 = pointsOnBranch[0].layout_x;
-      const y1 = pointsOnBranch[0].y;
-      const y2 = pointsOnBranch[pointsOnBranch.length - 1].y;
-
-      let path = d3.path();
-      path.moveTo(x1, y1);
-      path.lineTo(x1, y2);
-
-      const x = this.points.indexOf(pointsOnBranch[pointsOnBranch.length - 1]);
-      const _id = this.connectivityArray.filter((c, i) => i % 2 === 0).indexOf(BigInt(x));
-      if (_id !== -1) {  // if _id === -1, then we are at the root node.
-        const x3 = this.points[this.connectivityArray[_id * 2 + 1]].layout_x;
-        const y3 = this.points[this.connectivityArray[_id * 2 + 1]].y;
-        path.lineTo(x3, y3);
-      }
-
-      this.nodelayer.append("path")
-          .attr("d", path)
-          .attr("fill", "none")
-          .attr("stroke", "black")
-          .attr("stroke-width", 2);
-    });
 
     // draw the donut plots
     if (type === 'donut') {
-      for (let i = 0; i < this.points.length; i++) {
-        if (this.points[i].drawDonut) {
-          this.Donut(this.points[i]);
-        }
-      }
-    }
+      tree.calculateLayoutDonut();
 
-    // draw the points in the graph
-    for (let i = 0; i < this.points.length; i++) {
-      if (this.points[i].drawPoint) {
-        this.nodelayer.append("circle")
-            .attr("cx", this.points[i].layout_x)
-            .attr("cy", this.points[i].y)
-            .attr("r", 4)
-            .attr("fill", "black");
-      }
+      tree.drawEdges();
+      tree.drawDonut();
+      tree.drawPoints();
     }
 
     // center the tree with viewBox
-    // console.log(this.x_min)
-    // console.log(this.x_max)
-    // console.log(this.y_min)
-    // console.log(this.y_max)
-    this.x_max = Math.max(...this.points.map(p => p.layout_x));
-    this.x_min = Math.min(...this.points.map(p => p.layout_x));
-    this.y_max = Math.max(...this.points.map(p => p.y));
-    this.y_min = Math.min(...this.points.map(p => p.y));
+    const x_max = Math.max(...this.points.map(p => p.x_layout));
+    const x_min = Math.min(...this.points.map(p => p.x_layout));
+    const y_max = Math.max(...this.points.map(p => p.y_layout));
+    const y_min = Math.min(...this.points.map(p => p.y_layout));
     this.svg
         .attr("viewBox", [
-          this.x_min - this.padding,
-          this.y_min - this.padding,
-          2 * this.padding + (this.x_max - this.x_min),  // also + streamgraphOptions.rootMaxwidth
-          2 * this.padding + (this.y_max - this.y_min)]
+          x_min - this.padding,
+          y_min - this.padding,
+          2 * this.padding + (x_max - x_min) + ((type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : 0),
+          2 * this.padding + (y_max - y_min)]
         );
   }
 
@@ -310,39 +208,201 @@ class TreeRenderer {
   layoutXCoordOfBranchID(branchId) {
     return this.points.filter(p => p.branchId === branchId).map(p => p.layout_x)[0];
   }
+}
 
-  Donut(point) {
+class Tree {
+  constructor(points, connectivity, streamgraph_options, donut_options, nodelayer) {
+    this.all_points = points;
+    this.connectivity = connectivity;
+    this.streamgraph_options = streamgraph_options;
+    this.donut_options = donut_options;
+    this.nodelayer = nodelayer;
+
+    this.no_of_categories = this.all_points[0].kde_i1.length;
+
+    this.unique_branchIds = this.all_points
+        .map(p => p.branchId)
+        .filter((v, i, self) => self.indexOf(v) === i)
+        .sort((a, b) => this.xCoordFromBranchId(a) - this.xCoordFromBranchId(b))  // sort by the x coordinate of the branches
+        .reverse();
+
+    this.treeRoot = this.all_points[this.all_points.findIndex(p => p.y === Math.max(...this.all_points.map(p => p.y)))];
+
+    // We want each subtree to have the same order of categories (i.e. "colors") as
+    // the main tree. The order is specified by the size at the root node
+    // see https://stackoverflow.com/questions/3730510/javascript-sort-array-and-return-an-array-of-indices-that-indicates-the-positio
+    this.color_order = Array.from(Array(this.treeRoot.kde_i1.length).keys())  // create array [0, ..., this.treeRoot.kde_i1.length - 1]
+        .sort((a, b) => this.treeRoot.kde_i1[b] - this.treeRoot.kde_i1[a]);  // sort the array according to the entries in this.treeRoot.kde_i1
+
+    this.all_points.forEach(p => p.reorderKDE_I1(this.color_order));
+
+    // create a scale for mapping of the points, which is shared at each subbranch
+    this.mapping = d3.scaleLinear()
+        .domain([0, this.treeRoot.kde_i1.reduce((c, k) => c + k, 0)])  // this reduction just calculates the sum of the array
+        .range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding]);
+
+    this.branches = this.unique_branchIds
+        .map((id, i) => new Branch(this, id, i === 0));
+  }
+
+  calculateLayoutStreamgraph() {
+    this.branches.forEach(b => {
+      if (!b.is_root_branch) {
+        const space_needed = this.mapping(b.bottom.kde_i1_reordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding;
+        const new_x = this.findNeighborBranch(b).x_layout - space_needed;
+        b.setXLayout(new_x);
+      }
+    });
+  }
+
+  calculateLayoutDonut() {
+    this.branches.forEach(b => {
+      if (!b.is_root_branch) {
+        const space_needed = this.donut_options.outerRadius * 2 + this.donut_options.padding;
+        const new_x = this.findNeighborBranch(b).x_layout - space_needed;
+        b.setXLayout(new_x);
+      }
+    });
+  }
+
+  drawStreamGraph() {
+    this.branches.forEach(b => b.drawStreamGraph());
+  }
+
+  drawDonut() {
     // adapted from https://www.geeksforgeeks.org/d3-js-pie-function/
-    let g = this.nodelayer.append("g")
-        .attr("transform", `translate(${point.x}, ${point.y})`);
+    this.all_points.filter(p => p.drawDonut).forEach(p => {
+      let g = this.nodelayer.append("g")
+          .attr("transform", `translate(${p.x_layout}, ${p.y_layout})`);
 
-    const pie = d3.pie().sort(null);
-    const arc = d3.arc()
-        .innerRadius(8)
-        .outerRadius(20);
+      const pie = d3.pie().sort(null);
+      const arc = d3.arc()
+          .innerRadius(this.donut_options.innerRadius)
+          .outerRadius(this.donut_options.outerRadius);
 
-    const arcs = g.selectAll("arcs")
-        .data(pie(point.kde_i1))
-        .enter()
-        .append("g");
+      const arcs = g.selectAll("arcs")
+          .data(pie(p.kde_i1))
+          .enter()
+          .append("g");
 
-    arcs.append("path")
-        .attr("fill", (data, i) => d3.schemeSet1[i])
-        .attr("d", arc)
-        .attr("stroke", "black")
-        .style("stroke-width", 1);
+      arcs.append("path")
+          .attr("fill", (data, i) => d3.schemeSet1[i])
+          .attr("d", arc)
+          .attr("stroke", "black")
+          .style("stroke-width", 1);
+    });
+  }
+
+  drawEdges() {
+    this.branches.forEach(b => {
+      let path = d3.path();
+
+      path.moveTo(b.x_layout, b.top.y_layout);
+      path.lineTo(b.x_layout, b.bottom.y_layout);
+      path.lineTo(b.connecting_point.x_layout, b.connecting_point.y_layout);
+
+      this.nodelayer.append("path")
+          .attr("d", path)
+          .attr("fill", "none")
+          .attr("stroke", "black")
+          .attr("stroke-width", this.streamgraph_options.edgeWidth);
+    });
+  }
+
+  drawPoints() {
+    this.all_points.filter(p => p.drawPoint).forEach(p =>
+      this.nodelayer.append("circle")
+          .attr("cx", p.x_layout)
+          .attr("cy", p.y_layout)
+          .attr("r", 4)
+          .attr("fill", "black")
+    );
+  }
+
+  findNeighborBranch(branch) {
+    // TODO this might need to be more sophisticated, if there are branches with the same x-coordinates
+    return this.branches[this.branches.indexOf(branch) - 1];
+  }
+
+  xCoordFromBranchId(bId) {
+    return this.all_points.filter(p => p.branchId === bId).map(p => p.x)[0];
+  }
+
+  xLayoutCoordFromBranchId(bId) {
+    return this.all_points.filter(p => p.branchId === bId).map(p => p.x_layout)[0];
+  }
+}
+
+class Branch {
+  constructor(tree, branchId, is_root_branch) {
+    this.tree = tree;
+    this.branchId = branchId;
+    this.is_root_branch = is_root_branch;  // boolean
+
+    this.x = this.tree.xCoordFromBranchId(this.branchId);
+    this.x_layout = this.tree.xLayoutCoordFromBranchId(this.branchId);
+
+    this.branch_points_sorted = this.tree.all_points
+        .filter(p => p.branchId === this.branchId)
+        .sort((a, b) => a.y - b.y);
+
+    this.top = this.branch_points_sorted[0];
+    this.bottom = this.branch_points_sorted[this.branch_points_sorted.length - 1];
+
+    if (!this.is_root_branch) {
+      const __tmp = this.tree.all_points.indexOf(this.bottom);
+      const __id = this.tree.connectivity.filter((c, i) => i % 2 === 0).indexOf(BigInt(__tmp));
+      // the point to which the branch is connected to
+      this.connecting_point = this.tree.all_points[this.tree.connectivity[__id * 2 + 1]];
+    } else {
+      this.connecting_point = this.bottom;
+    }
+  }
+
+  setXLayout(x_layout) {
+    this.x_layout = x_layout;
+    this.branch_points_sorted.forEach(p => p.setXLayout(x_layout));
+  }
+
+  drawStreamGraph() {
+    for (let i = 0; i < this.tree.no_of_categories; i++) {
+      let path = d3.path();
+      path.moveTo(
+          this.top.x_layout + this.tree.streamgraph_options.edgeWidth / 2,
+          this.top.y_layout
+      );
+      this.branch_points_sorted.forEach(point => {
+        path.lineTo(
+            point.x_layout + this.tree.mapping(point.kde_i1_reordered_cumsum[this.tree.no_of_categories - 1 - i]) + this.tree.streamgraph_options.edgeWidth / 2,
+            point.y_layout
+        );
+      });
+      path.lineTo(
+          this.bottom.x_layout + this.tree.streamgraph_options.edgeWidth / 2,
+          this.bottom.y_layout
+      );
+      path.closePath();
+
+      this.tree.nodelayer.append("path")
+          .attr("d", path)
+          .attr("fill", d3.schemeSet1[i % 9]);
+    }
   }
 }
 
 class Point {
   constructor(x, y, z) {
     this.x = x;
-    this.layout_x = x;
+    this.x_layout = x;
     this.y = y;
-    this.layout_y = y;
+    this.y_layout = y;
     this.z = z;
 
     this.drawDonut = false;
+  }
+
+  reorderKDE_I1(order) {
+    this.kde_i1_reordered_cumsum = d3.cumsum(order.map(i => this.kde_i1[i]));
   }
 
   setBranchId(id) {
@@ -361,20 +421,28 @@ class Point {
     this.kde_i1 = kde;
   }
 
-  setLayoutX(x) {
-    // console.log(`Old value: ${this.layout_x}`);
-    // console.log(`New value: ${x}`);
-    this.layout_x = x;
+  setXLayout(x) {
+    this.x_layout = x;
   }
 
-  setLayoutY(y) {
-    this.layout_y = y;
+  setYLayout(y) {
+    this.y_layout = y;
   }
 }
 
 class StreamgraphOptions {
-  constructor(maxwidth_root, padding) {
+  constructor(maxwidth_root, padding, edgeWidth, topN) {
     this.maxwidth_root = maxwidth_root;
+    this.padding = padding;
+    this.edgeWidth = edgeWidth;
+    this.topN = topN;
+  }
+}
+
+class DonutOptions {
+  constructor(innerRadius, outerRadius, padding) {
+    this.innerRadius = innerRadius;
+    this.outerRadius = outerRadius;
     this.padding = padding;
   }
 }
