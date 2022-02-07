@@ -8,8 +8,8 @@ class TreeRenderer {
     this.height = 500;
 
     let topN = 3;
-    this.streamgraph_options = new StreamgraphOptions(100, 10, 1, topN);
-    this.donut_options = new DonutOptions(8, 20, 10, topN);
+    this.streamgraph_options = new StreamgraphOptions(100, 10, 1, topN, "#9f9f9f");
+    this.donut_options = new DonutOptions(8, 20, 10, topN, "#9f9f9f");
 
     this.svg = this.treeContainer.append("svg")
         .attr("height", this.width)
@@ -292,7 +292,7 @@ class Tree {
                 if (i !== this.donut_options.topN)
                   return d3.schemeSet1[this.color_order.indexOf(p.kde_i1_sorted_indices[i])];
                 else
-                  return "#5a5a5a";
+                  return this.donut_options.color_of_ignored;
               })
           .attr("d", arc)
           .attr("stroke", "black")
@@ -398,9 +398,15 @@ class Branch {
       );
       path.closePath();
 
+      let color = this.tree.streamgraph_options.color_of_ignored;
+      let __idx = this.bottom.kde_i1_sorted_indices.slice(0, this.tree.streamgraph_options.topN);
+      if (__idx.indexOf(this.tree.color_order[this.tree.no_of_categories - 1 - i]) !== -1) {
+        color = d3.schemeSet1[(this.tree.no_of_categories - 1 - i) % 9];
+      }
+
       this.tree.nodelayer.append("path")
           .attr("d", path)
-          .attr("fill", d3.schemeSet1[i % 9]);
+          .attr("fill", color);
     }
   }
 }
@@ -451,19 +457,21 @@ class Point {
 }
 
 class StreamgraphOptions {
-  constructor(maxwidth_root, padding, edgeWidth, topN) {
+  constructor(maxwidth_root, padding, edgeWidth, topN, color_of_ignored) {
     this.maxwidth_root = maxwidth_root;
     this.padding = padding;
     this.edgeWidth = edgeWidth;
     this.topN = topN;
+    this.color_of_ignored = color_of_ignored;
   }
 }
 
 class DonutOptions {
-  constructor(innerRadius, outerRadius, padding, topN) {
+  constructor(innerRadius, outerRadius, padding, topN, color_of_ignored) {
     this.innerRadius = innerRadius;
     this.outerRadius = outerRadius;
     this.padding = padding;
     this.topN = topN;
+    this.color_of_ignored = color_of_ignored;
   }
 }
