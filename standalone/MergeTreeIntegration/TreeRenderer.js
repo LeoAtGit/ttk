@@ -198,16 +198,6 @@ class TreeRenderer {
           2 * this.padding + (y_max - y_min)]
         );
   }
-
-  spaceToNextBranch(branches, i) {
-    // branches is a sorted array where the branchId on branches[0] corresponds to the branchId with the branch of the highest x-value
-    // TODO improve this function. If there are two branches above each other it could get problematic
-    return this.layoutXCoordOfBranchID(branches[i - 1]) - this.layoutXCoordOfBranchID(branches[i])
-  }
-
-  layoutXCoordOfBranchID(branchId) {
-    return this.points.filter(p => p.branchId === branchId).map(p => p.layout_x)[0];
-  }
 }
 
 class Tree {
