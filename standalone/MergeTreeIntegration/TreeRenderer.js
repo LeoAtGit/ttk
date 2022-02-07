@@ -298,7 +298,7 @@ class Tree {
       let path = d3.path();
 
       path.moveTo(b.x_layout, b.top.y_layout);
-      path.lineTo(b.x_layout, b.bottom.y_layout);
+      path.lineTo(b.x_layout, b.connecting_point.y_layout);  // normally to b.bottom.y_layout, but we want to trick the layout drawing a bit
       path.lineTo(b.connecting_point.x_layout, b.connecting_point.y_layout);
 
       this.nodelayer.append("path")
@@ -373,13 +373,21 @@ class Branch {
       );
       this.branch_points_sorted.forEach(point => {
         path.lineTo(
-            point.x_layout + this.tree.mapping(point.kde_i1_reordered_cumsum[this.tree.no_of_categories - 1 - i]) + this.tree.streamgraph_options.edgeWidth / 2,
+            point.x_layout + this.tree.mapping(point.kde_i1_reordered_cumsum[this.tree.no_of_categories - 1 - i])
+              + this.tree.streamgraph_options.edgeWidth / 2,
             point.y_layout
         );
       });
+      const __lastPoint = this.branch_points_sorted[this.branch_points_sorted.length - 1];
+      path.lineTo(
+          __lastPoint.x_layout
+            + this.tree.mapping(__lastPoint.kde_i1_reordered_cumsum[this.tree.no_of_categories - 1 - i])
+            + this.tree.streamgraph_options.edgeWidth / 2,
+          this.connecting_point.y_layout
+      );
       path.lineTo(
           this.bottom.x_layout + this.tree.streamgraph_options.edgeWidth / 2,
-          this.bottom.y_layout
+          this.connecting_point.y_layout
       );
       path.closePath();
 
