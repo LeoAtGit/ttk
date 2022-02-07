@@ -233,7 +233,7 @@ class Tree {
     // the main tree. The order is specified by the size at the root node
     this.color_order = getSortedIndices(this.treeRoot.kde_i1);
 
-    this.all_points.forEach(p => p.reorderKDE_I1(this.color_order));
+    this.all_points.forEach(p => p.reorderKDE_I1(this.color_order, this.streamgraph_options.topN));
 
     // create a scale for mapping of the points, which is shared at each subbranch
     this.mapping = d3.scaleLinear()
@@ -247,7 +247,7 @@ class Tree {
   calculateLayoutStreamgraph() {
     this.branches.forEach(b => {
       if (!b.is_root_branch) {
-        const space_needed = this.mapping(b.bottom.kde_i1_reordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding;
+        const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding;
         const new_x = this.findNeighborBranch(b).x_layout - space_needed;
         b.setXLayout(new_x);
       }
@@ -372,7 +372,7 @@ class Branch {
   }
 
   drawStreamGraph() {
-    for (let i = 0; i < this.tree.no_of_categories; i++) {
+    for (let i = this.tree.no_of_categories - 1; i >= 0; i--) {
       let path = d3.path();
       path.moveTo(
           this.top.x_layout + this.tree.streamgraph_options.edgeWidth / 2,
@@ -380,7 +380,7 @@ class Branch {
       );
       this.branch_points_sorted.forEach(point => {
         path.lineTo(
-            point.x_layout + this.tree.mapping(point.kde_i1_reordered_cumsum[this.tree.no_of_categories - 1 - i])
+            point.x_layout + this.tree.mapping(point.kde_i1_sorted_and_ordered_cumsum[i])
               + this.tree.streamgraph_options.edgeWidth / 2,
             point.y_layout
         );
@@ -388,7 +388,7 @@ class Branch {
       const __lastPoint = this.branch_points_sorted[this.branch_points_sorted.length - 1];
       path.lineTo(
           __lastPoint.x_layout
-            + this.tree.mapping(__lastPoint.kde_i1_reordered_cumsum[this.tree.no_of_categories - 1 - i])
+            + this.tree.mapping(__lastPoint.kde_i1_sorted_and_ordered_cumsum[i])
             + this.tree.streamgraph_options.edgeWidth / 2,
           this.connecting_point.y_layout
       );
@@ -399,9 +399,8 @@ class Branch {
       path.closePath();
 
       let color = this.tree.streamgraph_options.color_of_ignored;
-      let __idx = this.bottom.kde_i1_sorted_indices.slice(0, this.tree.streamgraph_options.topN);
-      if (__idx.indexOf(this.tree.color_order[this.tree.no_of_categories - 1 - i]) !== -1) {
-        color = d3.schemeSet1[(this.tree.no_of_categories - 1 - i) % 9];
+      if (i < this.tree.streamgraph_options.topN) {
+        color = d3.schemeSet1[this.tree.color_order.indexOf(this.bottom.topN_indices_ordered[i]) % 9];
       }
 
       this.tree.nodelayer.append("path")
@@ -422,13 +421,21 @@ class Point {
     this.drawDonut = false;
   }
 
-  reorderKDE_I1(order) {
-    // reorder kde_i1 by size OF THE DATA IN THE ROOT NODE!
-    this.kde_i1_reordered_cumsum = d3.cumsum(order.map(i => this.kde_i1[i]));
-
+  reorderKDE_I1(order, topN) {
     // sort kde_i1 by size
     this.kde_i1_sorted_indices = getSortedIndices(this.kde_i1);
     this.kde_i1_sorted = this.kde_i1_sorted_indices.map(i => this.kde_i1[i]);
+
+    // get the indices of the largest topN values
+    this.topN_indices = this.kde_i1_sorted_indices.slice(0, topN);
+    this.other_indices = this.kde_i1_sorted_indices.slice(topN);
+    // reorder those indices according to the `order` array
+    this.topN_indices_ordered = this.topN_indices.sort((i, j) => order.indexOf(i) - order.indexOf(j));
+
+    this.kde_i1_sorted_and_ordered = this.topN_indices_ordered.map(i => this.kde_i1[i]);
+    this.kde_i1_sorted_and_ordered = this.kde_i1_sorted_and_ordered.concat(this.other_indices.map(i => this.kde_i1[i]));
+
+    this.kde_i1_sorted_and_ordered_cumsum = d3.cumsum(this.kde_i1_sorted_and_ordered);
   }
 
   setBranchId(id) {
