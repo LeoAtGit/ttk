@@ -7,8 +7,9 @@ class TreeRenderer {
     this.width = 500;
     this.height = 500;
 
-    this.streamgraph_options = new StreamgraphOptions(100, 10, 1, 3);
-    this.donut_options = new DonutOptions(8, 20, 10);
+    let topN = 3;
+    this.streamgraph_options = new StreamgraphOptions(100, 10, 1, topN);
+    this.donut_options = new DonutOptions(8, 20, 10, topN);
 
     this.svg = this.treeContainer.append("svg")
         .attr("height", this.width)
@@ -200,6 +201,16 @@ class TreeRenderer {
   }
 }
 
+function getSortedIndices(arr) {
+  // see https://stackoverflow.com/questions/3730510/javascript-sort-array-and-return-an-array-of-indices-that-indicates-the-positio
+  return Array.from(Array(arr.length).keys())  // create array [0, ..., arr.length - 1]
+      .sort((a, b) => arr[b] - arr[a]);  // sort the array according to the entries in arr
+}
+
+function sum(arr) {
+  return arr.reduce((c, k) => c + k, 0);
+}
+
 class Tree {
   constructor(points, connectivity, streamgraph_options, donut_options, nodelayer) {
     this.all_points = points;
@@ -220,15 +231,13 @@ class Tree {
 
     // We want each subtree to have the same order of categories (i.e. "colors") as
     // the main tree. The order is specified by the size at the root node
-    // see https://stackoverflow.com/questions/3730510/javascript-sort-array-and-return-an-array-of-indices-that-indicates-the-positio
-    this.color_order = Array.from(Array(this.treeRoot.kde_i1.length).keys())  // create array [0, ..., this.treeRoot.kde_i1.length - 1]
-        .sort((a, b) => this.treeRoot.kde_i1[b] - this.treeRoot.kde_i1[a]);  // sort the array according to the entries in this.treeRoot.kde_i1
+    this.color_order = getSortedIndices(this.treeRoot.kde_i1);
 
     this.all_points.forEach(p => p.reorderKDE_I1(this.color_order));
 
     // create a scale for mapping of the points, which is shared at each subbranch
     this.mapping = d3.scaleLinear()
-        .domain([0, this.treeRoot.kde_i1.reduce((c, k) => c + k, 0)])  // this reduction just calculates the sum of the array
+        .domain([0, sum(this.treeRoot.kde_i1)])
         .range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding]);
 
     this.branches = this.unique_branchIds
@@ -265,18 +274,26 @@ class Tree {
       let g = this.nodelayer.append("g")
           .attr("transform", `translate(${p.x_layout}, ${p.y_layout})`);
 
-      const pie = d3.pie().sort(null);
+      const pie = d3.pie();
       const arc = d3.arc()
           .innerRadius(this.donut_options.innerRadius)
           .outerRadius(this.donut_options.outerRadius);
 
+      let pie_data = p.kde_i1_sorted.slice(0, this.donut_options.topN);
+      pie_data.push(sum(p.kde_i1_sorted.slice(this.donut_options.topN)));
+
       const arcs = g.selectAll("arcs")
-          .data(pie(p.kde_i1))
+          .data(pie(pie_data))
           .enter()
           .append("g");
 
       arcs.append("path")
-          .attr("fill", (data, i) => d3.schemeSet1[i])
+          .attr("fill", (data, i) => {
+                if (i !== this.donut_options.topN)
+                  return d3.schemeSet1[this.color_order.indexOf(p.kde_i1_sorted_indices[i])];
+                else
+                  return "#5a5a5a";
+              })
           .attr("d", arc)
           .attr("stroke", "black")
           .style("stroke-width", 1);
@@ -400,7 +417,12 @@ class Point {
   }
 
   reorderKDE_I1(order) {
+    // reorder kde_i1 by size OF THE DATA IN THE ROOT NODE!
     this.kde_i1_reordered_cumsum = d3.cumsum(order.map(i => this.kde_i1[i]));
+
+    // sort kde_i1 by size
+    this.kde_i1_sorted_indices = getSortedIndices(this.kde_i1);
+    this.kde_i1_sorted = this.kde_i1_sorted_indices.map(i => this.kde_i1[i]);
   }
 
   setBranchId(id) {
@@ -438,9 +460,10 @@ class StreamgraphOptions {
 }
 
 class DonutOptions {
-  constructor(innerRadius, outerRadius, padding) {
+  constructor(innerRadius, outerRadius, padding, topN) {
     this.innerRadius = innerRadius;
     this.outerRadius = outerRadius;
     this.padding = padding;
+    this.topN = topN;
   }
 }
