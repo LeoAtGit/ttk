@@ -154,11 +154,11 @@ class TreeRenderer {
         + ((this.type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : this.donut_options.outerRadius);
     const y_max = Math.max(...this.points.map(p => p.y_layout));
 
-    if (x_max >= this.width) {
+    if (x_max >= this.width - 0.1) {
       tree.all_points.forEach(p => p.y_layout += (this.height - y_max) / 2)
     }
 
-    if (y_max >= this.height) {
+    if (y_max >= this.height - 0.1) {
       tree.branches.forEach(b => b.setXLayout(b.x_layout + (this.width - x_max) / 2));
     }
 
@@ -326,8 +326,11 @@ class Tree {
     this.all_points.forEach(p => p.y_layout *= scaling_factor);
 
     // we also have to apply the scaling to the mapping!
-    this.mapping.range([0, (this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding) * scaling_factor]);
     this.streamgraph_options.maxwidth_root *= scaling_factor;
+    this.streamgraph_options.padding *= scaling_factor;
+    this.mapping.range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding]);
+    this.donut_options.innerRadius *= scaling_factor;
+    this.donut_options.outerRadius *= scaling_factor;
   }
 
   drawStreamGraph() {
