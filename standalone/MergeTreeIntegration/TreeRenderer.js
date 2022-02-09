@@ -174,19 +174,20 @@ class TreeRenderer {
 
   drawCoordinateSystem() {
     this.coordinate_system.append("text")
-        .attr("x", -30)
+        .attr("x", -35)
         .attr("y", this.height / 2)
         .attr("font-size", 10)
         .attr("font-weight", "lighter")
-        .attr("transform", `rotate(-90, ${-30}, ${this.height / 2})`)
+        .attr("transform", `rotate(-90, ${-35}, ${this.height / 2})`)
         .text("Density");
 
     const y_max = Math.max(...this.points.map(p => p.y_layout));
     const y_min = Math.min(...this.points.map(p => p.y_layout));
 
+    const _tmp = y_min / (y_max - y_min);
     const yScale = d3.scaleLinear()
-        .domain([0, 1])
-        .range([y_max, y_min]);
+        .domain([-_tmp, 1 + _tmp])  // this ensures that the top of our graph is at 1 and the bottom at 0
+        .range([this.height, 0]);
     const yAxis = d3.axisRight(yScale)
         .ticks(10)
         .tickSize(this.width + this.padding);
@@ -197,7 +198,7 @@ class TreeRenderer {
         .call(g => g.selectAll(".tick line")
             .attr("stroke-opacity", 0.25))
         .call(g => g.selectAll(".tick text")
-            .attr("x", -20))
+            .attr("x", -30))
         .attr("font-weight", "lighter");
 
     this.svg.call(d3.zoom()
@@ -211,7 +212,7 @@ class TreeRenderer {
               .call(g => g.selectAll(".tick line")
                   .attr("stroke-opacity", 0.25))
               .call(g => g.selectAll(".tick text")
-                  .attr("x", -20))
+                  .attr("x", -30))
               .attr("font-weight", "lighter");
         })
     );
