@@ -8,8 +8,20 @@ class TreeRenderer {
     this.height = 500;
 
     let topN = 3;
-    this.streamgraph_options = new StreamgraphOptions(100, 10, 1, topN, "#9f9f9f");
-    this.donut_options = new DonutOptions(8, 20, 10, topN, "#9f9f9f");
+    this.streamgraph_options = {
+      maxwidth_root: 100,
+      padding: 10,
+      edgeWidth: 1,
+      topN: topN,
+      color_of_ignored: "#9f9f9f"
+    }
+    this.donut_options = {
+      innerRadius: 8,
+      outerRadius: 20,
+      padding: 10,
+      topN: topN,
+      color_of_ignored: "#9f9f9f"
+    }
 
     this.svg = this.treeContainer.append("svg")
         .attr("height", this.height)
@@ -338,35 +350,7 @@ class Tree {
   }
 
   drawDonut() {
-    // adapted from https://www.geeksforgeeks.org/d3-js-pie-function/
-    this.all_points.filter(p => p.drawDonut).forEach(p => {
-      let g = this.nodelayer.append("g")
-          .attr("transform", `translate(${p.x_layout}, ${p.y_layout})`);
-
-      const pie = d3.pie();
-      const arc = d3.arc()
-          .innerRadius(this.donut_options.innerRadius)
-          .outerRadius(this.donut_options.outerRadius);
-
-      let pie_data = p.kde_i1_sorted.slice(0, this.donut_options.topN);
-      pie_data.push(sum(p.kde_i1_sorted.slice(this.donut_options.topN)));
-
-      const arcs = g.selectAll("arcs")
-          .data(pie(pie_data))
-          .enter()
-          .append("g");
-
-      arcs.append("path")
-          .attr("fill", (data, i) => {
-                if (i !== this.donut_options.topN)
-                  return d3.schemeSet1[this.color_order.indexOf(p.kde_i1_sorted_indices[i])];
-                else
-                  return this.donut_options.color_of_ignored;
-              })
-          .attr("d", arc)
-          .attr("stroke", "black")
-          .style("stroke-width", 1);
-    });
+    this.branches.forEach(b => b.drawDonut());
   }
 
   drawEdges() {
@@ -430,6 +414,7 @@ class Branch {
       const __id = this.tree.connectivity.filter((c, i) => i % 2 === 0).indexOf(BigInt(__tmp));
       // the point to which the branch is connected to
       this.connecting_point = this.tree.all_points[this.tree.connectivity[__id * 2 + 1]];
+      this.tree.all_points[this.tree.connectivity[__id * 2 + 1]].is_connecting_point = true;
     } else {
       this.connecting_point = this.bottom;
     }
@@ -469,13 +454,63 @@ class Branch {
 
       let color = this.tree.streamgraph_options.color_of_ignored;
       if (i < this.tree.streamgraph_options.topN) {
-        color = d3.schemeSet1[this.tree.color_order.indexOf(this.bottom.topN_indices_ordered[i]) % 9];
+        color = d3.schemeSet3[this.tree.color_order.indexOf(this.bottom.topN_indices_ordered[i]) % 12];
       }
 
       this.tree.nodelayer.append("path")
           .attr("d", path)
           .attr("fill", color);
     }
+  }
+
+  drawDonut() {
+    // adapted from https://www.geeksforgeeks.org/d3-js-pie-function/
+    this.branch_points_sorted.filter(p => p.drawDonut).forEach(p => {
+      let g = this.tree.nodelayer.append("g")
+          .attr("transform", `translate(${p.x_layout}, ${p.y_layout})`);
+
+      const pie = d3.pie();
+      const arc = d3.arc()
+          .innerRadius(this.tree.donut_options.innerRadius)
+          .outerRadius(this.tree.donut_options.outerRadius);
+
+      // find the point whose data we should display
+      let point_of_interest = null;
+      const connecting_points = this.branch_points_sorted
+          .slice(this.branch_points_sorted.indexOf(p) + 1)
+          .filter(p => p.is_connecting_point);
+      if (connecting_points.length === 0) {
+        // there are no more connections on this branch. Show the values of the bottom node
+        point_of_interest = this.bottom;
+      } else {
+        // there is a connection on this branch. Show the values from the point before the connection
+        point_of_interest = connecting_points[0];
+      }
+
+      if (point_of_interest === null) {
+        console.error("Something went wrong when drawing the donut chart...")
+        return;
+      }
+
+      let pie_data = point_of_interest.kde_i1_sorted.slice(0, this.tree.donut_options.topN);
+      pie_data.push(sum(point_of_interest.kde_i1_sorted.slice(this.tree.donut_options.topN)));
+
+      const arcs = g.selectAll("arcs")
+          .data(pie(pie_data))
+          .enter()
+          .append("g");
+
+      arcs.append("path")
+          .attr("fill", (data, i) => {
+            if (i !== this.tree.donut_options.topN)
+              return d3.schemeSet3[this.tree.color_order.indexOf(point_of_interest.kde_i1_sorted_indices[i]) % 12];
+            else
+              return this.tree.donut_options.color_of_ignored;
+          })
+          .attr("d", arc)
+          .attr("stroke", "black")
+          .style("stroke-width", 1);
+    });
   }
 }
 
@@ -488,6 +523,7 @@ class Point {
     this.z = z;
 
     this.drawDonut = false;
+    this.is_connecting_point = false;
   }
 
   reorderKDE_I1(order, topN) {
@@ -529,25 +565,5 @@ class Point {
 
   setYLayout(y) {
     this.y_layout = y;
-  }
-}
-
-class StreamgraphOptions {
-  constructor(maxwidth_root, padding, edgeWidth, topN, color_of_ignored) {
-    this.maxwidth_root = maxwidth_root;
-    this.padding = padding;
-    this.edgeWidth = edgeWidth;
-    this.topN = topN;
-    this.color_of_ignored = color_of_ignored;
-  }
-}
-
-class DonutOptions {
-  constructor(innerRadius, outerRadius, padding, topN, color_of_ignored) {
-    this.innerRadius = innerRadius;
-    this.outerRadius = outerRadius;
-    this.padding = padding;
-    this.topN = topN;
-    this.color_of_ignored = color_of_ignored;
   }
 }
