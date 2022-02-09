@@ -12,8 +12,8 @@ class TreeRenderer {
     this.donut_options = new DonutOptions(8, 20, 10, topN, "#9f9f9f");
 
     this.svg = this.treeContainer.append("svg")
-        .attr("height", this.width)
-        .attr("width", this.height)
+        .attr("height", this.height)
+        .attr("width", this.width)
         .attr("style", "border:5px solid #eaeaea");
 
     this.root = this.svg.append("g");
@@ -36,18 +36,12 @@ class TreeRenderer {
     const kde_i1 = this.vtkDataSet.pointData.KDE_ByType_I1.data;
 
     // change the y coordinates, because ttk and svg use a different coordinate system
-    let _y = [];
-    for (let i = 1; i < coords.length; i+=3) {
-      _y.push(coords[i]);
-    }
+    const _y = coords.filter((d, i) => (i % 3) === 1);
     const _y_max = Math.max(..._y);
     const _y_min = Math.min(..._y);
 
     // also change the x coordinates, so our bounding box starts at (0,0). This helps for e.g. the coordinate axis rendering
-    let _x = [];
-    for (let i = 0; i < coords.length; i+=3) {
-      _x.push(coords[i]);
-    }
+    const _x = coords.filter((d, i) => (i % 3) === 0);
     const _x_min = Math.min(..._x);
 
     while(coords.length > 0) {
@@ -116,6 +110,8 @@ class TreeRenderer {
   }
 
   render(type) {
+    this.type = type;
+
     if (!this.vtkDataSet) {
       console.error("trying to render without dataset");
       return;
@@ -123,23 +119,77 @@ class TreeRenderer {
 
     this.nodelayer.empty();
 
-    // draw the coordinate system
-    this.coordinate_system
-        .attr("transform", `translate(${-2 * this.padding} , 0)`);
+    const tree = new Tree(this.points, this.connectivityArray, this.streamgraph_options, this.donut_options, this.nodelayer);
 
+    // draw the streamgraph
+    if (type === 'streamgraph') {
+      tree.calculateLayoutStreamgraph();
+      tree.moveToOrigin();
+      tree.rescale(this.width, this.height, type);
+      this.centerView(tree);
+      this.drawCoordinateSystem();
+      tree.drawStreamGraph();
+
+      tree.drawEdges();
+      tree.drawPoints();
+    }
+
+    // draw the donut plots
+    if (type === 'donut') {
+      tree.calculateLayoutDonut();
+      tree.moveToOrigin();
+      tree.rescale(this.width, this.height, type);
+      this.centerView(tree);
+      this.drawCoordinateSystem();
+
+      tree.drawEdges();
+      tree.drawDonut();
+      tree.drawPoints();
+    }
+  }
+
+  centerView(tree) {
+    // change x_layout and y_layout coordinates such that they are centered for this particular viewbox configuration
+    const x_max = Math.max(...this.points.map(p => p.x_layout))
+        + ((this.type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : this.donut_options.outerRadius);
+    const y_max = Math.max(...this.points.map(p => p.y_layout));
+
+    if (x_max >= this.width) {
+      tree.all_points.forEach(p => p.y_layout += (this.height - y_max) / 2)
+    }
+
+    if (y_max >= this.height) {
+      tree.branches.forEach(b => b.setXLayout(b.x_layout + (this.width - x_max) / 2));
+    }
+
+    this.svg
+        .attr("viewBox", [
+          -this.padding,
+          -this.padding,
+          this.width + 2 * this.padding,
+          this.height + 2 * this.padding
+          ]
+        );
+  }
+
+  drawCoordinateSystem() {
     this.coordinate_system.append("text")
-        .attr("x", -40)
-        .attr("y", -20)
+        .attr("x", -30)
+        .attr("y", this.height / 2)
         .attr("font-size", 10)
         .attr("font-weight", "lighter")
+        .attr("transform", `rotate(-90, ${-30}, ${this.height / 2})`)
         .text("Density");
+
+    const y_max = Math.max(...this.points.map(p => p.y_layout));
+    const y_min = Math.min(...this.points.map(p => p.y_layout));
 
     const yScale = d3.scaleLinear()
         .domain([0, 1])
-        .range([Math.max(...this.points.map(p => p.y)), 0]);
+        .range([y_max, y_min]);
     const yAxis = d3.axisRight(yScale)
         .ticks(10)
-        .tickSize(this.width - 2 * this.padding);
+        .tickSize(this.width + this.padding);
     const gY = this.coordinate_system.append("g")
         .call(yAxis)
         .call(g => g.select(".domain")
@@ -148,7 +198,7 @@ class TreeRenderer {
             .attr("stroke-opacity", 0.25))
         .call(g => g.selectAll(".tick text")
             .attr("x", -20))
-            .attr("font-weight", "lighter");
+        .attr("font-weight", "lighter");
 
     this.svg.call(d3.zoom()
         // .extent([[0, 0], [500, 500]])
@@ -162,42 +212,9 @@ class TreeRenderer {
                   .attr("stroke-opacity", 0.25))
               .call(g => g.selectAll(".tick text")
                   .attr("x", -20))
-                  .attr("font-weight", "lighter");
+              .attr("font-weight", "lighter");
         })
     );
-
-    const tree = new Tree(this.points, this.connectivityArray, this.streamgraph_options, this.donut_options, this.nodelayer);
-
-    // draw the streamgraph
-    if (type === 'streamgraph') {
-      tree.calculateLayoutStreamgraph();
-      tree.drawStreamGraph();
-
-      tree.drawEdges();
-      tree.drawPoints();
-    }
-
-    // draw the donut plots
-    if (type === 'donut') {
-      tree.calculateLayoutDonut();
-
-      tree.drawEdges();
-      tree.drawDonut();
-      tree.drawPoints();
-    }
-
-    // center the tree with viewBox
-    const x_max = Math.max(...this.points.map(p => p.x_layout));
-    const x_min = Math.min(...this.points.map(p => p.x_layout));
-    const y_max = Math.max(...this.points.map(p => p.y_layout));
-    const y_min = Math.min(...this.points.map(p => p.y_layout));
-    this.svg
-        .attr("viewBox", [
-          x_min - this.padding,
-          y_min - this.padding,
-          2 * this.padding + (x_max - x_min) + ((type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : 0),
-          2 * this.padding + (y_max - y_min)]
-        );
   }
 }
 
@@ -262,6 +279,54 @@ class Tree {
         b.setXLayout(new_x);
       }
     });
+  }
+
+  moveToOrigin() {
+    const _x_min = Math.min(...this.all_points.map(p => p.x_layout));
+    this.branches.forEach(b => b.setXLayout(b.x_layout - _x_min));
+  }
+
+  rescale(width, height, type) {
+    const _x_max = Math.max(...this.all_points.map(p => p.x_layout))
+        + ((type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : this.donut_options.outerRadius);
+    const _y_max = Math.max(...this.all_points.map(p => p.y_layout));
+
+    // calculate the two possible scaling factors
+    let f1 = width / _x_max;
+    let f2 = height / _y_max;
+
+    // check which scaling factors keep us in the bounds of width * height
+    if (f1 * _y_max > height)
+      f1 = 0;
+
+    if (f2 * _x_max > width)
+      f2 = 0;
+
+    if (f1 === 0 && f2 === 0) {
+      console.error("something went wrong trying to scale the values. This should never happen I think...")
+      return;
+    }
+
+    let scaling_factor = 0;
+    // check with which scaling factor we would get the largest bounding box
+    if (width * _y_max * f1 > height * _x_max * f2) {
+      scaling_factor = f1;
+    } else {
+      scaling_factor = f2;
+    }
+
+    if (scaling_factor === 0) {
+      console.error("something went wrong trying to scale the values. This should never happen I think...")
+      return;
+    }
+
+    // actually do the rescaling
+    this.branches.forEach(b => b.setXLayout(b.x_layout * scaling_factor));
+    this.all_points.forEach(p => p.y_layout *= scaling_factor);
+
+    // we also have to apply the scaling to the mapping!
+    this.mapping.range([0, (this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding) * scaling_factor]);
+    this.streamgraph_options.maxwidth_root *= scaling_factor;
   }
 
   drawStreamGraph() {
