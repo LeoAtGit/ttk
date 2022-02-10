@@ -13,6 +13,7 @@ class TreeRenderer {
       padding: 10,
       edgeWidth: 1,
       topN: topN,
+      color_scheme: d3.schemeSet3,
       color_of_ignored: "#9f9f9f"
     }
     this.donut_options = {
@@ -20,6 +21,7 @@ class TreeRenderer {
       outerRadius: 20,
       padding: 10,
       topN: topN,
+      color_scheme: d3.schemeSet3,
       color_of_ignored: "#9f9f9f"
     }
 
@@ -34,6 +36,7 @@ class TreeRenderer {
 
     this.vtkDataSet = null;
     this.points = [];
+    this.transform = null;
   }
 
   setVtkDataSet(dataset){
@@ -119,6 +122,9 @@ class TreeRenderer {
     // at the absolute minimum (the root node of the tree), we also want to draw a point
     this.treeRoot = this.points[this.points.findIndex(p => p.y === Math.max(...this.points.map(p => p.y)))];
     this.treeRoot.drawPoint = true;
+
+    // save the labels
+    this.labels = this.vtkDataSet.fieldData.CategoryDictionary.data.map(s => s.replaceAll("\"", ""));
   }
 
   render(type) {
@@ -129,49 +135,55 @@ class TreeRenderer {
       return;
     }
 
-    this.nodelayer.empty();
+    this.coordinate_system.remove();
+    this.nodelayer.remove();
+    this.coordinate_system = this.root.append("g");
+    this.nodelayer = this.root.append("g");
 
-    const tree = new Tree(this.points, this.connectivityArray, this.streamgraph_options, this.donut_options, this.nodelayer);
+    this.tree = new Tree(this.points, this.connectivityArray, this.streamgraph_options, this.donut_options, this.nodelayer);
+
+    this.tree.findDonutData();
+    this.tree.createColorMapping();
 
     // draw the streamgraph
     if (type === 'streamgraph') {
-      tree.calculateLayoutStreamgraph();
-      tree.moveToOrigin();
-      tree.rescale(this.width, this.height, type);
-      this.centerView(tree);
+      this.tree.calculateLayoutStreamgraph();
+      this.tree.moveToOrigin();
+      this.tree.rescale(this.width, this.height, type);
+      this.centerView();
       this.drawCoordinateSystem();
-      tree.drawStreamGraph();
+      this.tree.drawStreamGraph();
 
-      tree.drawEdges();
-      tree.drawPoints();
+      this.tree.drawEdges();
+      this.tree.drawPoints();
     }
 
     // draw the donut plots
     if (type === 'donut') {
-      tree.calculateLayoutDonut();
-      tree.moveToOrigin();
-      tree.rescale(this.width, this.height, type);
-      this.centerView(tree);
+      this.tree.calculateLayoutDonut();
+      this.tree.moveToOrigin();
+      this.tree.rescale(this.width, this.height, type);
+      this.centerView();
       this.drawCoordinateSystem();
 
-      tree.drawEdges();
-      tree.drawDonut();
-      tree.drawPoints();
+      this.tree.drawEdges();
+      this.tree.drawDonut();
+      this.tree.drawPoints();
     }
   }
 
-  centerView(tree) {
+  centerView() {
     // change x_layout and y_layout coordinates such that they are centered for this particular viewbox configuration
     const x_max = Math.max(...this.points.map(p => p.x_layout))
         + ((this.type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : this.donut_options.outerRadius);
     const y_max = Math.max(...this.points.map(p => p.y_layout));
 
     if (x_max >= this.width - 0.1) {
-      tree.all_points.forEach(p => p.y_layout += (this.height - y_max) / 2)
+      this.tree.all_points.forEach(p => p.y_layout += (this.height - y_max) / 2)
     }
 
     if (y_max >= this.height - 0.1) {
-      tree.branches.forEach(b => b.setXLayout(b.x_layout + (this.width - x_max) / 2));
+      this.tree.branches.forEach(b => b.setXLayout(b.x_layout + (this.width - x_max) / 2));
     }
 
     this.svg
@@ -197,14 +209,14 @@ class TreeRenderer {
     const y_min = Math.min(...this.points.map(p => p.y_layout));
 
     const _tmp = y_min / (y_max - y_min);
-    const yScale = d3.scaleLinear()
+    this.yScale = d3.scaleLinear()
         .domain([-_tmp, 1 + _tmp])  // this ensures that the top of our graph is at 1 and the bottom at 0
         .range([this.height, 0]);
-    const yAxis = d3.axisRight(yScale)
+    this.yAxis = d3.axisRight(this.yScale)
         .ticks(10)
         .tickSize(this.width + this.padding);
-    const gY = this.coordinate_system.append("g")
-        .call(yAxis)
+    this.gY = this.coordinate_system.append("g")
+        .call(this.yAxis)
         .call(g => g.select(".domain")
             .remove())
         .call(g => g.selectAll(".tick line")
@@ -217,17 +229,26 @@ class TreeRenderer {
         // .extent([[0, 0], [500, 500]])
         // .scaleExtent([1, 8])
         .on("zoom", ({transform}) => {
-          this.nodelayer.attr("transform", transform);
-          gY.call(yAxis.scale(transform.rescaleY(yScale)))
-              .call(g => g.select(".domain")
-                  .remove())
-              .call(g => g.selectAll(".tick line")
-                  .attr("stroke-opacity", 0.25))
-              .call(g => g.selectAll(".tick text")
-                  .attr("x", -30))
-              .attr("font-weight", "lighter");
+          this.transform = transform;
+          this.doTransform();
         })
     );
+  }
+
+  doTransform() {
+    if (this.transform === null) {
+      return;
+    }
+
+    this.nodelayer.attr("transform", this.transform);
+    this.gY.call(this.yAxis.scale(this.transform.rescaleY(this.yScale)))
+        .call(g => g.select(".domain")
+            .remove())
+        .call(g => g.selectAll(".tick line")
+            .attr("stroke-opacity", 0.25))
+        .call(g => g.selectAll(".tick text")
+            .attr("x", -30))
+        .attr("font-weight", "lighter");
   }
 }
 
@@ -338,11 +359,82 @@ class Tree {
     this.all_points.forEach(p => p.y_layout *= scaling_factor);
 
     // we also have to apply the scaling to the mapping!
-    this.streamgraph_options.maxwidth_root *= scaling_factor;
-    this.streamgraph_options.padding *= scaling_factor;
-    this.mapping.range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding]);
-    this.donut_options.innerRadius *= scaling_factor;
-    this.donut_options.outerRadius *= scaling_factor;
+    if (type === "streamgraph") {
+      this.streamgraph_options.maxwidth_root *= scaling_factor;
+      this.streamgraph_options.padding *= scaling_factor;
+      this.mapping.range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding]);
+    }
+    if (type === "donut") {
+      this.donut_options.padding *= scaling_factor;
+      this.donut_options.innerRadius *= scaling_factor;
+      this.donut_options.outerRadius *= scaling_factor;
+    }
+  }
+
+  findDonutData() {
+    this.branches.forEach(b => {
+      b.branch_points_sorted.filter(p => p.drawDonut).forEach(p => {
+        // find the point whose data we should display
+        let point_of_interest = null;
+        const connecting_points = b.branch_points_sorted
+          .slice(b.branch_points_sorted.indexOf(p) + 1)
+          .filter(p => p.is_connecting_point);
+        if (connecting_points.length === 0) {
+          // there are no more connections on this branch. Show the values of the bottom node
+          point_of_interest = b.bottom;
+        } else {
+          // there is a connection on this branch. Show the values from the point before the connection
+          point_of_interest = connecting_points[0];
+        }
+
+        if (point_of_interest === null) {
+          console.error("Something went wrong when trying to find the donut data...")
+          return;
+        }
+
+        p.donut_data_from_point = point_of_interest;
+      });
+    });
+  }
+
+  getLabels() {
+    let res = {};
+
+    this.all_points.filter(p => p.drawDonut).forEach(p => {
+      for (let i = 0; i < this.donut_options.topN; i++) {
+        res[p.donut_data_from_point.kde_i1_sorted_indices[i]]
+          = this.donut_options.color_scheme[this.color_mapping[p.donut_data_from_point.kde_i1_sorted_indices[i]]];
+      }
+    });
+
+    return res;
+  }
+
+  createColorMapping() {
+    // requirement: color mapping with exactly 12 unique colors
+
+    let i = 1
+    for (i; i < this.no_of_categories; i++) {
+      let res = new Set();
+
+      this.all_points.filter(p => p.drawDonut).forEach(p => {
+        p.donut_data_from_point.kde_i1_sorted_indices.slice(0, i).map(j => res.add(j));
+      });
+
+      if (res.size > 12) {
+        i--;
+        break;
+      }
+    }
+
+    let res = new Set();
+    this.all_points.filter(p => p.drawDonut).forEach(p => {
+      p.donut_data_from_point.kde_i1_sorted_indices.slice(0, i).map(j => res.add(j));
+    });
+    let indices = [...res];
+
+    this.color_mapping = Array.from(Array(this.no_of_categories).keys()).map(i => i % 12);
+    indices.forEach((idx, i) => this.color_mapping[idx] = i);
   }
 
   drawStreamGraph() {
@@ -454,7 +546,8 @@ class Branch {
 
       let color = this.tree.streamgraph_options.color_of_ignored;
       if (i < this.tree.streamgraph_options.topN) {
-        color = d3.schemeSet3[this.tree.color_order.indexOf(this.bottom.topN_indices_ordered[i]) % 12];
+        // color = this.tree.streamgraph_options.color_scheme[this.tree.color_order.indexOf(this.bottom.topN_indices_ordered[i]) % 12];
+        color = this.tree.streamgraph_options.color_scheme[this.tree.color_mapping[this.bottom.topN_indices_ordered[i]]];
       }
 
       this.tree.nodelayer.append("path")
@@ -474,26 +567,8 @@ class Branch {
           .innerRadius(this.tree.donut_options.innerRadius)
           .outerRadius(this.tree.donut_options.outerRadius);
 
-      // find the point whose data we should display
-      let point_of_interest = null;
-      const connecting_points = this.branch_points_sorted
-          .slice(this.branch_points_sorted.indexOf(p) + 1)
-          .filter(p => p.is_connecting_point);
-      if (connecting_points.length === 0) {
-        // there are no more connections on this branch. Show the values of the bottom node
-        point_of_interest = this.bottom;
-      } else {
-        // there is a connection on this branch. Show the values from the point before the connection
-        point_of_interest = connecting_points[0];
-      }
-
-      if (point_of_interest === null) {
-        console.error("Something went wrong when drawing the donut chart...")
-        return;
-      }
-
-      let pie_data = point_of_interest.kde_i1_sorted.slice(0, this.tree.donut_options.topN);
-      pie_data.push(sum(point_of_interest.kde_i1_sorted.slice(this.tree.donut_options.topN)));
+      let pie_data = p.donut_data_from_point.kde_i1_sorted.slice(0, this.tree.donut_options.topN);
+      pie_data.push(sum(p.donut_data_from_point.kde_i1_sorted.slice(this.tree.donut_options.topN)));
 
       const arcs = g.selectAll("arcs")
           .data(pie(pie_data))
@@ -503,7 +578,8 @@ class Branch {
       arcs.append("path")
           .attr("fill", (data, i) => {
             if (i !== this.tree.donut_options.topN)
-              return d3.schemeSet3[this.tree.color_order.indexOf(point_of_interest.kde_i1_sorted_indices[i]) % 12];
+              return this.tree.donut_options.color_scheme[this.tree.color_mapping[p.donut_data_from_point.kde_i1_sorted_indices[i]]];
+              // return this.tree.donut_options.color_scheme[this.tree.color_order.indexOf(p.donut_data_from_point.kde_i1_sorted_indices[i]) % 12];
             else
               return this.tree.donut_options.color_of_ignored;
           })
@@ -524,6 +600,7 @@ class Point {
 
     this.drawDonut = false;
     this.is_connecting_point = false;
+    this.donut_data_from_point = null;
   }
 
   reorderKDE_I1(order, topN) {
