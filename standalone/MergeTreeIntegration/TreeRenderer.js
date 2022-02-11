@@ -39,6 +39,15 @@ class TreeRenderer {
     this.transform = null;
   }
 
+  changeColorScheme(cs) {
+    this.streamgraph_options.color_scheme = eval(`d3.${cs}`);
+    this.donut_options.color_scheme = eval(`d3.${cs}`);
+
+    if (this.tree !== null) {
+      this.tree.createColorMapping();
+    }
+  }
+
   setVtkDataSet(dataset){
     this.vtkDataSet = dataset;
 
@@ -411,8 +420,6 @@ class Tree {
   }
 
   createColorMapping() {
-    // requirement: color mapping with exactly 12 unique colors
-
     let i = 1
     for (i; i < this.no_of_categories; i++) {
       let res = new Set();
@@ -421,7 +428,7 @@ class Tree {
         p.donut_data_from_point.kde_i1_sorted_indices.slice(0, i).map(j => res.add(j));
       });
 
-      if (res.size > 12) {
+      if (res.size > this.streamgraph_options.color_scheme.length) {
         i--;
         break;
       }
@@ -433,7 +440,7 @@ class Tree {
     });
     let indices = [...res];
 
-    this.color_mapping = Array.from(Array(this.no_of_categories).keys()).map(i => i % 12);
+    this.color_mapping = Array.from(Array(this.no_of_categories).keys()).map(i => i % this.streamgraph_options.color_scheme.length);
     indices.forEach((idx, i) => this.color_mapping[idx] = i);
   }
 
