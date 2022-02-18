@@ -9,6 +9,7 @@ class TreeRenderer {
 
     let topN = 3;
     this.streamgraph_options = {
+      // maxwidth_root: 1957,
       maxwidth_root: 100,
       padding: 10,
       edgeWidth: 1,
@@ -16,6 +17,8 @@ class TreeRenderer {
       color_scheme: d3.schemeSet3,
       color_of_ignored: "#9f9f9f"
     }
+    this.streamgraph_options.padding_scaled = this.streamgraph_options.padding;
+
     this.donut_options = {
       innerRadius: 8,
       outerRadius: 20,
@@ -181,6 +184,12 @@ class TreeRenderer {
     }
   }
 
+  resetLayoutingCoords() {
+    this.points.forEach(p => p.x_layout = p.x);
+    this.points.forEach(p => p.y_layout = p.y);
+    this.streamgraph_options.padding_scaled = this.streamgraph_options.padding;
+  }
+
   centerView() {
     // change x_layout and y_layout coordinates such that they are centered for this particular viewbox configuration
     const x_max = Math.max(...this.points.map(p => p.x_layout))
@@ -298,7 +307,7 @@ class Tree {
     // create a scale for mapping of the points, which is shared at each subbranch
     this.mapping = d3.scaleLinear()
         .domain([0, sum(this.treeRoot.kde_i1)])
-        .range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding]);
+        .range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding_scaled]);
 
     this.branches = this.unique_branchIds
         .map((id, i) => new Branch(this, id, i === 0));
@@ -307,7 +316,7 @@ class Tree {
   calculateLayoutStreamgraph() {
     this.branches.forEach(b => {
       if (!b.is_root_branch) {
-        const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding;
+        const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding_scaled;
         const new_x = this.findNeighborBranch(b).x_layout - space_needed;
         b.setXLayout(new_x);
       }
@@ -327,6 +336,9 @@ class Tree {
   moveToOrigin() {
     const _x_min = Math.min(...this.all_points.map(p => p.x_layout));
     this.branches.forEach(b => b.setXLayout(b.x_layout - _x_min));
+
+    const _y_min = Math.min(...this.all_points.map(p => p.y_layout));
+    this.all_points.forEach(p => p.y_layout -= _y_min);
   }
 
   rescale(width, height, type) {
@@ -370,8 +382,8 @@ class Tree {
     // we also have to apply the scaling to the mapping!
     if (type === "streamgraph") {
       this.streamgraph_options.maxwidth_root *= scaling_factor;
-      this.streamgraph_options.padding *= scaling_factor;
-      this.mapping.range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding]);
+      this.streamgraph_options.padding_scaled *= scaling_factor;
+      this.mapping.range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding_scaled]);
     }
     if (type === "donut") {
       this.donut_options.padding *= scaling_factor;

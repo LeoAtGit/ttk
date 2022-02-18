@@ -64,7 +64,18 @@ class GraphOptions {
       });
     });
 
-    // so the values are displayed when the side is reloaded
+    d3.select("#maxwidthRoot").on("input", e => {
+      const maxwidthRoot = e.target.value;
+      d3.select("#label_maxwidthRoot").text(`${maxwidthRoot} max width root`);
+
+      this.streamGraph.streamgraph_options.maxwidth_root = parseInt(maxwidthRoot);
+      this.streamGraph.resetLayoutingCoords();
+      this.streamGraph.render("streamgraph");
+      this.streamGraph.doTransform();
+    });
+
+    // so the values are displayed when the side is loaded
+    d3.select("#maxwidthRoot").node().dispatchEvent(new Event("input"));
     d3.select("#topN").node().dispatchEvent(new Event("input"));
     d3.select("#color_scheme").node().dispatchEvent(new Event("input"));
   }
