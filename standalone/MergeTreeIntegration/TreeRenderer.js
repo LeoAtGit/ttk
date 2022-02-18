@@ -137,8 +137,12 @@ class TreeRenderer {
     this.treeRoot = this.points[this.points.findIndex(p => p.y === Math.max(...this.points.map(p => p.y)))];
     this.treeRoot.drawPoint = true;
 
-    // save the labels
-    this.labels = this.vtkDataSet.fieldData.CategoryDictionary.data.map(s => s.replaceAll("\"", ""));
+    // save the labels if the dataset has labels. Otherwise give default values
+    if (this.vtkDataSet.fieldData.hasOwnProperty("CategoryDictionary")) {
+      this.labels = this.vtkDataSet.fieldData.CategoryDictionary.data.map(s => s.replaceAll("\"", ""));
+    } else {
+      this.labels = Array.from(Array(kde_i0.length).keys());
+    }
   }
 
   render(type) {
@@ -161,6 +165,7 @@ class TreeRenderer {
 
     // draw the streamgraph
     if (type === 'streamgraph') {
+      this.tree.fix_reorderKDE_I1();  // has to be called after this.tree.createColorMapping()
       this.tree.calculateLayoutStreamgraph();
       this.tree.moveToOrigin();
       this.tree.rescale(this.width, this.height, type);
@@ -305,8 +310,6 @@ class Tree {
     // the main tree. The order is specified by the size at the root node
     this.color_order = getSortedIndices(this.treeRoot.kde_i1);
 
-    this.all_points.forEach(p => p.reorderKDE_I1(this.color_order, this.streamgraph_options.topN));
-
     // create a scale for mapping of the points, which is shared at each subbranch if "relative mapping" is chosen
     this.mapping = d3.scaleLinear()
         .domain([0, sum(this.treeRoot.kde_i1)])
@@ -314,6 +317,18 @@ class Tree {
 
     this.branches = this.unique_branchIds
         .map((id, i) => new Branch(this, id, i === 0));
+
+    // for the donut chart, we want to reorder the KDE at each point, so we can draw the donuts more easily.
+    this.all_points.forEach(p => p.reorderKDE_I1(this.color_order, this.streamgraph_options.topN));
+  }
+
+  fix_reorderKDE_I1() {
+    // for the streamgraph, we want to reorder the KDE at each point ACCORDING TO THE ORDER AT THE BOTTOM NODE OF THE
+    // CORRESPONDING BRANCH!!!
+    // otherwise, this would introduce bugs...
+    //
+    // Note that this function has to be called after the createColorMapping() because this code is shitty
+    this.branches.forEach(b => b.reorderKDE_I1_streamgraph(this.color_order, this.streamgraph_options.topN));
   }
 
   calculateLayoutStreamgraph() {
@@ -446,6 +461,8 @@ class Tree {
 
   createColorMapping() {
     let i = 1
+
+    // do this just to find out the i
     for (i; i < this.no_of_categories; i++) {
       let res = new Set();
 
@@ -459,6 +476,7 @@ class Tree {
       }
     }
 
+    // here do the actual calculation
     let res = new Set();
     this.all_points.filter(p => p.drawDonut).forEach(p => {
       p.donut_data_from_point.kde_i1_sorted_indices.slice(0, i).map(j => res.add(j));
@@ -549,6 +567,13 @@ class Branch {
     this.branch_points_sorted.forEach(p => p.setXLayout(x_layout));
   }
 
+  reorderKDE_I1_streamgraph(order, topN) {
+    const kde_i1_sorted_indices = getSortedIndices(this.bottom.kde_i1);
+    const kde_i1_sorted = kde_i1_sorted_indices.map(i => this.bottom.kde_i1[i]);
+
+    this.branch_points_sorted.forEach(p => p.reorderKDE_I1(order, topN, kde_i1_sorted_indices, kde_i1_sorted));
+  }
+
   drawStreamGraph() {
     const mapping = (this.tree.streamgraph_options.use_relative_sizes)
       ? this.tree.mapping
@@ -614,11 +639,12 @@ class Branch {
 
       arcs.append("path")
           .attr("fill", (data, i) => {
-            if (i !== this.tree.donut_options.topN)
+            if (i !== this.tree.donut_options.topN) {
               return this.tree.donut_options.color_scheme[this.tree.color_mapping[p.donut_data_from_point.kde_i1_sorted_indices[i]]];
               // return this.tree.donut_options.color_scheme[this.tree.color_order.indexOf(p.donut_data_from_point.kde_i1_sorted_indices[i]) % 12];
-            else
+            } else {
               return this.tree.donut_options.color_of_ignored;
+            }
           })
           .attr("d", arc)
           .attr("stroke", "black")
@@ -640,10 +666,10 @@ class Point {
     this.donut_data_from_point = null;
   }
 
-  reorderKDE_I1(order, topN) {
+  reorderKDE_I1(order, topN, kde_i1_sorted_indices = null, kde_i1_sorted = null) {
     // sort kde_i1 by size
-    this.kde_i1_sorted_indices = getSortedIndices(this.kde_i1);
-    this.kde_i1_sorted = this.kde_i1_sorted_indices.map(i => this.kde_i1[i]);
+    this.kde_i1_sorted_indices = (kde_i1_sorted_indices === null) ? getSortedIndices(this.kde_i1) : kde_i1_sorted_indices;
+    this.kde_i1_sorted = (kde_i1_sorted === null) ? this.kde_i1_sorted_indices.map(i => this.kde_i1[i]) : kde_i1_sorted;
 
     // get the indices of the largest topN values
     this.topN_indices = this.kde_i1_sorted_indices.slice(0, topN);
