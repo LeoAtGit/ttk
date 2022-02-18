@@ -199,7 +199,8 @@ class TreeRenderer {
     const y_max = Math.max(...this.points.map(p => p.y_layout));
 
     if (x_max >= this.width - 0.1) {
-      this.tree.all_points.forEach(p => p.y_layout += (this.height - y_max) / 2)
+      // this.tree.all_points.forEach(p => p.y_layout += (this.height - y_max) / 2)
+      this.tree.all_points.forEach(p => p.y_layout *= (this.height / y_max));
     }
 
     if (y_max >= this.height - 0.1) {
