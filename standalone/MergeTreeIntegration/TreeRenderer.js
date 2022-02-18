@@ -11,6 +11,8 @@ class TreeRenderer {
     this.streamgraph_options = {
       // maxwidth_root: 1957,
       maxwidth_root: 100,
+      // use_relative_sizes: true,
+      use_relative_sizes: false,
       padding: 10,
       edgeWidth: 1,
       topN: topN,
@@ -304,7 +306,7 @@ class Tree {
 
     this.all_points.forEach(p => p.reorderKDE_I1(this.color_order, this.streamgraph_options.topN));
 
-    // create a scale for mapping of the points, which is shared at each subbranch
+    // create a scale for mapping of the points, which is shared at each subbranch if "relative mapping" is chosen
     this.mapping = d3.scaleLinear()
         .domain([0, sum(this.treeRoot.kde_i1)])
         .range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding_scaled]);
@@ -314,13 +316,23 @@ class Tree {
   }
 
   calculateLayoutStreamgraph() {
-    this.branches.forEach(b => {
-      if (!b.is_root_branch) {
-        const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding_scaled;
-        const new_x = this.findNeighborBranch(b).x_layout - space_needed;
-        b.setXLayout(new_x);
-      }
-    });
+    if (this.streamgraph_options.use_relative_sizes) {
+      this.branches.forEach(b => {
+        if (!b.is_root_branch) {
+          const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding_scaled;
+          const new_x = this.findNeighborBranch(b).x_layout - space_needed;
+          b.setXLayout(new_x);
+        }
+      });
+    } else {
+      this.branches.forEach(b => {
+        if (!b.is_root_branch) {
+          const space_needed = this.streamgraph_options.maxwidth_root + this.streamgraph_options.padding_scaled;
+          const new_x = this.findNeighborBranch(b).x_layout - space_needed;
+          b.setXLayout(new_x);
+        }
+      });
+    }
   }
 
   calculateLayoutDonut() {
@@ -537,6 +549,11 @@ class Branch {
   }
 
   drawStreamGraph() {
+    const mapping = (this.tree.streamgraph_options.use_relative_sizes)
+      ? this.tree.mapping
+      : d3.scaleLinear()
+          .domain([0, sum(this.bottom.kde_i1)])
+          .range([0, this.tree.streamgraph_options.maxwidth_root - this.tree.streamgraph_options.padding_scaled]);
     for (let i = this.tree.no_of_categories - 1; i >= 0; i--) {
       let path = d3.path();
       path.moveTo(
@@ -545,7 +562,7 @@ class Branch {
       );
       this.branch_points_sorted.forEach(point => {
         path.lineTo(
-            point.x_layout + this.tree.mapping(point.kde_i1_sorted_and_ordered_cumsum[i])
+            point.x_layout + mapping(point.kde_i1_sorted_and_ordered_cumsum[i])
               + this.tree.streamgraph_options.edgeWidth / 2,
             point.y_layout
         );
@@ -553,7 +570,7 @@ class Branch {
       const __lastPoint = this.branch_points_sorted[this.branch_points_sorted.length - 1];
       path.lineTo(
           __lastPoint.x_layout
-            + this.tree.mapping(__lastPoint.kde_i1_sorted_and_ordered_cumsum[i])
+            + mapping(__lastPoint.kde_i1_sorted_and_ordered_cumsum[i])
             + this.tree.streamgraph_options.edgeWidth / 2,
           this.connecting_point.y_layout
       );

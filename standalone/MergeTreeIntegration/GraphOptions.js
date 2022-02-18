@@ -74,8 +74,19 @@ class GraphOptions {
       this.streamGraph.doTransform();
     });
 
+    d3.select("#absolute_width").on("change", e => {
+      const absolute_width = e.target.checked;
+
+      this.streamGraph.streamgraph_options.use_relative_sizes = !absolute_width;
+      this.streamGraph.streamgraph_options.maxwidth_root = parseInt(d3.select("#maxwidthRoot").node().value);
+      this.streamGraph.resetLayoutingCoords();
+      this.streamGraph.render("streamgraph");
+      this.streamGraph.doTransform();
+    });
+
     // so the values are displayed when the side is loaded
     d3.select("#maxwidthRoot").node().dispatchEvent(new Event("input"));
+    d3.select("#absolute_width").node().dispatchEvent(new Event("change"));
     d3.select("#topN").node().dispatchEvent(new Event("input"));
     d3.select("#color_scheme").node().dispatchEvent(new Event("input"));
   }
