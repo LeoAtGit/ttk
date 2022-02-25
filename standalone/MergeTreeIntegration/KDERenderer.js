@@ -186,9 +186,23 @@ void main() {
 
   computeMask(idx, segList){
     const n = this.mask.length;
-    const idxMod = idx%255;
+    // const idxMod = idx%255;
+    const data = this.vtkDataSet.pointData.KDE.data;
+    const data2 = this.vtkDataSet.pointData.BranchId.data;
     for(let i=0; i<n; i++)
-      this.mask[i] = segList.includes(this.segmentation[i]) ? idxMod : 255;
+      // this.mask[i] = segList.includes(this.segmentation[i]) ? idxMod : 255;
+      this.mask[i] = data[i] > 0.2 ? data2[i] % 12 : 255;
+
+    this.uniforms.texMask.value.needsUpdate = true;
+  }
+
+  computeMaskBranchId(branchId_list, scalar_value){
+    const n = this.mask.length;
+    const kde = this.vtkDataSet.pointData.KDE.data;
+    const branchIds = this.vtkDataSet.pointData.BranchId.data;
+    for (let i = 0; i < n; i++) {
+      this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? branchIds[i] % 12 : 255;
+    }
 
     this.uniforms.texMask.value.needsUpdate = true;
   }
@@ -229,10 +243,14 @@ void main() {
   }
 
   render(opacity, nContours, contourWidth){
-    this.consts.opacity = opacity;
+    this.consts.opacity = opacity.toFixed(2);
     this.consts.nContours = nContours;
     this.consts.contourWidth = contourWidth;
 
+    this.update_render();
+  }
+
+  update_render() {
     this.quad.material = new THREE.RawShaderMaterial({
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),

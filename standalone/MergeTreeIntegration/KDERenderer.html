@@ -43,30 +43,31 @@
     <body>
 
     <div>
-      <div id="treeContainerDonut" style="float: left; width: 600px; height: 600px;margin:0 auto;"></div>
-      <div id="treeContainerStreamgraph" style="float: left; width: 600px; height: 600px;margin:0 auto;"></div>
-      <div id="div_graph_options" style="float: left; width: 350px; height: 600px;margin:0 auto;">
-        <input id="topN" type="range" min="1" max="6" value="3">
-        <label id="label_topN" for="topN"></label>
-        <br>
-        <select id="color_scheme">
-          <option value="schemeSet3">schemeSet3</option>
-          <option value="schemePaired">schemePaired</option>
-          <option value="schemeSet1">schemeSet1</option>
-        </select>
-        <br>
-        <div id="color_legend" style="width: 100%">
-          <label>Color Legend</label>
-        </div>
-        <div id="maxwidth_root" style="width: 100%">
-          <input id="absolute_width" type="checkbox">
-          <label id="label_absolute_width" for="absolute_width">absolute width?</label>
-          <input id="maxwidthRoot" type="range" min="25" max="1000" value="3">
-          <label id="label_maxwidthRoot" for="maxwidthRoot"></label>
-        </div>
+      <div id="treeContainerDonut" style="float: left; width: 500px; height: 600px;margin:0 auto;"></div>
+      <div id="treeContainerStreamgraph" style="float: left; width: 500px; height: 600px;margin:0 auto;"></div>
+      <div id="mapContainer" style="width: 500px; height: 600px;margin:0 auto;"></div>
+    </div>
+
+    <div id="div_graph_options" style="float: left; width: 350px; height: 600px;margin:0 auto;">
+      <input id="topN" type="range" min="1" max="6" value="3">
+      <label id="label_topN" for="topN"></label>
+      <br>
+      <select id="color_scheme">
+        <option value="schemeSet3">schemeSet3</option>
+        <option value="schemePaired">schemePaired</option>
+        <option value="schemeSet1">schemeSet1</option>
+      </select>
+      <br>
+      <div id="color_legend" style="width: 100%">
+        <label>Color Legend</label>
+      </div>
+      <div id="maxwidth_root" style="width: 100%">
+        <input id="absolute_width" type="checkbox">
+        <label id="label_absolute_width" for="absolute_width">absolute width?</label>
+        <input id="maxwidthRoot" type="range" min="25" max="1000" value="3">
+        <label id="label_maxwidthRoot" for="maxwidthRoot"></label>
       </div>
     </div>
-    <div id="mapContainer" style="width: 600px; height: 600px;margin:0 auto;"></div>
 
       <script id='sourceCode'>
 const map = L.map('mapContainer').setView([41.85003, -87.65005], 13);
@@ -98,6 +99,18 @@ connection.on( 'messageSequence',  msgs=>{
 connection.on('open',()=>connection.sendString('RequestInputVtkDataSet'));
 
 connection.connect('localhost',9285);
+
+const connection_map = new TTK.ttkWebSocketIO();
+connection_map.on( 'messageSequence',  msgs=>{
+  TTK.vtkDataSet.createFromMessageSequence(msgs).then( objects=>{
+    console.log(objects[0]);
+    kdeRenderer.setVtkDataSet(objects[0]);
+    kdeRenderer.render(0.5, 5, 1);
+  });
+});
+connection_map.on('open',()=>connection_map.sendString('RequestInputVtkDataSet'));
+
+connection_map.connect('localhost',9286);
       </script>
    </body>
 </html>

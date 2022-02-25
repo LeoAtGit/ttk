@@ -189,6 +189,17 @@ class TreeRenderer {
       this.tree.drawDonut();
       this.tree.drawPoints();
     }
+
+    d3.selectAll(".vertices").on("click", e => {
+      const clicked_node = e.target;
+      const id = parseInt(clicked_node.id);
+
+      const selected_point = this.points[id];
+      const selected_points = this.tree.findPointsOnClick(selected_point);
+
+      kdeRenderer.computeMaskBranchId(selected_points['points'].map(p => p.branchId), selected_points['min_scalar_value']);
+      kdeRenderer.update_render();
+    });
   }
 
   resetLayoutingCoords() {
@@ -446,6 +457,54 @@ class Tree {
     });
   }
 
+  findPointsOnClick(selected_point) {
+    // recursively find the points that are above the selected_point (also go through all of the subtrees that are above)
+    // or below the selected point, up to a connecting point or the bottom, whatever comes first.
+
+    let res = {
+      'points': [],
+      'min_scalar_value': Infinity,
+    };
+    const branch = this.returnBranchWithBranchId(selected_point.branchId);
+
+    if (selected_point === branch.top || selected_point !== branch.bottom) {
+      // points going down the branch
+      let p = branch.branch_points_sorted.slice(branch.branch_points_sorted.indexOf(selected_point));
+      for (let i = 1; i < p.length; i++) {
+        if (p[i].is_connecting_point) {
+          break;
+        } else {
+          res['points'] = res['points'].concat([p[i]]);
+          res['min_scalar_value'] = Math.min(res['min_scalar_value'], p[i].kde);
+        }
+
+        if (p[i] === branch.bottom) {
+          // scalar value must be taken from the other branch, because otherwise not everything is covered
+          res['min_scalar_value'] = Math.min(res['min_scalar_value'], branch.bottom.connected_to_point.kde);
+          break;
+        }
+      }
+    }
+
+    if (selected_point === branch.bottom || selected_point !== branch.top) {
+      // points going up the branch
+      let p = branch.branch_points_sorted.slice(0, branch.branch_points_sorted.indexOf(selected_point) + 1);
+      res['points'] = res['points'].concat(p);
+      res['min_scalar_value'] = Math.min(res['min_scalar_value'], ...p.map(_p => _p.kde));
+      p.filter(point => point.is_connecting_point).forEach(point => {
+        const __tmp = this.findPointsOnClick(this.returnBranchWithBranchId(point.branchId_of_connection).bottom);
+        res['points'] = res['points'].concat(__tmp['points']);
+        res['min_scalar_value'] = Math.min(res['min_scalar_value'], __tmp['min_scalar_value']);
+      });
+    }
+
+    return res;
+  }
+
+  returnBranchWithBranchId(branchId) {
+    return this.branches.filter(b => b.branchId === branchId)[0];
+  }
+
   getLabels() {
     let res = {};
 
@@ -518,6 +577,8 @@ class Tree {
           .attr("cy", p.y_layout)
           .attr("r", 4)
           .attr("fill", "black")
+          .attr("class", "vertices")
+          .attr("id", `${this.all_points.indexOf(p)}`)
     );
   }
 
@@ -556,9 +617,12 @@ class Branch {
       const __id = this.tree.connectivity.filter((c, i) => i % 2 === 0).indexOf(BigInt(__tmp));
       // the point to which the branch is connected to
       this.connecting_point = this.tree.all_points[this.tree.connectivity[__id * 2 + 1]];
-      this.tree.all_points[this.tree.connectivity[__id * 2 + 1]].is_connecting_point = true;
+      this.connecting_point.is_connecting_point = true;
+      this.connecting_point.branchId_of_connection = this.branchId;
+      this.bottom.connected_to_point = this.connecting_point;
     } else {
       this.connecting_point = this.bottom;
+      this.bottom.connected_to_point = this.connecting_point;
     }
   }
 
@@ -663,6 +727,8 @@ class Point {
 
     this.drawDonut = false;
     this.is_connecting_point = false;
+    this.branchId_of_connection = -1;
+    this.connected_to_point = null;
     this.donut_data_from_point = null;
   }
 
