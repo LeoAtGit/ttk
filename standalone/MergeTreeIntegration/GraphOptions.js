@@ -84,10 +84,16 @@ class GraphOptions {
       this.streamGraph.doTransform();
     });
 
+    d3.select("#contour_count").on("input", e => {
+      kdeRenderer.update_nContours(parseInt(e.target.value));
+      d3.select("#label_contour_count").text(`${e.target.value} contour count`);
+    });
+
     // so the values are displayed when the side is loaded
     d3.select("#maxwidthRoot").node().dispatchEvent(new Event("input"));
     d3.select("#absolute_width").node().dispatchEvent(new Event("change"));
     d3.select("#topN").node().dispatchEvent(new Event("input"));
     d3.select("#color_scheme").node().dispatchEvent(new Event("input"));
+    d3.select("#contour_count").node().dispatchEvent(new Event("input"));
   }
 }

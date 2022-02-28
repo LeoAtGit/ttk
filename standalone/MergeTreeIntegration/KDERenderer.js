@@ -264,4 +264,9 @@ void main() {
 
     this.renderer.render( this.scene, this.camera );
   }
+
+  update_nContours(n) {
+    this.consts.nContours = n;
+    this.update_render();
+  }
 }
