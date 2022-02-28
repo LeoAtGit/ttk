@@ -11,7 +11,8 @@ class KDERenderer {
 
     // Color Maps
     this.colorBrewerQuantitative12 = new Uint8Array([
-      166,206,227,
+      255,153,153,
+      // 166,206,227,
       31,120,180,
       178,223,138,
       51,160,44,
@@ -201,7 +202,8 @@ void main() {
     const kde = this.vtkDataSet.pointData.KDE.data;
     const branchIds = this.vtkDataSet.pointData.BranchId.data;
     for (let i = 0; i < n; i++) {
-      this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? branchIds[i] % 12 : 255;
+      this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? 0 : 255;
+      // this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? branchIds[i] % 12 : 255;
     }
 
     this.uniforms.texMask.value.needsUpdate = true;

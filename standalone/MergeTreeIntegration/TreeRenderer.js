@@ -14,7 +14,7 @@ class TreeRenderer {
       // use_relative_sizes: true,
       use_relative_sizes: false,
       padding: 10,
-      edgeWidth: 1,
+      edgeWidth: 1.5,
       topN: topN,
       color_scheme: d3.schemeSet3,
       color_of_ignored: "#9f9f9f"
@@ -196,6 +196,8 @@ class TreeRenderer {
 
       const selected_point = this.points[id];
       const selected_points = this.tree.findPointsOnClick(selected_point);
+
+      this.tree.highlightEdges(selected_points['points']);
 
       kdeRenderer.computeMaskBranchId(selected_points['points'].map(p => p.branchId), selected_points['min_scalar_value']);
       kdeRenderer.update_render();
@@ -470,6 +472,10 @@ class Tree {
     if (selected_point === branch.top || selected_point !== branch.bottom) {
       // points going down the branch
       let p = branch.branch_points_sorted.slice(branch.branch_points_sorted.indexOf(selected_point));
+
+      res['points'] = res['points'].concat([selected_point]);
+      res['min_scalar_value'] = Math.min(res['min_scalar_value'], selected_point.kde);
+
       for (let i = 1; i < p.length; i++) {
         if (p[i].is_connecting_point) {
           break;
@@ -558,15 +564,72 @@ class Tree {
     this.branches.forEach(b => {
       let path = d3.path();
 
-      path.moveTo(b.x_layout, b.top.y_layout);
+      let y_start = b.top.y_layout;
+      let y_end = b.connecting_point.y_layout;
+      let idx = 0;
+      let i = 0;
+      let connecting_points = b.branch_points_sorted.filter(p => p.is_connecting_point);
+      for (i = 0; i < connecting_points.length; i++) {
+        let subbranch = b.branch_points_sorted.slice(idx, b.branch_points_sorted.indexOf(connecting_points[i]) + 1);
+        idx = b.branch_points_sorted.indexOf(connecting_points[i]);
+        y_start = subbranch[0].y_layout;
+        y_end = subbranch[subbranch.length - 1].y_layout;
+        path.moveTo(b.x_layout, y_start);
+        path.lineTo(b.x_layout, y_end);
+
+        this.nodelayer.append("path")
+          .attr("d", path)
+          .attr("class", "edge")
+          .attr("id", `${b.branchId}_${i}`)
+          .attr("fill", "none")
+          .attr("stroke", "black")
+          .attr("stroke-width", this.streamgraph_options.edgeWidth);
+
+        path = d3.path();
+        y_start = y_end;
+      }
+      path.moveTo(b.x_layout, y_start);
       path.lineTo(b.x_layout, b.connecting_point.y_layout);  // normally to b.bottom.y_layout, but we want to trick the layout drawing a bit
       path.lineTo(b.connecting_point.x_layout, b.connecting_point.y_layout);
 
       this.nodelayer.append("path")
           .attr("d", path)
+          .attr("class", "edge")
+          .attr("id", `${b.branchId}_${i}`)
           .attr("fill", "none")
           .attr("stroke", "black")
           .attr("stroke-width", this.streamgraph_options.edgeWidth);
+    });
+  }
+
+  highlightEdges(points) {
+    d3.selectAll(`.edge`)
+      .attr("stroke", "black");
+
+    let b_ids = points.map(p => p.branchId);
+    b_ids = [...new Set(b_ids)];  // make unique
+    b_ids.forEach(b_id => {
+      // foreach branch_id check what the connecting point furthest down is in the list of points
+      let selected_points_bid = points.filter(p => p.branchId === b_id);
+      const all_points_bid = this.returnBranchWithBranchId(b_id).branch_points_sorted;
+
+      if (selected_points_bid.length >= all_points_bid.length) {
+        // easy case, the whole branch must be colored in red
+        d3.selectAll(`.edge[id^='${b_id}_']`)
+          .attr("stroke", "red");
+      } else {
+        // harder case, find out which segments must be colored red.
+
+        // find point with largest y_layout
+        selected_points_bid = selected_points_bid.sort((a, b) => a.y - b.y);
+        const __tmp = selected_points_bid[selected_points_bid.length - 1];
+        const next_connecting_point = all_points_bid[all_points_bid.indexOf(__tmp) + 1];
+        const connecting_points = all_points_bid.filter(p => p.is_connecting_point);
+        for (let i = 0; i < connecting_points.indexOf(next_connecting_point) + 1; i++) {
+          d3.selectAll(`.edge[id='${b_id}_${i}']`)
+            .attr("stroke", "red");
+        }
+      }
     });
   }
 
