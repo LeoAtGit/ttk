@@ -4,8 +4,8 @@ class TreeRenderer {
 
     this.scale = 200;
     this.padding = 50;
-    this.width = 500;
-    this.height = 500;
+    this.width = parseInt(treeContainer.node().style.width);
+    this.height = parseInt(treeContainer.node().style.height);
 
     let topN = 3;
     this.streamgraph_options = {
@@ -33,7 +33,7 @@ class TreeRenderer {
     this.svg = this.treeContainer.append("svg")
         .attr("height", this.height)
         .attr("width", this.width)
-        .attr("style", "border:5px solid #eaeaea");
+        // .attr("style", "border:5px solid #eaeaea");
 
     this.root = this.svg.append("g");
     this.coordinate_system = this.root.append("g");

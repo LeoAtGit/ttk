@@ -43,12 +43,12 @@
     <body>
 
     <div>
-      <div id="treeContainerDonut" style="float: left; width: 500px; height: 600px;margin:0 auto;"></div>
-      <div id="treeContainerStreamgraph" style="float: left; width: 500px; height: 600px;margin:0 auto;"></div>
-      <div id="mapContainer" style="width: 500px; height: 600px;margin:0 auto;"></div>
+      <div id="mapContainer" style="float: left; width: 450px; height: 500px;margin:0 auto;"></div>
+      <div id="treeContainerDonut" style="float: left; width: 550px; height: 500px;margin:0 auto;"></div>
+      <div id="treeContainerStreamgraph" style="float: left; width: 550px; height: 500px;margin:0 auto;"></div>
     </div>
 
-    <div id="div_graph_options" style="float: left; width: 350px; height: 600px;margin:0 auto;">
+    <div id="div_graph_options" style="float: left; width: 600px; height: 500px;margin:0 auto;">
       <input id="topN" type="range" min="1" max="6" value="3">
       <label id="label_topN" for="topN"></label>
       <br>
@@ -57,18 +57,23 @@
         <option value="schemePaired">schemePaired</option>
         <option value="schemeSet1">schemeSet1</option>
       </select>
+      <label>Color Map</label>
       <br>
-      <div id="color_legend" style="width: 100%">
-        <label>Color Legend</label>
-      </div>
       <div id="maxwidth_root" style="width: 100%">
         <input id="absolute_width" type="checkbox">
         <label id="label_absolute_width" for="absolute_width">absolute width?</label>
+        <br>
         <input id="maxwidthRoot" type="range" min="25" max="1000" value="3">
         <label id="label_maxwidthRoot" for="maxwidthRoot"></label>
       </div>
       <input id="contour_count" type="range" min="1" max="10" value="3">
       <label id="label_contour_count" for="contour_count"></label>
+    </div>
+
+    <div style="float: left; width: 600px; height: 500px;margin:0 auto;">
+      <div id="color_legend" style="width: 100%">
+        <label>Color Legend</label>
+      </div>
     </div>
 
       <script id='sourceCode'>

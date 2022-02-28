@@ -86,7 +86,7 @@ class GraphOptions {
 
     d3.select("#contour_count").on("input", e => {
       kdeRenderer.update_nContours(parseInt(e.target.value));
-      d3.select("#label_contour_count").text(`${e.target.value} contour count`);
+      d3.select("#label_contour_count").text(`${e.target.value} contours`);
     });
 
     // so the values are displayed when the side is loaded
