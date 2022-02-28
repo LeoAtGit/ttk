@@ -234,6 +234,9 @@ void main() {
     this.segmentation = vtkDataSet.pointData.NodeId.data;
 
     this.mask = new Uint8Array(vtkDataSet.dimension[0]*vtkDataSet.dimension[1]);
+    for (let i = 0; i < this.mask.length; i++) {
+      this.mask[i] = 255;
+    }
     uniforms.texMask.value = this.createTexture(1,vtkDataSet.dimension, this.mask);
 
     this.appendCanvas(

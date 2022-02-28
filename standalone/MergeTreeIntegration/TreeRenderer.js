@@ -175,6 +175,7 @@ class TreeRenderer {
 
       this.tree.drawEdges();
       this.tree.drawPoints();
+      this.tree.drawEdges(true);
     }
 
     // draw the donut plots
@@ -188,11 +189,12 @@ class TreeRenderer {
       this.tree.drawEdges();
       this.tree.drawDonut();
       this.tree.drawPoints();
+      this.tree.drawEdges(true);
     }
 
     d3.selectAll(".vertices").on("click", e => {
       const clicked_node = e.target;
-      const id = parseInt(clicked_node.id);
+      const id = parseInt(clicked_node.id.split("_")[1]);
 
       const selected_point = this.points[id];
       const selected_points = this.tree.findPointsOnClick(selected_point);
@@ -201,6 +203,23 @@ class TreeRenderer {
 
       kdeRenderer.computeMaskBranchId(selected_points['points'].map(p => p.branchId), selected_points['min_scalar_value']);
       kdeRenderer.update_render();
+    });
+
+    d3.selectAll(".edge[id^='click_']").on("click", e => {
+      const clicked_edge = e.target;
+      const id = clicked_edge.id;
+      const b_id = parseInt(id.split("_")[1]);
+      const connecting_point_index = parseInt(id.split("_")[2]);
+
+      const branch = this.tree.returnBranchWithBranchId(b_id);
+      if (connecting_point_index === 0) {
+        // it was the top point
+        d3.select(`#vertex_${this.points.indexOf(branch.top)}`).node().dispatchEvent(new Event("click"));
+      } else {
+        // it was some connecting point
+        const connecting_points = branch.branch_points_sorted.filter(p => p.is_connecting_point);
+        d3.select(`#vertex_${this.points.indexOf(connecting_points[connecting_point_index - 1])}`).node().dispatchEvent(new Event("click"));
+      }
     });
   }
 
@@ -560,7 +579,7 @@ class Tree {
     this.branches.forEach(b => b.drawDonut());
   }
 
-  drawEdges() {
+  drawEdges(draw_click_helpers=false) {
     this.branches.forEach(b => {
       let path = d3.path();
 
@@ -577,13 +596,24 @@ class Tree {
         path.moveTo(b.x_layout, y_start);
         path.lineTo(b.x_layout, y_end);
 
-        this.nodelayer.append("path")
-          .attr("d", path)
-          .attr("class", "edge")
-          .attr("id", `${b.branchId}_${i}`)
-          .attr("fill", "none")
-          .attr("stroke", "black")
-          .attr("stroke-width", this.streamgraph_options.edgeWidth);
+        if (draw_click_helpers) {
+          this.nodelayer.append("path")
+            .attr("d", path)
+            .attr("class", "edge")
+            .attr("id", `click_${b.branchId}_${i}`)
+            .attr("fill", "none")
+            .attr("stroke", "black")
+            .attr("stroke-opacity", 0.0)
+            .attr("stroke-width", 10);
+        } else {
+          this.nodelayer.append("path")
+            .attr("d", path)
+            .attr("class", "edge")
+            .attr("id", `${b.branchId}_${i}`)
+            .attr("fill", "none")
+            .attr("stroke", "black")
+            .attr("stroke-width", this.streamgraph_options.edgeWidth);
+        }
 
         path = d3.path();
         y_start = y_end;
@@ -592,13 +622,24 @@ class Tree {
       path.lineTo(b.x_layout, b.connecting_point.y_layout);  // normally to b.bottom.y_layout, but we want to trick the layout drawing a bit
       path.lineTo(b.connecting_point.x_layout, b.connecting_point.y_layout);
 
-      this.nodelayer.append("path")
+      if (draw_click_helpers) {
+        this.nodelayer.append("path")
+          .attr("d", path)
+          .attr("class", "edge")
+          .attr("id", `click_${b.branchId}_${i}`)
+          .attr("fill", "none")
+          .attr("stroke", "black")
+          .attr("stroke-opacity", 0.0)
+          .attr("stroke-width", 10);
+      } else {
+        this.nodelayer.append("path")
           .attr("d", path)
           .attr("class", "edge")
           .attr("id", `${b.branchId}_${i}`)
           .attr("fill", "none")
           .attr("stroke", "black")
           .attr("stroke-width", this.streamgraph_options.edgeWidth);
+      }
     });
   }
 
@@ -641,7 +682,7 @@ class Tree {
           .attr("r", 4)
           .attr("fill", "black")
           .attr("class", "vertices")
-          .attr("id", `${this.all_points.indexOf(p)}`)
+          .attr("id", `vertex_${this.all_points.indexOf(p)}`)
     );
   }
 
