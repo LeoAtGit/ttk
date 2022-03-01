@@ -42,6 +42,7 @@ class TreeRenderer {
     this.vtkDataSet = null;
     this.points = [];
     this.transform = null;
+    this.clicked_node = null;  // the node that is clicked which indicates which branches to highlight
   }
 
   changeColorScheme(cs) {
@@ -193,8 +194,8 @@ class TreeRenderer {
     }
 
     d3.selectAll(".vertices").on("click", e => {
-      const clicked_node = e.target;
-      const id = parseInt(clicked_node.id.split("_")[1]);
+      this.clicked_node = e.target;
+      const id = parseInt(this.clicked_node.id.split("_")[1]);
 
       const selected_point = this.points[id];
       const selected_points = this.tree.findPointsOnClick(selected_point);
@@ -212,15 +213,22 @@ class TreeRenderer {
       const connecting_point_index = parseInt(id.split("_")[2]);
 
       const branch = this.tree.returnBranchWithBranchId(b_id);
+      let point;
       if (connecting_point_index === 0) {
         // it was the top point
-        d3.select(`#vertex_${this.points.indexOf(branch.top)}`).node().dispatchEvent(new Event("click"));
+        point = branch.top;
       } else {
         // it was some connecting point
         const connecting_points = branch.branch_points_sorted.filter(p => p.is_connecting_point);
-        d3.select(`#vertex_${this.points.indexOf(connecting_points[connecting_point_index - 1])}`).node().dispatchEvent(new Event("click"));
+        point = connecting_points[connecting_point_index - 1];
       }
+      d3.select(`#vertex_${this.points.indexOf(point)}`).node().dispatchEvent(new Event("click"));
     });
+
+    // this is needed that after another call to `render()` the branches stay highlighted
+    if (this.clicked_node !== null) {
+      this.clicked_node.dispatchEvent(new Event("click"));
+    }
   }
 
   resetLayoutingCoords() {
