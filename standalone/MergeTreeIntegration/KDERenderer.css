@@ -11,7 +11,7 @@ body {
 }
 
 #mapContainer {
-    height: 500px;
+    height: 450px;
 }
 
 #treeContainerDonut {
@@ -20,6 +20,17 @@ body {
 
 #treeContainerStreamgraph {
     min-height: 500px;
+}
+
+.pad-top-bottom {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border: solid #dadada;
+}
+
+#color_legend {
+    font-size: 10pt;
+    border: solid #dadada;
 }
 
 #color_legend div {
