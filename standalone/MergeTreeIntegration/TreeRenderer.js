@@ -513,7 +513,7 @@ class Tree {
 
         if (p[i] === branch.bottom) {
           // scalar value must be taken from the other branch, because otherwise not everything is covered
-          res['min_scalar_value'] = Math.min(res['min_scalar_value'], branch.bottom.connected_to_point.kde);
+          res['min_scalar_value'] = Math.min(res['min_scalar_value'], branch.connecting_point.kde);
           break;
         }
       }
@@ -731,10 +731,8 @@ class Branch {
       this.connecting_point = this.tree.all_points[this.tree.connectivity[__id * 2 + 1]];
       this.connecting_point.is_connecting_point = true;
       this.connecting_point.branchId_of_connection = this.branchId;
-      this.bottom.connected_to_point = this.connecting_point;
     } else {
       this.connecting_point = this.bottom;
-      this.bottom.connected_to_point = this.connecting_point;
     }
   }
 
@@ -840,7 +838,6 @@ class Point {
     this.drawDonut = false;
     this.is_connecting_point = false;
     this.branchId_of_connection = -1;
-    this.connected_to_point = null;
     this.donut_data_from_point = null;
   }
 
