@@ -1,0 +1,46 @@
+html {
+    /*zoom: 1;*/
+}
+
+body {
+    min-height: 100vh;
+}
+
+.container {
+    max-width: none;
+}
+
+#mapContainer {
+    height: 500px;
+}
+
+#treeContainerDonut {
+    min-height: 500px;
+}
+
+#treeContainerStreamgraph {
+    min-height: 500px;
+}
+
+#color_legend div {
+    margin-left: 5px;
+}
+
+/*#div_graph_options {*/
+/*    float: left;*/
+/*    width: 230px;*/
+/*    height: 500px;*/
+/*    margin: 0 auto;*/
+/*    padding-left: 40px;*/
+/*    padding-right: 40px;*/
+/*}*/
+
+/*h5 {*/
+/*    margin: 3px 0 3px;*/
+/*}*/
+
+/*.options_box {*/
+/*    padding: 10px;*/
+/*    margin: 5px;*/
+/*    border: solid #9f9f9f;*/
+/*}*/

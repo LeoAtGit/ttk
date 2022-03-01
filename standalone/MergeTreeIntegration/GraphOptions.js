@@ -26,7 +26,7 @@ class GraphOptions {
 
     d3.select("#topN").on("input", e => {
       const topN = e.target.value;
-      d3.select("#label_topN").text(`${topN} TopN Categories`);
+      d3.select("#label_topN").text(`${topN}`);
 
       this.streamGraph.streamgraph_options.topN = parseInt(topN);
       this.streamGraph.render("streamgraph");
@@ -52,21 +52,21 @@ class GraphOptions {
       labels_array.forEach(d => {
         let entry = d3.select("#color_legend")
           .append("div")
-          .attr("class", "entry")
+          .attr("class", "entry row")
 
         entry.append("div")
-          .attr("style", `background-color: ${d[1]}; color: ${d[1]}; width: 10%; float: left;`)
-          .text("O");  // FIXME make this nicer
+          .attr("style", `background-color: ${d[1]};`)
+          .attr("class", "col-1 rounded-circle");
 
         entry.append("div")
-          .attr("style", `width: 90%; float: right;`)
+          .attr("class", "col-10")
           .text(this.donutGraph.labels[d[0]]);
       });
     });
 
     d3.select("#maxwidthRoot").on("input", e => {
       const maxwidthRoot = e.target.value;
-      d3.select("#label_maxwidthRoot").text(`${maxwidthRoot} max width root`);
+      d3.select("#label_maxwidthRoot").text(`${maxwidthRoot}`);
 
       this.streamGraph.streamgraph_options.maxwidth_root = parseInt(maxwidthRoot);
       this.streamGraph.resetLayoutingCoords();
@@ -86,7 +86,7 @@ class GraphOptions {
 
     d3.select("#contour_count").on("input", e => {
       kdeRenderer.update_nContours(parseInt(e.target.value));
-      d3.select("#label_contour_count").text(`${e.target.value} contours`);
+      d3.select("#label_contour_count").text(`${e.target.value}`);
     });
 
     // so the values are displayed when the side is loaded

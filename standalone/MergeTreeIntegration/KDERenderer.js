@@ -106,7 +106,7 @@ class KDERenderer {
       this.imageOverlay._image = this.renderer.domElement;
 
       // Force Leaflet to update the canvas size and position
-      this.leafletMap.setZoom(12);
+      this.leafletMap.setView([(lon0 + lon1) / 2, (lat0 + lat1) / 2], 11);
     }
   }
 

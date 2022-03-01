@@ -4,8 +4,8 @@ class TreeRenderer {
 
     this.scale = 200;
     this.padding = 50;
-    this.width = parseInt(treeContainer.node().style.width);
-    this.height = parseInt(treeContainer.node().style.height);
+    this.width = parseInt(treeContainer.node().clientWidth);
+    this.height = parseInt(treeContainer.node().clientHeight);
 
     let topN = 3;
     this.streamgraph_options = {
