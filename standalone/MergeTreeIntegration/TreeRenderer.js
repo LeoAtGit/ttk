@@ -4,8 +4,8 @@ class TreeRenderer {
 
     this.scale = 200;
     this.padding = 50;
-    this.width = parseInt(treeContainer.node().clientWidth);
-    this.height = parseInt(treeContainer.node().clientHeight);
+    this.width = 800;
+    this.height = 700;
 
     let topN = 3;
     this.streamgraph_options = {
@@ -206,9 +206,25 @@ class TreeRenderer {
       kdeRenderer.update_render();
     });
 
+    this.previous_id = null;
     d3.selectAll(".edge[id^='click_']").on("click", e => {
       const clicked_edge = e.target;
       const id = clicked_edge.id;
+      if (id === this.previous_id) {
+        // deselect edges and return
+        d3.selectAll(`.edge-display`)
+          .attr("stroke-opacity", 1)
+          .attr("stroke-width", this.streamgraph_options.edgeWidth);
+
+        this.previous_id = null;
+
+        // reset map
+        kdeRenderer.computeMaskBranchId([], 0);
+        kdeRenderer.update_render();
+        return;
+      }
+
+      this.previous_id = id;
       const b_id = parseInt(id.split("_")[1]);
       const connecting_point_index = parseInt(id.split("_")[2]);
 
@@ -226,6 +242,7 @@ class TreeRenderer {
     });
 
     // this is needed that after another call to `render()` the branches stay highlighted
+    // FIXME doesn't work perfectly just yet...
     if (this.clicked_node !== null) {
       this.clicked_node.dispatchEvent(new Event("click"));
     }
@@ -616,7 +633,7 @@ class Tree {
         } else {
           this.nodelayer.append("path")
             .attr("d", path)
-            .attr("class", "edge")
+            .attr("class", "edge edge-display")
             .attr("id", `${b.branchId}_${i}`)
             .attr("fill", "none")
             .attr("stroke", "black")
@@ -642,7 +659,7 @@ class Tree {
       } else {
         this.nodelayer.append("path")
           .attr("d", path)
-          .attr("class", "edge")
+          .attr("class", "edge edge-display")
           .attr("id", `${b.branchId}_${i}`)
           .attr("fill", "none")
           .attr("stroke", "black")
@@ -652,8 +669,9 @@ class Tree {
   }
 
   highlightEdges(points) {
-    d3.selectAll(`.edge`)
-      .attr("stroke", "black");
+    d3.selectAll(`.edge-display`)
+      .attr("stroke-opacity", 1)
+      .attr("stroke-width", this.streamgraph_options.edgeWidth);
 
     let b_ids = points.map(p => p.branchId);
     b_ids = [...new Set(b_ids)];  // make unique
@@ -663,11 +681,12 @@ class Tree {
       const all_points_bid = this.returnBranchWithBranchId(b_id).branch_points_sorted;
 
       if (selected_points_bid.length >= all_points_bid.length) {
-        // easy case, the whole branch must be colored in red
-        d3.selectAll(`.edge[id^='${b_id}_']`)
-          .attr("stroke", "red");
+        // easy case, the whole branch must be highlighted
+        d3.selectAll(`.edge-display[id^='${b_id}_']`)
+          .attr("stroke-width", 10)
+          .attr("stroke-opacity", 0.4);
       } else {
-        // harder case, find out which segments must be colored red.
+        // harder case, find out which segments must be highlighted
 
         // find point with largest y_layout
         selected_points_bid = selected_points_bid.sort((a, b) => a.y - b.y);
@@ -676,7 +695,8 @@ class Tree {
         const connecting_points = all_points_bid.filter(p => p.is_connecting_point);
         for (let i = 0; i < connecting_points.indexOf(next_connecting_point) + 1; i++) {
           d3.selectAll(`.edge[id='${b_id}_${i}']`)
-            .attr("stroke", "red");
+            .attr("stroke-width", 10)
+            .attr("stroke-opacity", 0.4);
         }
       }
     });
@@ -695,8 +715,17 @@ class Tree {
   }
 
   findNeighborBranch(branch) {
-    // TODO this might need to be more sophisticated, if there are branches with the same x-coordinates
-    return this.branches[this.branches.indexOf(branch) - 1];
+    // this function has to be this complicated because it can happen that
+    // this.branches[this.branches.indexOf(branch) - 1] has the same x value
+    // as the current branch -- thus resulting in a waste of space!
+    const x = branch.x;
+    let i = 1;
+    let ret = this.branches[this.branches.indexOf(branch) - i];
+    while (x === ret.x) {
+      i += 1;
+      ret = this.branches[this.branches.indexOf(branch) - i];
+    }
+    return ret;
   }
 
   xCoordFromBranchId(bId) {

@@ -11,7 +11,8 @@ class KDERenderer {
 
     // Color Maps
     this.colorBrewerQuantitative12 = new Uint8Array([
-      255,153,153,
+      100,100,100,
+      // 255,153,153,
       // 166,206,227,
       31,120,180,
       178,223,138,

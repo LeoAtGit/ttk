@@ -70,14 +70,41 @@
             </div>
           </div>
         </div>
-        <div id="treeContainerDonut" class="col-3"></div>
-        <div id="treeContainerStreamgraph" class="col-5"></div>
-
+        <div id="graphContainer" class="col-8">
+          <div class="row">
+            <label class="col-2">Type</label>
+            <div class="col-2"></div>
+            <div class="col-8">
+              <select id="graph_type">
+                <option value="streamgraph">Streamgraph</option>
+                <option value="donut">Donut</option>
+              </select>
+            </div>
+          </div>
+          <div id="graph" class="row">
+            <div id="treeContainerDonut"></div>
+            <div id="treeContainerStreamgraph"></div>
+          </div>
+        </div>
       </div>
 
     </div>
 
       <script id='sourceCode'>
+
+d3.select("#graph_type").on("input", e => {
+  if (e.target.value === "streamgraph") {
+    d3.select("#treeContainerDonut").attr("style", "display: none");
+    d3.select("#treeContainerStreamgraph").attr("style", "");
+  }
+
+  if (e.target.value === "donut") {
+    d3.select("#treeContainerDonut").attr("style", "");
+    d3.select("#treeContainerStreamgraph").attr("style", "display: none");
+  }
+});
+d3.select("#graph_type").node().dispatchEvent(new Event("input"));
+
 const map = L.map('mapContainer').setView([41.85003, -87.65005], 13);
 const mapLink = '<a href="https://openstreetmap.org">OpenStreetMap</a>';
 const translink = '<a href="http://thunderforest.com/">Thunderforest</a>';
