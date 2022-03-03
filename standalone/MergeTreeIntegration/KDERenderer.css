@@ -28,13 +28,22 @@ body {
     border: solid #dadada;
 }
 
-#color_legend {
-    font-size: 10pt;
-    border: solid #dadada;
+#mapContainer {
+    position: relative;
+    z-index: 0;
+    /*width: available;*/
+    /*height: available;*/
 }
 
-#color_legend div {
-    margin-left: 5px;
+#legend_div {
+    font-size: 10pt;
+    scale: 0.7;
+    position: absolute;
+    z-index: 1;
+    /*background-color: white;*/
+    width: 250px;
+    left: 345px;
+    top: 0px;
 }
 
 /*#div_graph_options {*/

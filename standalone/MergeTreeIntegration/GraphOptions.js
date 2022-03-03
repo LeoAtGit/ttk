@@ -55,7 +55,7 @@ class GraphOptions {
           .attr("class", "entry row")
 
         entry.append("div")
-          .attr("style", `background-color: ${d[1]};`)
+          .attr("style", `background-color: ${d[1]}; border: solid #aaaaaa`)
           .attr("class", "col-1 rounded-circle");
 
         entry.append("div")

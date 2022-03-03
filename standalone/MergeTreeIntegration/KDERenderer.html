@@ -24,7 +24,16 @@
     <div class="container">
       <div class="row">
         <div class="col-4">
-          <div id="mapContainer" class="row"></div>
+          <div class="row">
+            <div id="mapContainer" class="col-12"></div>
+            <div id="legend_div">
+              <div class="row align-items-center px-1">
+                <div id="color_legend">
+                  <h5>Color Legend</h5>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div id="div_graph_options" class="row">
             <div class="col-6">
@@ -58,14 +67,6 @@
                 <label class="col-4">No. of Contours</label>
                 <input id="contour_count" class="col-6" type="range" min="1" max="10" value="3">
                 <label id="label_contour_count" class="col-2" for="contour_count"></label>
-              </div>
-            </div>
-
-            <div class="col-6">
-              <div class="row align-items-center px-1">
-                <div id="color_legend">
-                  <h5>Color Legend</h5>
-                </div>
               </div>
             </div>
           </div>
