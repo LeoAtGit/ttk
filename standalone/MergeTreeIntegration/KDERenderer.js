@@ -155,7 +155,6 @@ void main() {
     float hatching = isolineIntensity(10.0 * (vUV.x + vUV.y), ${(8*this.consts.nContours).toFixed(1)}, ${1/2 * this.consts.contourWidth.toFixed(2)});
     float iso = isolineIntensity(texture2D(texKDE, vUV).a, ${(2*this.consts.nContours).toFixed(1)}, ${this.consts.contourWidth.toFixed(2)});
     float mask = texture2D(texMask, vUV).a*255.0;
-    mask += 1.0;
 
     vec4 isoColor = vec4(0,0,0,1.0-iso);
     vec3 catColor = texture2D( texColor, vec2(
@@ -198,9 +197,32 @@ void main() {
     );
   }
 
-  setColorMap(cmap) {
-    // cmap must be an Uint8Array with 16 entries
-    this.uniforms.texColor = cmap;
+  hexToRgb(hex) {
+    // from https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+
+  setColorMap(cscheme, cmap) {
+    let elems = [];
+    cscheme.forEach(cHex => {
+      const __tmp = this.hexToRgb(cHex);
+      elems = elems.concat([__tmp.r, __tmp.g, __tmp.b]);
+    });
+    elems = elems.concat(new Array((16 - cscheme.length) * 3).fill(0));  // fill with zeroes, so we get a 2^x size
+
+    this.colorScheme = new Uint8Array(elems);
+    this.colorMapping = cmap;
+    this.colorMapping[255] = 255;
+
+    this.uniforms.texColor = {type:'t', value: this.createTexture(3,[1,16],this.colorScheme)};
+    this.uniforms.texColor.value.needsUpdate = true;
+
+    this.update_render();
   }
 
   computeMask(idx, segList){
@@ -254,6 +276,17 @@ void main() {
     this.uniforms.texMask.value.needsUpdate = true;
   }
 
+  computeMaskNoSelection() {
+    const n = this.mask.length;
+    const kde = this.vtkDataSet.pointData.KDE.data;
+    const branchIds = this.vtkDataSet.pointData.BranchId.data;
+    for (let i = 0; i < n; i++) {
+      this.mask[i] = this.colorMapping[this.tree.getColorIDbyBranchIdAndScalar(branchIds[i], kde[i].toString())];
+    }
+
+    this.uniforms.texMask.value.needsUpdate = true;
+  }
+
   setVtkDataSet(vtkDataSet){
 
     this.vtkDataSet = vtkDataSet;
@@ -292,6 +325,12 @@ void main() {
       vtkDataSet.origin[0]+vtkDataSet.spacing[0]*vtkDataSet.dimension[0],
       vtkDataSet.origin[1]+vtkDataSet.spacing[1]*vtkDataSet.dimension[1]
     );
+
+    this.computeMaskNoSelection();
+  }
+
+  setTree(tree) {
+    this.tree = tree;
   }
 
   render(opacity, nContours, contourWidth){

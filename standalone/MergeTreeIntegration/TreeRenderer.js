@@ -51,6 +51,7 @@ class TreeRenderer {
 
     if (this.tree !== null) {
       this.tree.createColorMapping();
+      kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
     }
   }
 
@@ -162,7 +163,10 @@ class TreeRenderer {
     this.tree = new Tree(this.points, this.connectivityArray, this.streamgraph_options, this.donut_options, this.nodelayer);
 
     this.tree.findDonutData();
+    this.tree.createHelperStructureForMap();
     this.tree.createColorMapping();
+    kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
+    kdeRenderer.setTree(this.tree);
 
     // draw the streamgraph
     if (type === 'streamgraph') {
@@ -377,6 +381,8 @@ class Tree {
 
     // for the donut chart, we want to reorder the KDE at each point, so we can draw the donuts more easily.
     this.all_points.forEach(p => p.reorderKDE_I1(this.color_order, this.streamgraph_options.topN));
+
+    this.lowest_connecting_point = this.all_points.filter(p => p.drawDonut).sort((a, b) => b.y - a.y)[0];
   }
 
   fix_reorderKDE_I1() {
@@ -416,6 +422,47 @@ class Tree {
         b.setXLayout(new_x);
       }
     });
+  }
+
+  createHelperStructureForMap() {
+    this.helperStructure = {};
+    this.branches.forEach(b => {
+      this.helperStructure[b.branchId] = {};
+
+      let idx = b.top.donut_data_from_point.kde_i1_sorted_indices[0];
+      this.helperStructure[b.branchId][b.top.kde] = idx;
+      for (const p of b.branch_points_sorted) {
+        if (p.drawDonut) {
+          if (p.donut_data_from_point.kde_i1_sorted_indices[0] !== idx) {
+            idx = p.donut_data_from_point.kde_i1_sorted_indices[0];
+            this.helperStructure[b.branchId][p.kde] = idx;
+          }
+        }
+      }
+    });
+  }
+
+  getColorIDbyBranchIdAndScalar(branchID, scalar) {
+    const f_scalar = parseFloat(scalar);
+    if (f_scalar <= this.lowest_connecting_point.kde) {
+      return 255;
+    }
+
+    const __tmp = this.helperStructure[branchID];
+    const keys = Object.keys(__tmp);
+    if (keys.length === 1) {
+      return __tmp[keys[0]];
+    } else {
+      let __ret;
+      for (let k of keys) {
+        __ret = __tmp[k];
+        const f_k = parseFloat(k);
+        if (f_k < f_scalar) {
+          return __ret;
+        }
+      }
+      return __ret;
+    }
   }
 
   moveToOrigin() {
