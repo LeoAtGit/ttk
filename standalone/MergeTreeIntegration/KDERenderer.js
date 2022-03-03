@@ -135,24 +135,27 @@ uniform sampler2D texKDE;
 uniform sampler2D texMask;
 
 const float opacity = ${this.consts.opacity};
-const vec2 resolution = vec2(${this.consts.resolution[0]},${this.consts.resolution[1]});
+// const vec2 resolution = vec2(${this.consts.resolution[0]},${this.consts.resolution[1]});
 varying vec2 vUV;
 
-float isolineIntensity(){
+float isolineIntensity(float scalar, float n, float w){
 
-    float v = texture2D(texKDE, vUV).a*${(2*this.consts.nContours).toFixed(1)}+0.1;
+    float v = scalar*n+0.1;
 
     float d = fract(v);
     if(mod(v, 2.0) > 1.) d = 1.-d;
 
-    return v<0.5 ? 1.0 : clamp( d/(${this.consts.contourWidth.toFixed(2)}*fwidth(v)), 0.0 , 1.0);
+    return clamp( d/(w*fwidth(v)), 0.0 , 1.0);
+    // return v<0.5 ? 1.0 : clamp( d/(w*fwidth(v)), 0.0 , 1.0);
 }
 
 void main() {
     float nColors = 12.0;
 
-    float iso = isolineIntensity();
+    float hatching = isolineIntensity(10.0 * (vUV.x + vUV.y), ${(8*this.consts.nContours).toFixed(1)}, ${1/2 * this.consts.contourWidth.toFixed(2)});
+    float iso = isolineIntensity(texture2D(texKDE, vUV).a, ${(2*this.consts.nContours).toFixed(1)}, ${this.consts.contourWidth.toFixed(2)});
     float mask = texture2D(texMask, vUV).a*255.0;
+    mask += 1.0;
 
     vec4 isoColor = vec4(0,0,0,1.0-iso);
     vec3 catColor = texture2D( texColor, vec2(
@@ -161,8 +164,17 @@ void main() {
       )).rgb;
     ;
 
+    // vec4 color = mask<254.5
+    //       ? vec4(catColor*iso*opacity, opacity)
+    //       : vec4(0);
+    
+    catColor = hatching * catColor;
+    float o = opacity;
+    vec4 isoCatColor = vec4(catColor * iso * o, o);
+    vec4 isoHatchCatColor = mix(vec4(0, 0, 0, 0.6), isoCatColor, hatching);
     vec4 color = mask<254.5
-      ? vec4(catColor*iso*opacity, opacity)
+      ? isoHatchCatColor
+      // ? vec4(catColor*iso*opacity, opacity)
       : vec4(0);
 
     gl_FragColor = isoColor + color;
@@ -184,6 +196,11 @@ void main() {
       THREE.NearestFilter,
       1
     );
+  }
+
+  setColorMap(cmap) {
+    // cmap must be an Uint8Array with 16 entries
+    this.uniforms.texColor = cmap;
   }
 
   computeMask(idx, segList){
@@ -210,23 +227,52 @@ void main() {
     this.uniforms.texMask.value.needsUpdate = true;
   }
 
+  computeMaskMaxKDEI1(branchId_list, scalar_value) {
+    const n = this.mask.length;
+    // TODO check if this is really kde_i1 and not kde_i0
+    let kde_i1 = this.vtkDataSet.pointData.KDE_ByType.data;
+    const nComp_i1 = this.vtkDataSet.pointData.KDE_ByType.nComponents;
+
+    let points = [];
+    console.log(kde_i1.length)
+    console.log(kde_i1.length / nComp_i1)
+    // for(let i = 0; i < kde_i1.length / nComp_i1; i++) {
+    //   if (i % 1000 === 0)
+    //     console.log(i);
+    //   points = points.concat([kde_i1.slice(i * nComp_i1, (i + 1) * nComp_i1)])
+    // }
+
+    console.log(points);
+    console.log(Math.max(...points));
+
+    const branchIds = this.vtkDataSet.pointData.BranchId.data;
+    for (let i = 0; i < n; i++) {
+      this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? 0 : 255;
+      // this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? branchIds[i] % 12 : 255;
+    }
+
+    this.uniforms.texMask.value.needsUpdate = true;
+  }
+
   setVtkDataSet(vtkDataSet){
 
     this.vtkDataSet = vtkDataSet;
 
     const size = new THREE.Vector2();
     this.renderer.getSize(size);
+    const hd = 1.0;
+    const resX = this.vtkDataSet.dimension[0] * hd;
+    const resY = this.vtkDataSet.dimension[1] * hd;
 
     // update size if necessary (possible optimization: only create data textures if no swap possible)
     if(size.x!==this.vtkDataSet.dimension[0] || size.y!==this.vtkDataSet.dimension[1]){
       this.renderer.setSize(
-        this.vtkDataSet.dimension[0],
-        this.vtkDataSet.dimension[1]
+        resX, resY
       );
     } else {
     }
 
-    this.consts.resolution = [vtkDataSet.dimension[0],vtkDataSet.dimension[1]];
+    this.consts.resolution = [resX, resY];
 
     const uniforms = this.uniforms;
 
