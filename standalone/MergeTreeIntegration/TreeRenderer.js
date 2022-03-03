@@ -206,7 +206,7 @@ class TreeRenderer {
 
       this.tree.highlightEdges(selected_points['points']);
 
-      kdeRenderer.computeMaskBranchId(selected_points['points'].map(p => p.branchId), selected_points['min_scalar_value']);
+      kdeRenderer.computeSelection(selected_points['points'].map(p => p.branchId), selected_points['min_scalar_value']);
       kdeRenderer.update_render();
     });
 
@@ -223,7 +223,7 @@ class TreeRenderer {
         this.previous_id = null;
 
         // reset map
-        kdeRenderer.computeMaskBranchId([], 0);
+        kdeRenderer.computeMaskNoSelection();
         kdeRenderer.update_render();
         return;
       }

@@ -9,46 +9,6 @@ class KDERenderer {
       alpha: true
     });
 
-    // Color Maps
-    this.colorBrewerQuantitative12 = new Uint8Array([
-      100,100,100,
-      // 255,153,153,
-      // 166,206,227,
-      31,120,180,
-      178,223,138,
-      51,160,44,
-      251,154,153,
-      227,26,28,
-      253,191,111,
-      255,127,0,
-      202,178,214,
-      106,61,154,
-      255,255,153,
-      177,89,40,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-    ]);
-    this.colorBrewerQuantitative6 = new Uint8Array([
-      31,120,180,
-      51,160,44,
-      227,26,28,
-      255,127,0,
-      106,61,154,
-      177,89,40,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-      0,0,0,
-    ]);
-
     this.mask = null;
 
     // Camera
@@ -67,9 +27,10 @@ class KDERenderer {
 
     this.planeMaterial = new THREE.MeshBasicMaterial({color:'red'});
     this.uniforms = {
-      texColor: {type:'t', value: this.createTexture(3,[1,16],this.colorBrewerQuantitative12)},
+      texColor: {type:'t', value: null},
       texKDE: {type:'t', value: null},
       texMask: {type:'t', value: null},
+      texSelection: {type:'t', value: null},
     };
 
     this.quad = new THREE.Mesh(
@@ -77,7 +38,6 @@ class KDERenderer {
         this.planeMaterial
     );
     this.scene.add(this.quad);
-
 
     // Leaflet
     this.leafletMap = leafletMap;
@@ -133,6 +93,7 @@ precision highp float;
 uniform sampler2D texColor;
 uniform sampler2D texKDE;
 uniform sampler2D texMask;
+uniform sampler2D texSelection;
 
 const float opacity = ${this.consts.opacity};
 // const vec2 resolution = vec2(${this.consts.resolution[0]},${this.consts.resolution[1]});
@@ -155,27 +116,25 @@ void main() {
     float hatching = isolineIntensity(10.0 * (vUV.x + vUV.y), ${(8*this.consts.nContours).toFixed(1)}, ${1/2 * this.consts.contourWidth.toFixed(2)});
     float iso = isolineIntensity(texture2D(texKDE, vUV).a, ${(2*this.consts.nContours).toFixed(1)}, ${this.consts.contourWidth.toFixed(2)});
     float mask = texture2D(texMask, vUV).a*255.0;
+    float selection = texture2D(texSelection, vUV).a*255.0;
 
     vec4 isoColor = vec4(0,0,0,1.0-iso);
     vec3 catColor = texture2D( texColor, vec2(
         0,
         mod(mask,nColors)/15.0
       )).rgb;
-    ;
-
-    // vec4 color = mask<254.5
-    //       ? vec4(catColor*iso*opacity, opacity)
-    //       : vec4(0);
     
-    catColor = hatching * catColor;
-    float o = opacity;
-    vec4 isoCatColor = vec4(catColor * iso * o, o);
-    vec4 isoHatchCatColor = mix(vec4(0, 0, 0, 0.6), isoCatColor, hatching);
-    vec4 color = mask<254.5
-      ? isoHatchCatColor
-      // ? vec4(catColor*iso*opacity, opacity)
-      : vec4(0);
-
+    vec4 isoCatColor = vec4(catColor * iso * opacity, opacity);
+    
+    vec4 color = vec4(0,0,0,0);
+    if (mask < 254.5) {
+      if (selection == 1.0) {
+        color = mix(vec4(0, 0, 0, 0.6), isoCatColor, hatching);
+      } else {
+        color = isoCatColor;
+      }
+    }
+    
     gl_FragColor = isoColor + color;
 }
         `;
@@ -225,55 +184,19 @@ void main() {
     this.update_render();
   }
 
-  computeMask(idx, segList){
-    const n = this.mask.length;
-    // const idxMod = idx%255;
-    const data = this.vtkDataSet.pointData.KDE.data;
-    const data2 = this.vtkDataSet.pointData.BranchId.data;
-    for(let i=0; i<n; i++)
-      // this.mask[i] = segList.includes(this.segmentation[i]) ? idxMod : 255;
-      this.mask[i] = data[i] > 0.2 ? data2[i] % 12 : 255;
-
-    this.uniforms.texMask.value.needsUpdate = true;
-  }
-
-  computeMaskBranchId(branchId_list, scalar_value){
+  computeSelection(branchId_list, scalar_value) {
     const n = this.mask.length;
     const kde = this.vtkDataSet.pointData.KDE.data;
     const branchIds = this.vtkDataSet.pointData.BranchId.data;
     for (let i = 0; i < n; i++) {
-      this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? 0 : 255;
-      // this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? branchIds[i] % 12 : 255;
+      if (branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value) {
+        this.selection[i] = 1;
+      } else {
+        this.selection[i] = 0;
+      }
     }
 
-    this.uniforms.texMask.value.needsUpdate = true;
-  }
-
-  computeMaskMaxKDEI1(branchId_list, scalar_value) {
-    const n = this.mask.length;
-    // TODO check if this is really kde_i1 and not kde_i0
-    let kde_i1 = this.vtkDataSet.pointData.KDE_ByType.data;
-    const nComp_i1 = this.vtkDataSet.pointData.KDE_ByType.nComponents;
-
-    let points = [];
-    console.log(kde_i1.length)
-    console.log(kde_i1.length / nComp_i1)
-    // for(let i = 0; i < kde_i1.length / nComp_i1; i++) {
-    //   if (i % 1000 === 0)
-    //     console.log(i);
-    //   points = points.concat([kde_i1.slice(i * nComp_i1, (i + 1) * nComp_i1)])
-    // }
-
-    console.log(points);
-    console.log(Math.max(...points));
-
-    const branchIds = this.vtkDataSet.pointData.BranchId.data;
-    for (let i = 0; i < n; i++) {
-      this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? 0 : 255;
-      // this.mask[i] = branchId_list.includes(branchIds[i]) && kde[i] >= scalar_value ? branchIds[i] % 12 : 255;
-    }
-
-    this.uniforms.texMask.value.needsUpdate = true;
+    this.uniforms.texSelection.value.needsUpdate = true;
   }
 
   computeMaskNoSelection() {
@@ -313,11 +236,10 @@ void main() {
 
     this.segmentation = vtkDataSet.pointData.NodeId.data;
 
-    this.mask = new Uint8Array(vtkDataSet.dimension[0]*vtkDataSet.dimension[1]);
-    for (let i = 0; i < this.mask.length; i++) {
-      this.mask[i] = 255;
-    }
+    this.mask = new Uint8Array(vtkDataSet.dimension[0]*vtkDataSet.dimension[1]).fill(255);
+    this.selection = new Uint8Array(vtkDataSet.dimension[0]*vtkDataSet.dimension[1]).fill(0);
     uniforms.texMask.value = this.createTexture(1,vtkDataSet.dimension, this.mask);
+    uniforms.texSelection.value = this.createTexture(1, vtkDataSet.dimension, this.selection);
 
     this.appendCanvas(
       vtkDataSet.origin[0],
