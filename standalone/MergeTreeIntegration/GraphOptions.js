@@ -88,6 +88,18 @@ class GraphOptions {
       });
     });
 
+    d3.select("#topN_map").on("input", e => {
+      const topN_map = parseInt(e.target.value);
+      d3.select("#label_topN_map").text(`${topN_map}`);
+
+      this.streamGraphAbs.render("streamgraph", topN_map);
+      this.streamGraphRel.render("streamgraph", topN_map);
+      this.donutGraph.render("donut", topN_map);
+      this.pieGraph.render("pie", topN_map);
+      kdeRenderer.computeMaskNoSelection();
+      kdeRenderer.update_render();
+    });
+
     d3.select("#maxwidthRoot").on("input", e => {
       const maxwidthRoot = e.target.value;
       d3.select("#label_maxwidthRoot").text(`${maxwidthRoot}`);
@@ -171,5 +183,6 @@ class GraphOptions {
     d3.select("#hatching_count").node().dispatchEvent(new Event("input"));
     d3.select("#hatching_width").node().dispatchEvent(new Event("input"));
     d3.select("#graph_type").node().dispatchEvent(new Event("input"));
+    d3.select("#topN_map").node().dispatchEvent(new Event("input"));
   }
 }

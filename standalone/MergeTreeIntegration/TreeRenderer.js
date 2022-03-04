@@ -146,7 +146,7 @@ class TreeRenderer {
     }
   }
 
-  render(type) {
+  render(type, topN_map) {
     this.type = type;
 
     if (!this.vtkDataSet) {
@@ -162,7 +162,7 @@ class TreeRenderer {
     this.tree = new Tree(this.points, this.connectivityArray, this.streamgraph_options, this.donut_options, this.nodelayer);
 
     this.tree.findDonutData();
-    this.tree.createHelperStructureForMap();
+    this.tree.createHelperStructureForMap(topN_map);
     this.tree.createColorMapping();
     kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
     kdeRenderer.setTree(this.tree);
@@ -437,18 +437,18 @@ class Tree {
     });
   }
 
-  createHelperStructureForMap() {
+  createHelperStructureForMap(n=0) {
     this.helperStructure = {};
     this.branches.forEach(b => {
-      this.helperStructure[b.branchId] = {};
+      this.helperStructure[b.branchId] = new Map();
 
-      let idx = b.top.donut_data_from_point.kde_i1_sorted_indices[0];
-      this.helperStructure[b.branchId][b.top.kde] = idx;
+      let idx = b.top.donut_data_from_point.kde_i1_sorted_indices[n];
+      this.helperStructure[b.branchId].set(b.top.kde, idx);
       for (const p of b.branch_points_sorted) {
         if (p.drawDonut) {
-          if (p.donut_data_from_point.kde_i1_sorted_indices[0] !== idx) {
-            idx = p.donut_data_from_point.kde_i1_sorted_indices[0];
-            this.helperStructure[b.branchId][p.kde] = idx;
+          if (p.donut_data_from_point.kde_i1_sorted_indices[n] !== idx) {
+            idx = p.donut_data_from_point.kde_i1_sorted_indices[n];
+            this.helperStructure[b.branchId].set(p.kde, idx);
           }
         }
       }
@@ -456,23 +456,20 @@ class Tree {
   }
 
   getColorIDbyBranchIdAndScalar(branchID, scalar) {
-    const f_scalar = parseFloat(scalar);
-    if (f_scalar <= this.lowest_connecting_point.kde) {
+    if (scalar <= this.lowest_connecting_point.kde) {
       return 255;
     }
 
-    const __tmp = this.helperStructure[branchID];
-    const keys = Object.keys(__tmp);
-    if (keys.length === 1) {
-      return __tmp[keys[0]];
+    const map = this.helperStructure[branchID];
+    if (map.size === 1) {
+      return map.values().next().value;
     } else {
-      let __ret;
-      for (let k of keys) {
-        __ret = __tmp[k];
-        const f_k = parseFloat(k);
-        if (f_k < f_scalar) {
+      let __ret = map.values().next().value;
+      for (const [k, idx] of map) {
+        if (k <= scalar) {
           return __ret;
         }
+        __ret = idx;
       }
       return __ret;
     }

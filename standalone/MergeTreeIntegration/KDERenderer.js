@@ -202,6 +202,10 @@ void main() {
   }
 
   computeMaskNoSelection() {
+    if (this.mask === null) {
+      return;
+    }
+
     const n = this.mask.length;
     const kde = this.vtkDataSet.pointData.KDE.data;
     const branchIds = this.vtkDataSet.pointData.BranchId.data;
