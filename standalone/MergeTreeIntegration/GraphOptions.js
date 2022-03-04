@@ -73,27 +73,69 @@ class GraphOptions {
       this.streamGraph.render("streamgraph");
       this.streamGraph.doTransform();
     });
-
-    d3.select("#absolute_width").on("change", e => {
-      const absolute_width = e.target.checked;
-
-      this.streamGraph.streamgraph_options.use_relative_sizes = !absolute_width;
-      this.streamGraph.streamgraph_options.maxwidth_root = parseInt(d3.select("#maxwidthRoot").node().value);
-      this.streamGraph.resetLayoutingCoords();
-      this.streamGraph.render("streamgraph");
-      this.streamGraph.doTransform();
-    });
+    //
+    // d3.select("#absolute_width").on("change", e => {
+    //   const absolute_width = e.target.checked;
+    //
+    //   this.streamGraph.streamgraph_options.use_relative_sizes = !absolute_width;
+    //   this.streamGraph.streamgraph_options.maxwidth_root = parseInt(d3.select("#maxwidthRoot").node().value);
+    //   this.streamGraph.resetLayoutingCoords();
+    //   this.streamGraph.render("streamgraph");
+    //   this.streamGraph.doTransform();
+    // });
 
     d3.select("#contour_count").on("input", e => {
       kdeRenderer.update_nContours(parseInt(e.target.value));
       d3.select("#label_contour_count").text(`${e.target.value}`);
     });
 
+    d3.select("#hatching_count").on("input", e => {
+      kdeRenderer.update_nHatching(parseInt(e.target.value));
+      d3.select("#label_hatching_count").text(`${e.target.value}`);
+    });
+
+    d3.select("#hatching_width").on("input", e => {
+      kdeRenderer.update_HatchingWidth(parseInt(e.target.value));
+      d3.select("#label_hatching_width").text(`${e.target.value}`);
+    });
+
+    d3.select("#graph_type").on("input", e => {
+      if (e.target.value === "streamgraph_abs") {
+        this.streamGraph.streamgraph_options.use_relative_sizes = false;
+        this.streamGraph.streamgraph_options.maxwidth_root = parseInt(d3.select("#maxwidthRoot").node().value);
+        this.streamGraph.resetLayoutingCoords();
+        this.streamGraph.render("streamgraph");
+        this.streamGraph.doTransform();
+
+        d3.select("#treeContainerDonut").attr("style", "display: none");
+        d3.select("#treeContainerStreamgraph").attr("style", "");
+      }
+
+      if (e.target.value === "streamgraph_rel") {
+        this.streamGraph.streamgraph_options.use_relative_sizes = true;
+        this.streamGraph.streamgraph_options.maxwidth_root = parseInt(d3.select("#maxwidthRoot").node().value);
+        this.streamGraph.resetLayoutingCoords();
+        this.streamGraph.render("streamgraph");
+        this.streamGraph.doTransform();
+
+        d3.select("#treeContainerDonut").attr("style", "display: none");
+        d3.select("#treeContainerStreamgraph").attr("style", "");
+      }
+
+      if (e.target.value === "donut") {
+        d3.select("#treeContainerDonut").attr("style", "");
+        d3.select("#treeContainerStreamgraph").attr("style", "display: none");
+      }
+    });
+
     // so the values are displayed when the side is loaded
     d3.select("#maxwidthRoot").node().dispatchEvent(new Event("input"));
-    d3.select("#absolute_width").node().dispatchEvent(new Event("change"));
+    // d3.select("#absolute_width").node().dispatchEvent(new Event("change"));
     d3.select("#topN").node().dispatchEvent(new Event("input"));
     d3.select("#color_scheme").node().dispatchEvent(new Event("input"));
     d3.select("#contour_count").node().dispatchEvent(new Event("input"));
+    d3.select("#hatching_count").node().dispatchEvent(new Event("input"));
+    d3.select("#hatching_width").node().dispatchEvent(new Event("input"));
+    d3.select("#graph_type").node().dispatchEvent(new Event("input"));
   }
 }

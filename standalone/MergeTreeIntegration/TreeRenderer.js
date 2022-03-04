@@ -5,7 +5,7 @@ class TreeRenderer {
     this.scale = 200;
     this.padding = 50;
     this.width = 800;
-    this.height = 700;
+    this.height = 600;
 
     let topN = 3;
     this.streamgraph_options = {
@@ -223,6 +223,7 @@ class TreeRenderer {
         this.previous_id = null;
 
         // reset map
+        kdeRenderer.computeSelection([], 0);
         kdeRenderer.computeMaskNoSelection();
         kdeRenderer.update_render();
         return;

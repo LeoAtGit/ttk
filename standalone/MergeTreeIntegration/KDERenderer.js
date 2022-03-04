@@ -22,7 +22,9 @@ class KDERenderer {
       opacity: 0.8,
       resolution: [0,0],
       nContours: 7,
-      contourWidth: 1
+      contourWidth: 1,
+      nHatching: 7,
+      hatchingWidth: 1,
     };
 
     this.planeMaterial = new THREE.MeshBasicMaterial({color:'red'});
@@ -113,7 +115,7 @@ float isolineIntensity(float scalar, float n, float w){
 void main() {
     float nColors = 12.0;
 
-    float hatching = isolineIntensity(10.0 * (vUV.x + vUV.y), ${(8*this.consts.nContours).toFixed(1)}, ${1/2 * this.consts.contourWidth.toFixed(2)});
+    float hatching = isolineIntensity(10.0 * (vUV.x + vUV.y), ${(8*this.consts.nHatching).toFixed(1)}, ${(1/2 * this.consts.hatchingWidth).toFixed(2)});
     float iso = isolineIntensity(texture2D(texKDE, vUV).a, ${(2*this.consts.nContours).toFixed(1)}, ${this.consts.contourWidth.toFixed(2)});
     float mask = texture2D(texMask, vUV).a*255.0;
     float selection = texture2D(texSelection, vUV).a*255.0;
@@ -275,6 +277,16 @@ void main() {
 
   update_nContours(n) {
     this.consts.nContours = n;
+    this.update_render();
+  }
+
+  update_nHatching(n) {
+    this.consts.nHatching = n;
+    this.update_render();
+  }
+
+  update_HatchingWidth(n) {
+    this.consts.hatchingWidth = n;
     this.update_render();
   }
 }
