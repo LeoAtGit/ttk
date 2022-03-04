@@ -158,6 +158,10 @@ class GraphOptions {
       }
     });
 
+    d3.select("#more_toggle").on("click", e => {
+        d3.selectAll(".more").attr("class", "");
+    });
+
     // so the values are displayed when the side is loaded
     d3.select("#maxwidthRoot").node().dispatchEvent(new Event("input"));
     // d3.select("#absolute_width").node().dispatchEvent(new Event("change"));

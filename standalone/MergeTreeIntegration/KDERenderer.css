@@ -23,9 +23,10 @@ body {
 }
 
 .pad-top-bottom {
+    font-size: 8pt;
     padding-top: 5px;
     padding-bottom: 5px;
-    border: solid #dadada;
+    /*border: solid #dadada;*/
 }
 
 #mapContainer {
@@ -43,7 +44,11 @@ body {
     width: 250px;
     height: 250px;
     left: 445px;
-    top: 150px;
+    top: 20px;
+}
+
+.more {
+    display: none;
 }
 
 /*#div_graph_options {*/

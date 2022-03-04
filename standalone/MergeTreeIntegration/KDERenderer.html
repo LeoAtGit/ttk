@@ -24,15 +24,21 @@
     <div class="container">
       <!-- "Header" with Graph Options -->
       <div id="div_graph_options" class="row">
-        <div class="col-2">
+
+        <div style="width: 200px">
           <div class="row align-items-center px-1 pad-top-bottom">
-            <label class="col-4">Color Scheme</label>
-            <select id="color_scheme" class="col">
+            <label style="width: 90px">Color Scheme</label>
+            <select id="color_scheme" style="width: 90px">
               <option value="schemeSet3">schemeSet3</option>
               <option value="schemePaired">schemePaired</option>
               <option value="schemeSet1">schemeSet1</option>
             </select>
           </div>
+        </div>
+
+        <div style="width: 5px">|</div>
+
+        <div style="width: 200px">
           <div class="row align-items-center px-1 pad-top-bottom">
             <label class="col-4">Top N</label>
             <input id="topN" class="col-6" type="range" min="1" max="6" value="3">
@@ -40,32 +46,37 @@
           </div>
         </div>
 
-        <div class="col-3">
-          <div class="row align-items-center px-1 pad-top-bottom">
-            <div>
-              <label>Graph Type:</label>
-              <select id="graph_type">
-                <option value="streamgraph_abs">Streamgraph (absolute)</option>
-                <option value="streamgraph_rel">Streamgraph (relative)</option>
-                <option value="donut">Donut</option>
-                <option value="pie">Pie Chart</option>
-              </select>
-            </div>
-          </div>
+        <div style="width: 5px">|</div>
 
-<!--          <div class="row align-items-center px-1 pad-top-bottom">-->
-<!--            <label id="label_absolute_width" class="col-7" for="absolute_width">Absolute width?</label>-->
-<!--            <input id="absolute_width" class="col-3" type="checkbox">-->
-<!--          </div>-->
-
+        <div style="width: 300px">
           <div class="row align-items-center px-1 pad-top-bottom">
-            <label class="col-4">MaxWidth Root</label>
-            <input id="maxwidthRoot" class="col-6" type="range" min="25" max="400" value="3">
-            <label id="label_maxwidthRoot" class="col-2" for="maxwidthRoot"></label>
+            <label style="width: 90px">Graph Type</label>
+            <select id="graph_type" style="width: 180px">
+              <option value="streamgraph_abs">Streamgraph (absolute)</option>
+              <option value="streamgraph_rel">Streamgraph (relative)</option>
+              <option value="donut">Donut</option>
+              <option value="pie">Pie Chart</option>
+            </select>
           </div>
         </div>
 
-        <div class="col-2">
+        <div style="width: 5px">|</div>
+
+        <div style="width: 300px">
+          <div class="row align-items-center px-1 pad-top-bottom">
+            <label style="width: 100px">MaxWidth Root</label>
+            <input id="maxwidthRoot" style="width: 150px" type="range" min="25" max="400" value="3">
+            <label id="label_maxwidthRoot" style="width: 30px" for="maxwidthRoot"></label>
+          </div>
+        </div>
+
+        <div style="width: 5px">|</div>
+
+        <div id="more_toggle" style="width: 5px; cursor: pointer">...</div>
+
+        <div class="more" style="width: 5px">|</div>
+
+        <div class="more" style="width: 200px">
           <div class="row align-items-center px-1 pad-top-bottom">
             <label class="col-4">No. of Contours</label>
             <input id="contour_count" class="col-6" type="range" min="1" max="10" value="3">
@@ -73,12 +84,19 @@
           </div>
         </div>
 
-        <div class="col-2">
+        <div class="more" style="width: 5px">|</div>
+
+        <div class="more" style="width: 200px">
           <div class="row align-items-center px-1 pad-top-bottom">
             <label class="col-4">Hatching Count</label>
             <input id="hatching_count" class="col-6" type="range" min="1" max="10" value="3">
             <label id="label_hatching_count" class="col-2" for="hatching_count"></label>
           </div>
+        </div>
+
+        <div class="more" style="width: 5px">|</div>
+
+        <div class="more" style="width: 200px">
           <div class="row align-items-center px-1 pad-top-bottom">
             <label class="col-4">Hatching Width</label>
             <input id="hatching_width" class="col-6" type="range" min="1" max="10" value="3">
@@ -86,30 +104,29 @@
           </div>
         </div>
 
-      </div>
+        <div class="row" style="height: 10px"></div>
 
-      <div class="row" style="height: 30px"></div>
-
-      <!-- Map and Graphs -->
-      <div class="row">
-        <div class="col-5">
-          <div class="row">
-            <div id="mapContainer" class="col-12"></div>
-            <div id="legend_div">
-              <div class="row align-items-center px-1">
-                <div id="color_legend">
-                  <h5>Gangs</h5>
+        <!-- Map and Graphs -->
+        <div class="row">
+          <div class="col-5">
+            <div class="row">
+              <div id="mapContainer" class="col-12"></div>
+              <div id="legend_div">
+                <div class="row align-items-center px-1">
+                  <div id="color_legend">
+                    <h5>Gangs</h5>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div id="graphContainer" class="col-7">
-          <div id="graph" class="row">
-            <div id="treeContainerDonut"></div>
-            <div id="treeContainerPie"></div>
-            <div id="treeContainerStreamgraphAbs"></div>
-            <div id="treeContainerStreamgraphRel"></div>
+          <div id="graphContainer" class="col-7">
+            <div id="graph" class="row">
+              <div id="treeContainerDonut"></div>
+              <div id="treeContainerPie"></div>
+              <div id="treeContainerStreamgraphAbs"></div>
+              <div id="treeContainerStreamgraphRel"></div>
+            </div>
           </div>
         </div>
       </div>
