@@ -171,7 +171,11 @@ class GraphOptions {
     });
 
     d3.select("#more_toggle").on("click", e => {
-        d3.selectAll(".more").attr("class", "");
+      if (d3.selectAll(".more").attr("style") === "display: none") {
+        d3.selectAll(".more").attr("style", "display: inherit");
+      } else {
+        d3.selectAll(".more").attr("style", "display: none");
+      }
     });
 
     // so the values are displayed when the side is loaded
