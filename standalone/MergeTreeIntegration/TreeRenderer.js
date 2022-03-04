@@ -14,7 +14,7 @@ class TreeRenderer {
       // use_relative_sizes: true,
       use_relative_sizes: false,
       padding: 10,
-      edgeWidth: 1.5,
+      edgeWidth: 1,
       topN: topN,
       color_scheme: d3.schemeSet3,
       color_of_ignored: "#9f9f9f"
@@ -42,7 +42,6 @@ class TreeRenderer {
     this.vtkDataSet = null;
     this.points = [];
     this.transform = null;
-    this.clicked_node = null;  // the node that is clicked which indicates which branches to highlight
   }
 
   changeColorScheme(cs) {
@@ -207,12 +206,13 @@ class TreeRenderer {
 
       this.tree.drawEdges();
       this.tree.drawPie();
+      this.tree.drawPoints(true);
       this.tree.drawEdges(true);
     }
 
     d3.selectAll(".vertices").on("click", e => {
-      this.clicked_node = e.target;
-      const id = parseInt(this.clicked_node.id.split("_")[1]);
+      g_clicked_node = e.target;
+      const id = parseInt(e.target.id.split("_")[1]);
 
       const selected_point = this.points[id];
       const selected_points = this.tree.findPointsOnClick(selected_point);
@@ -260,9 +260,8 @@ class TreeRenderer {
     });
 
     // this is needed that after another call to `render()` the branches stay highlighted
-    // FIXME doesn't work perfectly just yet...
-    if (this.clicked_node !== null) {
-      this.clicked_node.dispatchEvent(new Event("click"));
+    if (g_clicked_node !== null) {
+      g_clicked_node.dispatchEvent(new Event("click"));
     }
   }
 
@@ -412,7 +411,7 @@ class Tree {
     if (this.streamgraph_options.use_relative_sizes) {
       this.branches.forEach(b => {
         if (!b.is_root_branch) {
-          const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding_scaled;
+          const space_needed = this.streamgraph_options.maxwidth_root + this.streamgraph_options.padding_scaled;
           const new_x = this.findNeighborBranch(b).x_layout - space_needed;
           b.setXLayout(new_x);
         }
@@ -420,7 +419,7 @@ class Tree {
     } else {
       this.branches.forEach(b => {
         if (!b.is_root_branch) {
-          const space_needed = this.streamgraph_options.maxwidth_root + this.streamgraph_options.padding_scaled;
+          const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding_scaled;
           const new_x = this.findNeighborBranch(b).x_layout - space_needed;
           b.setXLayout(new_x);
         }
@@ -748,8 +747,8 @@ class Tree {
       if (selected_points_bid.length >= all_points_bid.length) {
         // easy case, the whole branch must be highlighted
         d3.selectAll(`.edge-display[id^='${b_id}_']`)
-          .attr("stroke-width", 10)
-          .attr("stroke-opacity", 0.4);
+          .attr("stroke-width", 5)
+          .attr("stroke-opacity", 0.7);
       } else {
         // harder case, find out which segments must be highlighted
 
@@ -760,19 +759,19 @@ class Tree {
         const connecting_points = all_points_bid.filter(p => p.is_connecting_point);
         for (let i = 0; i < connecting_points.indexOf(next_connecting_point) + 1; i++) {
           d3.selectAll(`.edge[id='${b_id}_${i}']`)
-            .attr("stroke-width", 10)
-            .attr("stroke-opacity", 0.4);
+            .attr("stroke-width", 5)
+            .attr("stroke-opacity", 0.7);
         }
       }
     });
   }
 
-  drawPoints() {
+  drawPoints(hide=false) {
     this.all_points.filter(p => p.drawPoint).forEach(p =>
       this.nodelayer.append("circle")
           .attr("cx", p.x_layout)
           .attr("cy", p.y_layout)
-          .attr("r", 4)
+          .attr("r", (hide) ? 0 : 4)
           .attr("fill", "black")
           .attr("class", "vertices")
           .attr("id", `vertex_${this.all_points.indexOf(p)}`)
@@ -843,7 +842,7 @@ class Branch {
   }
 
   drawStreamGraph() {
-    const mapping = (this.tree.streamgraph_options.use_relative_sizes)
+    const mapping = (!this.tree.streamgraph_options.use_relative_sizes)
       ? this.tree.mapping
       : d3.scaleLinear()
           .domain([0, sum(this.bottom.kde_i1)])

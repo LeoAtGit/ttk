@@ -10,15 +10,23 @@ class GraphOptions {
     this.pieGraph = pie;
   }
 
-  setStreamGraph(stream) {
-    this.streamGraph = stream;
+  setStreamGraphAbs(stream) {
+    this.streamGraphAbs = stream;
+  }
+
+  setStreamGraphRel(stream) {
+    this.streamGraphRel = stream;
   }
 
   render() {
     d3.select("#color_scheme").on("input", e => {
-      this.streamGraph.changeColorScheme(e.target.value);
-      this.streamGraph.render("streamgraph");
-      this.streamGraph.doTransform();
+      this.streamGraphAbs.changeColorScheme(e.target.value);
+      this.streamGraphAbs.render("streamgraph");
+      this.streamGraphAbs.doTransform();
+
+      this.streamGraphRel.changeColorScheme(e.target.value);
+      this.streamGraphRel.render("streamgraph");
+      this.streamGraphRel.doTransform();
 
       this.donutGraph.changeColorScheme(e.target.value);
       this.donutGraph.render("donut");
@@ -36,9 +44,13 @@ class GraphOptions {
       const topN = e.target.value;
       d3.select("#label_topN").text(`${topN}`);
 
-      this.streamGraph.streamgraph_options.topN = parseInt(topN);
-      this.streamGraph.render("streamgraph");
-      this.streamGraph.doTransform();
+      this.streamGraphAbs.streamgraph_options.topN = parseInt(topN);
+      this.streamGraphAbs.render("streamgraph");
+      this.streamGraphAbs.doTransform();
+
+      this.streamGraphRel.streamgraph_options.topN = parseInt(topN);
+      this.streamGraphRel.render("streamgraph");
+      this.streamGraphRel.doTransform();
 
       this.donutGraph.donut_options.topN = parseInt(topN);
       this.donutGraph.render("donut");
@@ -80,10 +92,15 @@ class GraphOptions {
       const maxwidthRoot = e.target.value;
       d3.select("#label_maxwidthRoot").text(`${maxwidthRoot}`);
 
-      this.streamGraph.streamgraph_options.maxwidth_root = parseInt(maxwidthRoot);
-      this.streamGraph.resetLayoutingCoords();
-      this.streamGraph.render("streamgraph");
-      this.streamGraph.doTransform();
+      this.streamGraphAbs.streamgraph_options.maxwidth_root = parseInt(maxwidthRoot);
+      this.streamGraphAbs.resetLayoutingCoords();
+      this.streamGraphAbs.render("streamgraph");
+      this.streamGraphAbs.doTransform();
+
+      this.streamGraphRel.streamgraph_options.maxwidth_root = parseInt(maxwidthRoot);
+      this.streamGraphRel.resetLayoutingCoords();
+      this.streamGraphRel.render("streamgraph");
+      this.streamGraphRel.doTransform();
     });
     //
     // d3.select("#absolute_width").on("change", e => {
@@ -113,39 +130,31 @@ class GraphOptions {
 
     d3.select("#graph_type").on("input", e => {
       if (e.target.value === "streamgraph_abs") {
-        this.streamGraph.streamgraph_options.use_relative_sizes = false;
-        this.streamGraph.streamgraph_options.maxwidth_root = parseInt(d3.select("#maxwidthRoot").node().value);
-        this.streamGraph.resetLayoutingCoords();
-        this.streamGraph.render("streamgraph");
-        this.streamGraph.doTransform();
-
         d3.select("#treeContainerDonut").attr("style", "display: none");
         d3.select("#treeContainerPie").attr("style", "display: none");
-        d3.select("#treeContainerStreamgraph").attr("style", "");
+        d3.select("#treeContainerStreamgraphAbs").attr("style", "");
+        d3.select("#treeContainerStreamgraphRel").attr("style", "display: none");
       }
 
       if (e.target.value === "streamgraph_rel") {
-        this.streamGraph.streamgraph_options.use_relative_sizes = true;
-        this.streamGraph.streamgraph_options.maxwidth_root = parseInt(d3.select("#maxwidthRoot").node().value);
-        this.streamGraph.resetLayoutingCoords();
-        this.streamGraph.render("streamgraph");
-        this.streamGraph.doTransform();
-
         d3.select("#treeContainerDonut").attr("style", "display: none");
         d3.select("#treeContainerPie").attr("style", "display: none");
-        d3.select("#treeContainerStreamgraph").attr("style", "");
+        d3.select("#treeContainerStreamgraphAbs").attr("style", "display: none");
+        d3.select("#treeContainerStreamgraphRel").attr("style", "");
       }
 
       if (e.target.value === "donut") {
         d3.select("#treeContainerDonut").attr("style", "");
         d3.select("#treeContainerPie").attr("style", "display: none");
-        d3.select("#treeContainerStreamgraph").attr("style", "display: none");
+        d3.select("#treeContainerStreamgraphAbs").attr("style", "display: none");
+        d3.select("#treeContainerStreamgraphRel").attr("style", "display: none");
       }
 
       if (e.target.value === "pie") {
         d3.select("#treeContainerDonut").attr("style", "display: none");
         d3.select("#treeContainerPie").attr("style", "");
-        d3.select("#treeContainerStreamgraph").attr("style", "display: none");
+        d3.select("#treeContainerStreamgraphAbs").attr("style", "display: none");
+        d3.select("#treeContainerStreamgraphRel").attr("style", "display: none");
       }
     });
 

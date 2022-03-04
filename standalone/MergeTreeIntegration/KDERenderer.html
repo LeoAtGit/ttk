@@ -98,7 +98,7 @@
             <div id="legend_div">
               <div class="row align-items-center px-1">
                 <div id="color_legend">
-                  <h5>Color Legend</h5>
+                  <h5>Gangs</h5>
                 </div>
               </div>
             </div>
@@ -108,7 +108,8 @@
           <div id="graph" class="row">
             <div id="treeContainerDonut"></div>
             <div id="treeContainerPie"></div>
-            <div id="treeContainerStreamgraph"></div>
+            <div id="treeContainerStreamgraphAbs"></div>
+            <div id="treeContainerStreamgraphRel"></div>
           </div>
         </div>
       </div>
@@ -126,10 +127,15 @@ const translink = '<a href="http://thunderforest.com/">Thunderforest</a>';
 	maxZoom: 18
 }).addTo(map);
 
+let g_clicked_node = null;
+
 const kdeRenderer = new KDERenderer(map);
 const treeRendererDonut = new TreeRenderer(d3.select("#treeContainerDonut"));
 const treeRendererPie = new TreeRenderer(d3.select("#treeContainerPie"));
-const treeRendererStreamgraph = new TreeRenderer(d3.select("#treeContainerStreamgraph"));
+const treeRendererStreamgraphAbs = new TreeRenderer(d3.select("#treeContainerStreamgraphAbs"));
+treeRendererStreamgraphAbs.streamgraph_options.use_relative_sizes = false;
+const treeRendererStreamgraphRel = new TreeRenderer(d3.select("#treeContainerStreamgraphRel"));
+treeRendererStreamgraphRel.streamgraph_options.use_relative_sizes = true;
 const graphOptions = new GraphOptions();
 
 const connection = new TTK.ttkWebSocketIO();
@@ -138,13 +144,16 @@ connection.on( 'messageSequence',  msgs=>{
     console.log(objects[0]);
     treeRendererDonut.setVtkDataSet(objects[0]);
     treeRendererPie.setVtkDataSet(objects[0]);
-    treeRendererStreamgraph.setVtkDataSet(objects[0]);
+    treeRendererStreamgraphAbs.setVtkDataSet(objects[0]);
+    treeRendererStreamgraphRel.setVtkDataSet(objects[0]);
     treeRendererDonut.render("donut");
     treeRendererPie.render("pie");
-    treeRendererStreamgraph.render("streamgraph");
+    treeRendererStreamgraphAbs.render("streamgraph");
+    treeRendererStreamgraphRel.render("streamgraph");
     graphOptions.setDonutGraph(treeRendererDonut);
     graphOptions.setPieGraph(treeRendererPie);
-    graphOptions.setStreamGraph(treeRendererStreamgraph);
+    graphOptions.setStreamGraphAbs(treeRendererStreamgraphAbs);
+    graphOptions.setStreamGraphRel(treeRendererStreamgraphRel);
     graphOptions.render();
   });
 });
@@ -157,7 +166,7 @@ connection_map.on( 'messageSequence',  msgs=>{
   TTK.vtkDataSet.createFromMessageSequence(msgs).then( objects=>{
     console.log(objects[0]);
     kdeRenderer.setVtkDataSet(objects[0]);
-    kdeRenderer.render(0.5, 2, 1);
+    kdeRenderer.render(0.6, 2, 1);
     graphOptions.render();
   });
 });
