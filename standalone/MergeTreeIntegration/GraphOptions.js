@@ -6,6 +6,10 @@ class GraphOptions {
     this.donutGraph = donut;
   }
 
+  setPieGraph(pie) {
+    this.pieGraph = pie;
+  }
+
   setStreamGraph(stream) {
     this.streamGraph = stream;
   }
@@ -19,6 +23,10 @@ class GraphOptions {
       this.donutGraph.changeColorScheme(e.target.value);
       this.donutGraph.render("donut");
       this.donutGraph.doTransform();
+
+      this.pieGraph.changeColorScheme(e.target.value);
+      this.pieGraph.render("pie");
+      this.pieGraph.doTransform();
 
       // so the color legend will be updated as well
       d3.select("#topN").node().dispatchEvent(new Event("input"));
@@ -35,6 +43,10 @@ class GraphOptions {
       this.donutGraph.donut_options.topN = parseInt(topN);
       this.donutGraph.render("donut");
       this.donutGraph.doTransform();
+
+      this.pieGraph.donut_options.topN = parseInt(topN);
+      this.pieGraph.render("pie");
+      this.pieGraph.doTransform();
 
       // render the color legend
       let labels = this.donutGraph.tree.getLabels();
@@ -108,6 +120,7 @@ class GraphOptions {
         this.streamGraph.doTransform();
 
         d3.select("#treeContainerDonut").attr("style", "display: none");
+        d3.select("#treeContainerPie").attr("style", "display: none");
         d3.select("#treeContainerStreamgraph").attr("style", "");
       }
 
@@ -119,11 +132,19 @@ class GraphOptions {
         this.streamGraph.doTransform();
 
         d3.select("#treeContainerDonut").attr("style", "display: none");
+        d3.select("#treeContainerPie").attr("style", "display: none");
         d3.select("#treeContainerStreamgraph").attr("style", "");
       }
 
       if (e.target.value === "donut") {
         d3.select("#treeContainerDonut").attr("style", "");
+        d3.select("#treeContainerPie").attr("style", "display: none");
+        d3.select("#treeContainerStreamgraph").attr("style", "display: none");
+      }
+
+      if (e.target.value === "pie") {
+        d3.select("#treeContainerDonut").attr("style", "display: none");
+        d3.select("#treeContainerPie").attr("style", "");
         d3.select("#treeContainerStreamgraph").attr("style", "display: none");
       }
     });

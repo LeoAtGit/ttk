@@ -48,6 +48,7 @@
                 <option value="streamgraph_abs">Streamgraph (absolute)</option>
                 <option value="streamgraph_rel">Streamgraph (relative)</option>
                 <option value="donut">Donut</option>
+                <option value="pie">Pie Chart</option>
               </select>
             </div>
           </div>
@@ -106,6 +107,7 @@
         <div id="graphContainer" class="col-7">
           <div id="graph" class="row">
             <div id="treeContainerDonut"></div>
+            <div id="treeContainerPie"></div>
             <div id="treeContainerStreamgraph"></div>
           </div>
         </div>
@@ -126,6 +128,7 @@ const translink = '<a href="http://thunderforest.com/">Thunderforest</a>';
 
 const kdeRenderer = new KDERenderer(map);
 const treeRendererDonut = new TreeRenderer(d3.select("#treeContainerDonut"));
+const treeRendererPie = new TreeRenderer(d3.select("#treeContainerPie"));
 const treeRendererStreamgraph = new TreeRenderer(d3.select("#treeContainerStreamgraph"));
 const graphOptions = new GraphOptions();
 
@@ -134,10 +137,13 @@ connection.on( 'messageSequence',  msgs=>{
   TTK.vtkDataSet.createFromMessageSequence(msgs).then( objects=>{
     console.log(objects[0]);
     treeRendererDonut.setVtkDataSet(objects[0]);
+    treeRendererPie.setVtkDataSet(objects[0]);
     treeRendererStreamgraph.setVtkDataSet(objects[0]);
     treeRendererDonut.render("donut");
+    treeRendererPie.render("pie");
     treeRendererStreamgraph.render("streamgraph");
     graphOptions.setDonutGraph(treeRendererDonut);
+    graphOptions.setPieGraph(treeRendererPie);
     graphOptions.setStreamGraph(treeRendererStreamgraph);
     graphOptions.render();
   });

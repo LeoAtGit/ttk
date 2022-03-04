@@ -197,6 +197,19 @@ class TreeRenderer {
       this.tree.drawEdges(true);
     }
 
+    // draw the pie plots
+    if (type === 'pie') {
+      this.tree.calculateLayoutDonut();
+      this.tree.moveToOrigin();
+      this.tree.rescale(this.width, this.height, type);
+      this.centerView();
+      this.drawCoordinateSystem();
+
+      this.tree.drawEdges();
+      this.tree.drawPie();
+      this.tree.drawEdges(true);
+    }
+
     d3.selectAll(".vertices").on("click", e => {
       this.clicked_node = e.target;
       const id = parseInt(this.clicked_node.id.split("_")[1]);
@@ -652,6 +665,10 @@ class Tree {
     this.branches.forEach(b => b.drawDonut());
   }
 
+  drawPie() {
+    this.branches.forEach(b => b.drawDonut(true));
+  }
+
   drawEdges(draw_click_helpers=false) {
     this.branches.forEach(b => {
       let path = d3.path();
@@ -869,16 +886,23 @@ class Branch {
     }
   }
 
-  drawDonut() {
+  drawDonut(draw_pie=false) {
     // adapted from https://www.geeksforgeeks.org/d3-js-pie-function/
     this.branch_points_sorted.filter(p => p.drawDonut).forEach(p => {
       let g = this.tree.nodelayer.append("g")
           .attr("transform", `translate(${p.x_layout}, ${p.y_layout})`);
 
       const pie = d3.pie();
-      const arc = d3.arc()
+      let arc;
+      if (draw_pie) {
+        arc = d3.arc()
+          .innerRadius(0)
+          .outerRadius(this.tree.donut_options.outerRadius);
+      } else {
+        arc = d3.arc()
           .innerRadius(this.tree.donut_options.innerRadius)
           .outerRadius(this.tree.donut_options.outerRadius);
+      }
 
       let pie_data = p.donut_data_from_point.kde_i1_sorted.slice(0, this.tree.donut_options.topN);
       pie_data.push(sum(p.donut_data_from_point.kde_i1_sorted.slice(this.tree.donut_options.topN)));
