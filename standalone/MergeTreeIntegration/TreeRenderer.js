@@ -17,7 +17,7 @@ class TreeRenderer {
       edgeWidth: 1,
       topN: topN,
       color_scheme: d3.schemeSet3,
-      color_of_ignored: "#9f9f9f"
+      color_of_ignored: "#868686"
     }
     this.streamgraph_options.padding_scaled = this.streamgraph_options.padding;
 
@@ -27,7 +27,7 @@ class TreeRenderer {
       padding: 10,
       topN: topN,
       color_scheme: d3.schemeSet3,
-      color_of_ignored: "#9f9f9f"
+      color_of_ignored: "#868686"
     }
 
     this.svg = this.treeContainer.append("svg")
@@ -192,7 +192,7 @@ class TreeRenderer {
 
       this.tree.drawEdges();
       this.tree.drawDonut();
-      this.tree.drawPoints();
+      this.tree.drawPoints(true);
       this.tree.drawEdges(true);
     }
 
@@ -234,6 +234,7 @@ class TreeRenderer {
           .attr("stroke-width", this.streamgraph_options.edgeWidth);
 
         this.previous_id = null;
+        g_clicked_node = null;
 
         // reset map
         kdeRenderer.computeSelection([], 0);
@@ -920,6 +921,15 @@ class Branch {
           .attr("d", arc)
           .attr("stroke", "black")
           .style("stroke-width", 1);
+
+      // the black dot in the middle
+      g.append("circle")
+        .attr("cx", 0)  // position is already fixed by transform of `g`
+        .attr("cy", 0)  // position is already fixed by transform of `g`
+        .attr("r", (draw_pie) ? 0 : 4)
+        .attr("fill", "black")
+        .attr("class", "vertices")
+        .attr("id", `vertex_${this.tree.all_points.indexOf(p)}`);
     });
   }
 }

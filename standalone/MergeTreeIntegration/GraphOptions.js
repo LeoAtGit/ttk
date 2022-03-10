@@ -86,6 +86,19 @@ class GraphOptions {
           .attr("class", "col-10")
           .text(this.donutGraph.labels[d[0]]);
       });
+
+      // add the "Other" label to the legend
+      let entry = d3.select("#color_legend")
+        .append("div")
+        .attr("class", "entry row")
+
+      entry.append("div")
+        .attr("style", `background-color: ${this.donutGraph.donut_options.color_of_ignored}; border: solid #aaaaaa`)
+        .attr("class", "col-1 rounded-circle");
+
+      entry.append("div")
+        .attr("class", "col-10")
+        .text("Other");
     });
 
     d3.select("#topN_map").on("input", e => {
@@ -93,9 +106,13 @@ class GraphOptions {
       d3.select("#label_topN_map").text(`${topN_map}`);
 
       this.streamGraphAbs.render("streamgraph", topN_map);
+      this.streamGraphAbs.doTransform();
       this.streamGraphRel.render("streamgraph", topN_map);
+      this.streamGraphRel.doTransform();
       this.donutGraph.render("donut", topN_map);
+      this.donutGraph.doTransform();
       this.pieGraph.render("pie", topN_map);
+      this.pieGraph.doTransform();
       kdeRenderer.computeMaskNoSelection();
       kdeRenderer.update_render();
     });
