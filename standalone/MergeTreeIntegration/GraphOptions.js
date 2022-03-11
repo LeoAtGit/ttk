@@ -126,12 +126,6 @@ class GraphOptions {
       this.streamGraphAbs.resetLayoutingCoords();
       this.streamGraphAbs.render("streamgraph");
       this.streamGraphAbs.doTransform();
-
-      this.streamGraphRel.streamgraph_options.maxwidth_root
-        = this.streamGraphRel.streamgraph_options.treeScale * (parseInt(maxwidthRoot) / 100);
-      this.streamGraphRel.resetLayoutingCoords();
-      this.streamGraphRel.render("streamgraph");
-      this.streamGraphRel.doTransform();
     });
 
     d3.select("#treeScale").on("input", e => {

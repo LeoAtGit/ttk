@@ -848,11 +848,18 @@ class Branch {
   }
 
   drawStreamGraph() {
+    // find out what is the real scaled treeScale
+    let treeScale_scaled;
+    if (this.tree.streamgraph_options.use_relative_sizes) {
+      treeScale_scaled = this.tree.branches[0].x_layout - this.tree.branches[1].x_layout - this.tree.streamgraph_options.padding;
+    }
+
     const mapping = (!this.tree.streamgraph_options.use_relative_sizes)
       ? this.tree.mapping
       : d3.scaleLinear()
           .domain([0, sum(this.bottom.kde_i1)])
-          .range([0, this.tree.streamgraph_options.maxwidth_root - this.tree.streamgraph_options.padding_scaled]);
+          .range([0, treeScale_scaled]);
+          // .range([0, this.tree.streamgraph_options.maxwidth_root - this.tree.streamgraph_options.padding_scaled]);
     for (let i = this.tree.no_of_categories - 1; i >= 0; i--) {
       let path = d3.path();
       path.moveTo(
