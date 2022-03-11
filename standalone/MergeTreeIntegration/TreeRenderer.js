@@ -11,6 +11,8 @@ class TreeRenderer {
     this.streamgraph_options = {
       // maxwidth_root: 1957,
       maxwidth_root: 100,
+      maxwidth_root_max: 400,
+      treeScale: 50,
       // use_relative_sizes: true,
       use_relative_sizes: false,
       padding: 10,
@@ -184,7 +186,8 @@ class TreeRenderer {
 
     // draw the donut plots
     if (type === 'donut') {
-      this.tree.calculateLayoutDonut();
+      // this.tree.calculateLayoutDonut();
+      this.tree.calculateLayoutStreamgraph();  // TODO
       this.tree.moveToOrigin();
       this.tree.rescale(this.width, this.height, type);
       this.centerView();
@@ -198,7 +201,8 @@ class TreeRenderer {
 
     // draw the pie plots
     if (type === 'pie') {
-      this.tree.calculateLayoutDonut();
+      // this.tree.calculateLayoutDonut();
+      this.tree.calculateLayoutStreamgraph();  // TODO
       this.tree.moveToOrigin();
       this.tree.rescale(this.width, this.height, type);
       this.centerView();
@@ -274,8 +278,8 @@ class TreeRenderer {
 
   centerView() {
     // change x_layout and y_layout coordinates such that they are centered for this particular viewbox configuration
-    const x_max = Math.max(...this.points.map(p => p.x_layout))
-        + ((this.type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : this.donut_options.outerRadius);
+    const x_max = Math.max(...this.points.map(p => p.x_layout)) + this.streamgraph_options.maxwidth_root_max;
+        // + ((this.type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : this.donut_options.outerRadius);
     const y_max = Math.max(...this.points.map(p => p.y_layout));
 
     if (x_max >= this.width - 0.1) {
@@ -412,7 +416,8 @@ class Tree {
     if (this.streamgraph_options.use_relative_sizes) {
       this.branches.forEach(b => {
         if (!b.is_root_branch) {
-          const space_needed = this.streamgraph_options.maxwidth_root + this.streamgraph_options.padding_scaled;
+          // const space_needed = this.streamgraph_options.maxwidth_root + this.streamgraph_options.padding_scaled;
+          const space_needed = this.streamgraph_options.treeScale;
           const new_x = this.findNeighborBranch(b).x_layout - space_needed;
           b.setXLayout(new_x);
         }
@@ -420,7 +425,8 @@ class Tree {
     } else {
       this.branches.forEach(b => {
         if (!b.is_root_branch) {
-          const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding_scaled;
+          // const space_needed = this.mapping(b.bottom.kde_i1_sorted_and_ordered_cumsum[this.no_of_categories - 1]) + this.streamgraph_options.padding_scaled;
+          const space_needed = this.streamgraph_options.treeScale;
           const new_x = this.findNeighborBranch(b).x_layout - space_needed;
           b.setXLayout(new_x);
         }
@@ -485,8 +491,8 @@ class Tree {
   }
 
   rescale(width, height, type) {
-    const _x_max = Math.max(...this.all_points.map(p => p.x_layout))
-        + ((type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : this.donut_options.outerRadius);
+    const _x_max = Math.max(...this.all_points.map(p => p.x_layout)) + this.streamgraph_options.maxwidth_root_max;
+        // + ((type === 'streamgraph') ? this.streamgraph_options.maxwidth_root_max : this.donut_options.outerRadius);
     const _y_max = Math.max(...this.all_points.map(p => p.y_layout));
 
     // calculate the two possible scaling factors
@@ -524,15 +530,15 @@ class Tree {
 
     // we also have to apply the scaling to the mapping!
     if (type === "streamgraph") {
-      this.streamgraph_options.maxwidth_root *= scaling_factor;
+      // this.streamgraph_options.maxwidth_root *= scaling_factor;
       this.streamgraph_options.padding_scaled *= scaling_factor;
       this.mapping.range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding_scaled]);
     }
-    if (type === "donut") {
-      this.donut_options.padding *= scaling_factor;
-      this.donut_options.innerRadius *= scaling_factor;
-      this.donut_options.outerRadius *= scaling_factor;
-    }
+    // if (type === "donut") {
+      // this.donut_options.padding *= scaling_factor;
+      // this.donut_options.innerRadius *= scaling_factor;
+      // this.donut_options.outerRadius *= scaling_factor;
+    // }
   }
 
   findDonutData() {

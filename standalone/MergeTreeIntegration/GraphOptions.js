@@ -117,30 +117,47 @@ class GraphOptions {
       kdeRenderer.update_render();
     });
 
-    d3.select("#maxwidthRoot").on("input", e => {
+    d3.select("#graphScale").on("input", e => {
       const maxwidthRoot = e.target.value;
-      d3.select("#label_maxwidthRoot").text(`${maxwidthRoot}`);
+      d3.select("#label_graphScale").text(`${maxwidthRoot}%`);
 
-      this.streamGraphAbs.streamgraph_options.maxwidth_root = parseInt(maxwidthRoot);
+      this.streamGraphAbs.streamgraph_options.maxwidth_root
+        = this.streamGraphAbs.streamgraph_options.maxwidth_root_max * (parseInt(maxwidthRoot) / 100);
       this.streamGraphAbs.resetLayoutingCoords();
       this.streamGraphAbs.render("streamgraph");
       this.streamGraphAbs.doTransform();
 
-      this.streamGraphRel.streamgraph_options.maxwidth_root = parseInt(maxwidthRoot);
+      this.streamGraphRel.streamgraph_options.maxwidth_root
+        = this.streamGraphRel.streamgraph_options.treeScale * (parseInt(maxwidthRoot) / 100);
       this.streamGraphRel.resetLayoutingCoords();
       this.streamGraphRel.render("streamgraph");
       this.streamGraphRel.doTransform();
     });
-    //
-    // d3.select("#absolute_width").on("change", e => {
-    //   const absolute_width = e.target.checked;
-    //
-    //   this.streamGraph.streamgraph_options.use_relative_sizes = !absolute_width;
-    //   this.streamGraph.streamgraph_options.maxwidth_root = parseInt(d3.select("#maxwidthRoot").node().value);
-    //   this.streamGraph.resetLayoutingCoords();
-    //   this.streamGraph.render("streamgraph");
-    //   this.streamGraph.doTransform();
-    // });
+
+    d3.select("#treeScale").on("input", e => {
+      const maxwidthRoot = e.target.value;
+      d3.select("#label_treeScale").text(`${maxwidthRoot}`);
+
+      this.streamGraphAbs.streamgraph_options.treeScale = parseInt(maxwidthRoot);
+      this.streamGraphAbs.resetLayoutingCoords();
+      this.streamGraphAbs.render("streamgraph");
+      this.streamGraphAbs.doTransform();
+
+      this.streamGraphRel.streamgraph_options.treeScale = parseInt(maxwidthRoot);
+      this.streamGraphRel.resetLayoutingCoords();
+      this.streamGraphRel.render("streamgraph");
+      this.streamGraphRel.doTransform();
+
+      this.donutGraph.streamgraph_options.treeScale = parseInt(maxwidthRoot);
+      this.donutGraph.resetLayoutingCoords();
+      this.donutGraph.render("donut");
+      this.donutGraph.doTransform();
+
+      this.pieGraph.streamgraph_options.treeScale = parseInt(maxwidthRoot);
+      this.pieGraph.resetLayoutingCoords();
+      this.pieGraph.render("pie");
+      this.pieGraph.doTransform();
+    });
 
     d3.select("#contour_count").on("input", e => {
       kdeRenderer.update_nContours(parseInt(e.target.value));
@@ -196,8 +213,8 @@ class GraphOptions {
     });
 
     // so the values are displayed when the side is loaded
-    d3.select("#maxwidthRoot").node().dispatchEvent(new Event("input"));
-    // d3.select("#absolute_width").node().dispatchEvent(new Event("change"));
+    d3.select("#graphScale").node().dispatchEvent(new Event("input"));
+    d3.select("#treeScale").node().dispatchEvent(new Event("input"));
     d3.select("#topN").node().dispatchEvent(new Event("input"));
     d3.select("#color_scheme").node().dispatchEvent(new Event("input"));
     d3.select("#contour_count").node().dispatchEvent(new Event("input"));
