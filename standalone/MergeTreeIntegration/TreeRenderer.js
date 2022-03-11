@@ -330,30 +330,32 @@ class TreeRenderer {
             .attr("x", -30))
         .attr("font-weight", "lighter");
 
-    this.svg.call(d3.zoom()
-        // .extent([[0, 0], [500, 500]])
-        // .scaleExtent([1, 8])
-        .on("zoom", ({transform}) => {
-          this.transform = transform;
-          this.doTransform();
-        })
-    );
+    this.zoom = d3.zoom()
+      // .extent([[0, 0], [500, 500]])
+      // .scaleExtent([1, 8])
+      .on("zoom", ({transform}) => {
+        transform_all = transform;
+
+        this.nodelayer.attr("transform", transform_all);
+        this.gY.call(this.yAxis.scale(transform_all.rescaleY(this.yScale)))
+          .call(g => g.select(".domain")
+            .remove())
+          .call(g => g.selectAll(".tick line")
+            .attr("stroke-opacity", 0.25))
+          .call(g => g.selectAll(".tick text")
+            .attr("x", -30))
+          .attr("font-weight", "lighter");
+      })
+
+    this.svg.call(this.zoom);
   }
 
   doTransform() {
-    if (this.transform === null) {
+    if (transform_all === null) {
       return;
     }
 
-    this.nodelayer.attr("transform", this.transform);
-    this.gY.call(this.yAxis.scale(this.transform.rescaleY(this.yScale)))
-        .call(g => g.select(".domain")
-            .remove())
-        .call(g => g.selectAll(".tick line")
-            .attr("stroke-opacity", 0.25))
-        .call(g => g.selectAll(".tick text")
-            .attr("x", -30))
-        .attr("font-weight", "lighter");
+    this.svg.call(this.zoom.transform, d3.zoomIdentity.translate(transform_all.x, transform_all.y).scale(transform_all.k));
   }
 }
 

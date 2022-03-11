@@ -176,6 +176,10 @@ class GraphOptions {
 
     d3.select("#graph_type").on("input", e => {
       if (e.target.value === "streamgraph_abs") {
+        this.streamGraphRel.doTransform();
+        this.streamGraphAbs.doTransform();
+        this.donutGraph.doTransform();
+        this.pieGraph.doTransform();
         d3.select("#treeContainerDonut").attr("style", "display: none");
         d3.select("#treeContainerPie").attr("style", "display: none");
         d3.select("#treeContainerStreamgraphAbs").attr("style", "");
@@ -183,6 +187,10 @@ class GraphOptions {
       }
 
       if (e.target.value === "streamgraph_rel") {
+        this.streamGraphRel.doTransform();
+        this.streamGraphAbs.doTransform();
+        this.donutGraph.doTransform();
+        this.pieGraph.doTransform();
         d3.select("#treeContainerDonut").attr("style", "display: none");
         d3.select("#treeContainerPie").attr("style", "display: none");
         d3.select("#treeContainerStreamgraphAbs").attr("style", "display: none");
@@ -190,6 +198,10 @@ class GraphOptions {
       }
 
       if (e.target.value === "donut") {
+        this.streamGraphRel.doTransform();
+        this.streamGraphAbs.doTransform();
+        this.donutGraph.doTransform();
+        this.pieGraph.doTransform();
         d3.select("#treeContainerDonut").attr("style", "");
         d3.select("#treeContainerPie").attr("style", "display: none");
         d3.select("#treeContainerStreamgraphAbs").attr("style", "display: none");
@@ -197,6 +209,10 @@ class GraphOptions {
       }
 
       if (e.target.value === "pie") {
+        this.streamGraphRel.doTransform();
+        this.streamGraphAbs.doTransform();
+        this.donutGraph.doTransform();
+        this.pieGraph.doTransform();
         d3.select("#treeContainerDonut").attr("style", "display: none");
         d3.select("#treeContainerPie").attr("style", "");
         d3.select("#treeContainerStreamgraphAbs").attr("style", "display: none");
