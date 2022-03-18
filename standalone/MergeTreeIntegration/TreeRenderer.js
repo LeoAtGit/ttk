@@ -51,7 +51,7 @@ class TreeRenderer {
     this.donut_options.color_scheme = eval(`d3.${cs}`);
 
     if (this.tree !== null) {
-      this.tree.createColorMapping();
+      this.tree.createColorMapping(true);
       kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
     }
   }
@@ -165,7 +165,7 @@ class TreeRenderer {
 
     this.tree.findDonutData();
     this.tree.createHelperStructureForMap(topN_map);
-    this.tree.createColorMapping();
+    this.tree.createColorMapping(true);
     kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
     kdeRenderer.setTree(this.tree);
 
@@ -643,32 +643,294 @@ class Tree {
     return res;
   }
 
-  createColorMapping() {
-    let i = 1
+  createColorMapping(paper_mode_chicago=false) {
+    // paper_mode means that we fix the color_mapping by hand.
+    if (paper_mode_chicago) {
+      this.color_mapping = [
+        7,
+        0,
+        2,
+        3,
+        8,
+        1,
+        6,
+        2,
+        8,
+        9,
+        9,
+        11,
+        0,
+        1,
+        6,
+        3,
+        4,
+        5,
+        5,
+        7,
+        8,
+        9,
+        4,
+        11,
+        0,
+        1,
+        2,
+        3,
+        10,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        0,
+        1,
+        2,
+        3,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        255
+      ];
+    } else {
+      let i = 1
 
-    // do this just to find out the i
-    for (i; i < this.no_of_categories; i++) {
+      // do this just to find out the i
+      for (i; i < this.no_of_categories; i++) {
+        let res = new Set();
+
+        this.all_points.filter(p => p.drawDonut).forEach(p => {
+          p.donut_data_from_point.kde_i1_sorted_indices.slice(0, i).map(j => res.add(j));
+        });
+
+        if (res.size > this.streamgraph_options.color_scheme.length) {
+          i--;
+          break;
+        }
+      }
+
+      // here do the actual calculation
       let res = new Set();
-
       this.all_points.filter(p => p.drawDonut).forEach(p => {
         p.donut_data_from_point.kde_i1_sorted_indices.slice(0, i).map(j => res.add(j));
       });
+      let indices = [...res];
 
-      if (res.size > this.streamgraph_options.color_scheme.length) {
-        i--;
-        break;
-      }
+      this.color_mapping = Array.from(Array(this.no_of_categories).keys()).map(i => i % this.streamgraph_options.color_scheme.length);
+      indices.forEach((idx, i) => this.color_mapping[idx] = i);
     }
-
-    // here do the actual calculation
-    let res = new Set();
-    this.all_points.filter(p => p.drawDonut).forEach(p => {
-      p.donut_data_from_point.kde_i1_sorted_indices.slice(0, i).map(j => res.add(j));
-    });
-    let indices = [...res];
-
-    this.color_mapping = Array.from(Array(this.no_of_categories).keys()).map(i => i % this.streamgraph_options.color_scheme.length);
-    indices.forEach((idx, i) => this.color_mapping[idx] = i);
   }
 
   drawStreamGraph() {
