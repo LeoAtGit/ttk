@@ -102,8 +102,10 @@ class GraphOptions {
     });
 
     d3.select("#topN_map").on("input", e => {
-      const topN_map = parseInt(e.target.value);
+      let topN_map = parseInt(e.target.value);
       d3.select("#label_topN_map").text(`${topN_map}`);
+
+      topN_map -= 1;
 
       this.streamGraphAbs.render("streamgraph", topN_map);
       this.streamGraphAbs.doTransform();

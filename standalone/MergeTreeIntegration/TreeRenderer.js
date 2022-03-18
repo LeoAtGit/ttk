@@ -242,7 +242,6 @@ class TreeRenderer {
 
         // reset map
         kdeRenderer.computeSelection([], 0);
-        kdeRenderer.computeMaskNoSelection();
         kdeRenderer.update_render();
         return;
       }
@@ -282,14 +281,18 @@ class TreeRenderer {
         // + ((this.type === 'streamgraph') ? this.streamgraph_options.maxwidth_root : this.donut_options.outerRadius);
     const y_max = Math.max(...this.points.map(p => p.y_layout));
 
-    if (x_max >= this.width - 0.1) {
+    // if (x_max >= this.width - 0.1) {
       // this.tree.all_points.forEach(p => p.y_layout += (this.height - y_max) / 2)
-      this.tree.all_points.forEach(p => p.y_layout *= (this.height / y_max));
-    }
+    // }
 
-    if (y_max >= this.height - 0.1) {
-      this.tree.branches.forEach(b => b.setXLayout(b.x_layout + (this.width - x_max) / 2));
-    }
+    // graph shall always span from top to bottom
+    this.tree.all_points.forEach(p => p.y_layout *= (this.height / y_max));
+    // graph should be anchored at the leftmost edge and have a padding of 20
+    this.tree.branches.forEach(b => b.setXLayout(b.x_layout + 20));
+
+    // if (y_max >= this.height - 0.1) {
+      // this.tree.branches.forEach(b => b.setXLayout(b.x_layout + (this.width - x_max) / 2));
+    // }
 
     this.svg
         .attr("viewBox", [
@@ -391,10 +394,11 @@ class Tree {
     // the main tree. The order is specified by the size at the root node
     this.color_order = getSortedIndices(this.treeRoot.kde_i1);
 
-    // create a scale for mapping of the points, which is shared at each subbranch if "relative mapping" is chosen
+    // create a scale for mapping of the points, which is shared at each subbranch if "absolute mapping" is chosen
     this.mapping = d3.scaleLinear()
         .domain([0, sum(this.treeRoot.kde_i1)])
-        .range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding_scaled]);
+        // .range([0, this.streamgraph_options.maxwidth_root]);
+        .range([0, Math.max(0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding_scaled)]);
 
     this.branches = this.unique_branchIds
         .map((id, i) => new Branch(this, id, i === 0));
@@ -498,44 +502,49 @@ class Tree {
     const _y_max = Math.max(...this.all_points.map(p => p.y_layout));
 
     // calculate the two possible scaling factors
-    let f1 = width / _x_max;
-    let f2 = height / _y_max;
-
-    // check which scaling factors keep us in the bounds of width * height
-    if (f1 * _y_max > height)
-      f1 = 0;
-
-    if (f2 * _x_max > width)
-      f2 = 0;
-
-    if (f1 === 0 && f2 === 0) {
-      console.error("something went wrong trying to scale the values. This should never happen I think...")
-      return;
-    }
-
-    let scaling_factor = 0;
-    // check with which scaling factor we would get the largest bounding box
-    if (width * _y_max * f1 > height * _x_max * f2) {
-      scaling_factor = f1;
-    } else {
-      scaling_factor = f2;
-    }
-
-    if (scaling_factor === 0) {
-      console.error("something went wrong trying to scale the values. This should never happen I think...")
-      return;
-    }
+    // let f1 = width / _x_max;
+    // let f2 = height / _y_max;
+    //
+    // console.log("f1 * _y_max", f1 * _y_max, "height", height);
+    // console.log("f2 * _x_max", f2 * _x_max, "width", width);
+    //
+    // // check which scaling factors keep us in the bounds of width * height
+    // if (f1 * _y_max > height)
+    //   f1 = 0;
+    //
+    // if (f2 * _x_max > width)
+    //   f2 = 0;
+    //
+    // if (f1 === 0 && f2 === 0) {
+    //   console.error("something went wrong trying to scale the values. This should never happen I think...")
+    //   return;
+    // }
+    //
+    // let scaling_factor = 0;
+    // // check with which scaling factor we would get the largest bounding box
+    // if (width * _y_max * f1 >= height * _x_max * f2) {
+    //   scaling_factor = f1;
+    // } else {
+    //   scaling_factor = f2;
+    // }
+    //
+    // if (scaling_factor === 0) {
+    //   console.error("something went wrong trying to scale the values. This should never happen I think...")
+    //   return;
+    // }
 
     // actually do the rescaling
-    this.branches.forEach(b => b.setXLayout(b.x_layout * scaling_factor));
-    this.all_points.forEach(p => p.y_layout *= scaling_factor);
+    this.branches.forEach(b => b.setXLayout(b.x_layout * (width / _x_max)));
+    // this.branches.forEach(b => b.setXLayout(b.x_layout * scaling_factor));
+    this.all_points.forEach(p => p.y_layout *= (height / _y_max));
+    // this.all_points.forEach(p => p.y_layout *= scaling_factor);
 
     // we also have to apply the scaling to the mapping!
-    if (type === "streamgraph") {
+    // if (type === "streamgraph") {
       // this.streamgraph_options.maxwidth_root *= scaling_factor;
-      this.streamgraph_options.padding_scaled *= scaling_factor;
-      this.mapping.range([0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding_scaled]);
-    }
+      // this.streamgraph_options.padding_scaled *= scaling_factor;
+      // this.mapping.range([0, Math.max(0, this.streamgraph_options.maxwidth_root - this.streamgraph_options.padding_scaled)]);
+    // }
     // if (type === "donut") {
       // this.donut_options.padding *= scaling_factor;
       // this.donut_options.innerRadius *= scaling_factor;
