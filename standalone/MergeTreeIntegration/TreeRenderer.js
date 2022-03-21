@@ -4,7 +4,7 @@ class TreeRenderer {
 
     this.scale = 200;
     this.padding = 50;
-    this.width = 800;
+    this.width = 1200;
     this.height = 600;
 
     let topN = 3;
@@ -51,7 +51,7 @@ class TreeRenderer {
     this.donut_options.color_scheme = eval(`d3.${cs}`);
 
     if (this.tree !== null) {
-      this.tree.createColorMapping(true);
+      this.tree.createColorMapping("asteroid_colors");
       kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
     }
   }
@@ -87,12 +87,24 @@ class TreeRenderer {
     const nCompI0 = this.vtkDataSet.pointData.KDE_ByType_I0.nComponents;
     const nCompI1 = this.vtkDataSet.pointData.KDE_ByType_I1.nComponents;
 
+    let last_slice = null;
+    let smallest_kde = 10;
     for(let i = 0; i < this.points.length; i++) {
       this.points[i].setBranchId(branchid[i]);
       this.points[i].setKDE(kde[i]);
 
-      this.points[i].setKDE_I0(kde_i0.slice(i * nCompI0, (i + 1) * nCompI0));
-      this.points[i].setKDE_I1(kde_i1.slice(i * nCompI1, (i + 1) * nCompI1));
+      // 0.6 für case study im paper
+      if (branchid[i] === 0 && kde[i] < Math.min(...kde) + (Math.max(...kde) - Math.min(...kde)) * 0.6) {
+        this.points[i].setKDE_I1(last_slice);
+      } else {
+        this.points[i].setKDE_I0(kde_i0.slice(i * nCompI0, (i + 1) * nCompI0));
+        this.points[i].setKDE_I1(kde_i1.slice(i * nCompI1, (i + 1) * nCompI1));
+
+        if (branchid[i] === 0 && kde[i] < smallest_kde) {
+          last_slice = kde_i1.slice(i * nCompI1, (i + 1) * nCompI1);
+          smallest_kde = kde[i];
+        }
+      }
     }
 
     // cell information
@@ -165,7 +177,7 @@ class TreeRenderer {
 
     this.tree.findDonutData();
     this.tree.createHelperStructureForMap(topN_map);
-    this.tree.createColorMapping(true);
+    this.tree.createColorMapping("asteroid_colors");
     kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
     kdeRenderer.setTree(this.tree);
 
@@ -643,9 +655,9 @@ class Tree {
     return res;
   }
 
-  createColorMapping(paper_mode_chicago=false) {
+  createColorMapping(mode="normal") {
     // paper_mode means that we fix the color_mapping by hand.
-    if (paper_mode_chicago) {
+    if (mode === "chicago_colors") {
       this.color_mapping = [
         7,
         0,
@@ -904,6 +916,8 @@ class Tree {
         null,
         255
       ];
+    } else if (mode === "asteroid_colors") {
+      this.color_mapping = [0, 11];
     } else {
       let i = 1
 
