@@ -1173,12 +1173,22 @@ class Branch {
         }
       });
       const __lastPoint = this.branch_points_sorted[this.branch_points_sorted.length - 1];
-      path.lineTo(
+
+      if (this.tree.streamgraph_options.no_scale) {
+        path.lineTo(
           __lastPoint.x_layout
-            + mapping(__lastPoint.kde_i1_sorted_and_ordered_cumsum[i])
-            + this.tree.streamgraph_options.edgeWidth / 2,
+          + (treeScale_scaled * (__lastPoint.kde_i1_sorted_and_ordered_cumsum[i] / __lastPoint.kde_i1_sorted_and_ordered_cumsum[__lastPoint.kde_i1_sorted_and_ordered_cumsum.length -1]))
+          + this.tree.streamgraph_options.edgeWidth / 2,
           this.connecting_point.y_layout
-      );
+        );
+      } else {
+        path.lineTo(
+          __lastPoint.x_layout
+          + mapping(__lastPoint.kde_i1_sorted_and_ordered_cumsum[i])
+          + this.tree.streamgraph_options.edgeWidth / 2,
+          this.connecting_point.y_layout
+        );
+      }
       path.lineTo(
           this.bottom.x_layout + this.tree.streamgraph_options.edgeWidth / 2,
           this.connecting_point.y_layout
