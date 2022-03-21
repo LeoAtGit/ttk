@@ -4,8 +4,12 @@ class TreeRenderer {
 
     this.scale = 200;
     this.padding = 50;
-    this.width = 1200;
+    // this.width = 800;
+    this.width = 1200;   // for asteroid case study
     this.height = 600;
+    this.colormapping = "asteroid_colors";
+    // this.colormapping = "chicago_colors";
+    // this.colormapping = "normal";  // normal operating mode
 
     let topN = 3;
     this.streamgraph_options = {
@@ -13,6 +17,7 @@ class TreeRenderer {
       maxwidth_root: 100,
       maxwidth_root_max: 400,
       treeScale: 50,
+      no_scale: false,
       // use_relative_sizes: true,
       use_relative_sizes: false,
       padding: 10,
@@ -51,7 +56,7 @@ class TreeRenderer {
     this.donut_options.color_scheme = eval(`d3.${cs}`);
 
     if (this.tree !== null) {
-      this.tree.createColorMapping("asteroid_colors");
+      this.tree.createColorMapping(this.colormapping);
       kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
     }
   }
@@ -93,8 +98,8 @@ class TreeRenderer {
       this.points[i].setBranchId(branchid[i]);
       this.points[i].setKDE(kde[i]);
 
-      // 0.6 für case study im paper
-      if (branchid[i] === 0 && kde[i] < Math.min(...kde) + (Math.max(...kde) - Math.min(...kde)) * 0.6) {
+      // 0.6 for case study in paper with asteroids
+      if (branchid[i] === 0 && kde[i] < Math.min(...kde) + (Math.max(...kde) - Math.min(...kde)) * 0.0) {
         this.points[i].setKDE_I1(last_slice);
       } else {
         this.points[i].setKDE_I0(kde_i0.slice(i * nCompI0, (i + 1) * nCompI0));
@@ -177,7 +182,7 @@ class TreeRenderer {
 
     this.tree.findDonutData();
     this.tree.createHelperStructureForMap(topN_map);
-    this.tree.createColorMapping("asteroid_colors");
+    this.tree.createColorMapping(this.colormapping);
     kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
     kdeRenderer.setTree(this.tree);
 
@@ -1142,9 +1147,9 @@ class Branch {
     const mapping = (!this.tree.streamgraph_options.use_relative_sizes)
       ? this.tree.mapping
       : d3.scaleLinear()
-          .domain([0, sum(this.bottom.kde_i1)])
-          .range([0, treeScale_scaled]);
-          // .range([0, this.tree.streamgraph_options.maxwidth_root - this.tree.streamgraph_options.padding_scaled]);
+        .domain([0, sum(this.bottom.kde_i1)])
+        .range([0, treeScale_scaled]);
+    // .range([0, this.tree.streamgraph_options.maxwidth_root - this.tree.streamgraph_options.padding_scaled]);
     for (let i = this.tree.no_of_categories - 1; i >= 0; i--) {
       let path = d3.path();
       path.moveTo(
@@ -1152,11 +1157,20 @@ class Branch {
           this.top.y_layout
       );
       this.branch_points_sorted.forEach(point => {
-        path.lineTo(
-            point.x_layout + mapping(point.kde_i1_sorted_and_ordered_cumsum[i])
-              + this.tree.streamgraph_options.edgeWidth / 2,
+        if (this.tree.streamgraph_options.no_scale) {
+          path.lineTo(
+            point.x_layout + (treeScale_scaled * (point.kde_i1_sorted_and_ordered_cumsum[i] / point.kde_i1_sorted_and_ordered_cumsum[point.kde_i1_sorted_and_ordered_cumsum.length -1]))
+            // point.x_layout + mapping(point.kde_i1_sorted_and_ordered_cumsum[i])
+            + this.tree.streamgraph_options.edgeWidth / 2,
             point.y_layout
-        );
+          );
+        } else {
+          path.lineTo(
+            point.x_layout + mapping(point.kde_i1_sorted_and_ordered_cumsum[i])
+            + this.tree.streamgraph_options.edgeWidth / 2,
+            point.y_layout
+          );
+        }
       });
       const __lastPoint = this.branch_points_sorted[this.branch_points_sorted.length - 1];
       path.lineTo(

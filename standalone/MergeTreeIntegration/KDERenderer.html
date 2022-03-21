@@ -64,6 +64,7 @@
             <select id="graph_type" style="width: 180px">
               <option value="streamgraph_abs">Streamgraph (absolute)</option>
               <option value="streamgraph_rel">Streamgraph (relative)</option>
+              <option value="streamgraph_no_scale">Streamgraph (no scale)</option>
               <option value="donut">Donut</option>
               <option value="pie">Pie Chart</option>
             </select>
@@ -128,6 +129,7 @@
 
         <!-- Map and Graphs -->
         <div class="row">
+<!--          <div class="col-5">-->
           <div class="col-2">
             <div class="row">
               <div id="mapContainer" class="col-12"></div>
@@ -140,12 +142,14 @@
               </div>
             </div>
           </div>
+<!--          <div id="graphContainer" class="col-7">-->
           <div id="graphContainer" class="col-10">
             <div id="graph" class="row">
               <div id="treeContainerDonut"></div>
               <div id="treeContainerPie"></div>
               <div id="treeContainerStreamgraphAbs"></div>
               <div id="treeContainerStreamgraphRel"></div>
+              <div id="treeContainerStreamgraphNoScale"></div>
             </div>
           </div>
         </div>
@@ -174,6 +178,9 @@ const treeRendererStreamgraphAbs = new TreeRenderer(d3.select("#treeContainerStr
 treeRendererStreamgraphAbs.streamgraph_options.use_relative_sizes = false;
 const treeRendererStreamgraphRel = new TreeRenderer(d3.select("#treeContainerStreamgraphRel"));
 treeRendererStreamgraphRel.streamgraph_options.use_relative_sizes = true;
+const treeRendererStreamgraphNoScale = new TreeRenderer(d3.select("#treeContainerStreamgraphNoScale"));
+treeRendererStreamgraphNoScale.streamgraph_options.use_relative_sizes = true;
+treeRendererStreamgraphNoScale.streamgraph_options.no_scale = true;
 const graphOptions = new GraphOptions();
 
 const connection = new TTK.ttkWebSocketIO();
@@ -184,14 +191,17 @@ connection.on( 'messageSequence',  msgs=>{
     treeRendererPie.setVtkDataSet(objects[0]);
     treeRendererStreamgraphAbs.setVtkDataSet(objects[0]);
     treeRendererStreamgraphRel.setVtkDataSet(objects[0]);
+    treeRendererStreamgraphNoScale.setVtkDataSet(objects[0]);
     treeRendererDonut.render("donut");
     treeRendererPie.render("pie");
     treeRendererStreamgraphAbs.render("streamgraph");
     treeRendererStreamgraphRel.render("streamgraph");
+    treeRendererStreamgraphNoScale.render("streamgraph");
     graphOptions.setDonutGraph(treeRendererDonut);
     graphOptions.setPieGraph(treeRendererPie);
     graphOptions.setStreamGraphAbs(treeRendererStreamgraphAbs);
     graphOptions.setStreamGraphRel(treeRendererStreamgraphRel);
+    graphOptions.setStreamGraphNoScale(treeRendererStreamgraphNoScale);
     graphOptions.render();
   });
 });
