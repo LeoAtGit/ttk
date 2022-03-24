@@ -328,14 +328,21 @@ class TreeRenderer {
         .attr("font-size", 10)
         .attr("font-weight", "lighter")
         .attr("transform", `rotate(-90, ${-35}, ${this.height / 2})`)
-        .text("Density");
+        .text("Temperature [eV]");
+        // .text("Density");
 
     const y_max = Math.max(...this.points.map(p => p.y_layout));
     const y_min = Math.min(...this.points.map(p => p.y_layout));
 
     const _tmp = y_min / (y_max - y_min);
+
+    const all_temps = this.tree.all_points.map(p => p.kde);
+    const min_temp_eV = Math.min(...all_temps);  // units are electronVolt
+    const max_temp_eV = Math.max(...all_temps);  // units are electronVolt
+
     this.yScale = d3.scaleLinear()
-        .domain([-_tmp, 1 + _tmp])  // this ensures that the top of our graph is at 1 and the bottom at 0
+        // .domain([-_tmp, 1 + _tmp])  // this ensures that the top of our graph is at 1 and the bottom at 0
+        .domain([min_temp_eV, max_temp_eV])  // for asteroid dataset
         .range([this.height, 0]);
     this.yAxis = d3.axisRight(this.yScale)
         .ticks(10)
