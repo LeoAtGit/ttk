@@ -4,12 +4,13 @@ class TreeRenderer {
 
     this.scale = 200;
     this.padding = 50;
-    // this.width = 800;
-    this.width = 700;   // for asteroid case study
-    this.height = 1200;
+    this.width = 800;
+    // this.width = 700;   // for asteroid case study
+    this.height = 625;
+    // this.height = 1200;   // for asteroid case study (?)
     // this.colormapping = "asteroid_colors";
-    // this.colormapping = "chicago_colors";
-    this.colormapping = "climate_colors";
+    this.colormapping = "chicago_colors";
+    // this.colormapping = "climate_colors";
     // this.colormapping = "normal";  // normal operating mode
 
     let topN = 3;
@@ -329,8 +330,8 @@ class TreeRenderer {
         .attr("font-size", 10)
         .attr("font-weight", "lighter")
         .attr("transform", `rotate(-90, ${-35}, ${this.height / 2})`)
-        .text("Temperature [K]");
-        // .text("Density");
+        // .text("Temperature [K]");
+        .text("Density");
 
     const y_max = Math.max(...this.points.map(p => p.y_layout));
     const y_min = Math.min(...this.points.map(p => p.y_layout));
@@ -342,8 +343,8 @@ class TreeRenderer {
     const max_temp_eV = Math.max(...all_temps);  // units are electronVolt
 
     this.yScale = d3.scaleLinear()
-        // .domain([-_tmp, 1 + _tmp])  // this ensures that the top of our graph is at 1 and the bottom at 0
-        .domain([min_temp_eV, max_temp_eV])  // for asteroid dataset
+        .domain([-_tmp, 1 + _tmp])  // this ensures that the top of our graph is at 1 and the bottom at 0
+        // .domain([min_temp_eV, max_temp_eV])  // for asteroid dataset
         .range([this.height, 0]);
     this.yAxis = d3.axisRight(this.yScale)
         .ticks(10)
@@ -431,7 +432,7 @@ class Tree {
     // for the donut chart, we want to reorder the KDE at each point, so we can draw the donuts more easily.
     this.all_points.forEach(p => p.reorderKDE_I1(this.color_order, this.streamgraph_options.topN));
 
-    this.lowest_connecting_point = this.all_points.filter(p => p.drawDonut).sort((a, b) => b.y - a.y)[0];
+    this.lowest_connecting_point = this.all_points.filter(p => p.is_connecting_point).sort((a, b) => b.y - a.y)[0];
   }
 
   fix_reorderKDE_I1() {
