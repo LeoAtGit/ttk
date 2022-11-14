@@ -167,7 +167,109 @@ class TreeRenderer {
     }
   }
 
+  render_i0(type, topN_map) {
+    if (type !== 'streamgraph') {
+      return;
+    }
+
+    this.type = type;
+
+    if (!this.vtkDataSet) {
+      console.error("trying to render without dataset");
+      return;
+    }
+
+    this.coordinate_system.remove();
+    this.nodelayer.remove();
+    this.coordinate_system = this.root.append("g");
+    this.nodelayer = this.root.append("g");
+
+    this.tree = new Tree(this.points, this.connectivityArray, this.streamgraph_options, this.donut_options, this.nodelayer);
+
+    this.tree.findDonutData();
+    this.tree.createHelperStructureForMap(topN_map);
+    this.tree.createColorMapping(this.colormapping);
+    kdeRenderer.setColorMap(this.streamgraph_options.color_scheme, this.tree.color_mapping);
+    kdeRenderer.setTree(this.tree);
+
+    // draw the streamgraph
+    if (type === 'streamgraph') {
+      this.tree.fix_reorderKDE_I0();  // has to be called after this.tree.createColorMapping()
+      // this.tree.fix_reorderKDE_I1();  // has to be called after this.tree.createColorMapping()
+      this.tree.calculateLayoutStreamgraph();
+      this.tree.moveToOrigin();
+      this.tree.rescale(this.width, this.height, type);
+      this.centerView();
+      this.drawCoordinateSystem();
+      this.tree.drawStreamGraph_i0();
+      // this.tree.drawStreamGraph();
+
+      this.tree.drawEdges();
+      this.tree.drawPoints();
+      this.tree.drawEdges(true);
+      this.tree.drawEdgesSelector();
+    }
+
+    d3.selectAll(".vertices").on("click", e => {
+      g_clicked_node = e.target;
+      const id = parseInt(e.target.id.split("_")[1]);
+
+      const selected_point = this.points[id];
+      const selected_points = this.tree.findPointsOnClick(selected_point);
+
+      this.tree.highlightEdges(selected_points['points']);
+
+      kdeRenderer.computeSelection(selected_points['points'].map(p => p.branchId), selected_points['min_scalar_value']);
+      kdeRenderer.update_render();
+    });
+
+    this.previous_id = null;
+    d3.selectAll(".edge[id^='click_']").on("click", e => {
+      const clicked_edge = e.target;
+      const id = clicked_edge.id;
+      if (id === this.previous_id) {
+        // deselect edges and return
+        d3.selectAll(`.edge-display`)
+            .attr("stroke-opacity", 1)
+            .attr("stroke-width", this.streamgraph_options.edgeWidth);
+
+        this.previous_id = null;
+        g_clicked_node = null;
+
+        // reset map
+        kdeRenderer.computeSelection([], 0);
+        kdeRenderer.update_render();
+        return;
+      }
+
+      this.previous_id = id;
+      const b_id = parseInt(id.split("_")[1]);
+      const connecting_point_index = parseInt(id.split("_")[2]);
+
+      const branch = this.tree.returnBranchWithBranchId(b_id);
+      let point;
+      if (connecting_point_index === 0) {
+        // it was the top point
+        point = branch.top;
+      } else {
+        // it was some connecting point
+        const connecting_points = branch.branch_points_sorted.filter(p => p.is_connecting_point);
+        point = connecting_points[connecting_point_index - 1];
+      }
+      d3.select(`#vertex_${this.points.indexOf(point)}`).node().dispatchEvent(new Event("click"));
+    });
+
+    // this is needed that after another call to `render()` the branches stay highlighted
+    if (g_clicked_node !== null) {
+      g_clicked_node.dispatchEvent(new Event("click"));
+    }
+  }
+
   render(type, topN_map) {
+    // laaaazy fix
+    this.render_i0(type, topN_map)
+    return
+
     this.type = type;
 
     if (!this.vtkDataSet) {
@@ -433,6 +535,15 @@ class Tree {
     this.all_points.forEach(p => p.reorderKDE_I1(this.color_order, this.streamgraph_options.topN));
 
     this.lowest_connecting_point = this.all_points.filter(p => p.is_connecting_point).sort((a, b) => b.y - a.y)[0];
+  }
+
+  fix_reorderKDE_I0() {
+    // for the streamgraph, we want to reorder the KDE at each point ACCORDING TO THE ORDER AT THE BOTTOM NODE OF THE
+    // CORRESPONDING BRANCH!!!
+    // otherwise, this would introduce bugs...
+    //
+    // Note that this function has to be called after the createColorMapping() because this code is shitty
+    this.branches.forEach(b => b.reorderKDE_I0_streamgraph(this.color_order, this.streamgraph_options.topN));
   }
 
   fix_reorderKDE_I1() {
@@ -1220,6 +1331,10 @@ class Tree {
     }
   }
 
+  drawStreamGraph_i0() {
+    this.branches.forEach(b => b.drawStreamGraph_i0());
+  }
+
   drawStreamGraph() {
     this.branches.forEach(b => b.drawStreamGraph());
   }
@@ -1230,6 +1345,47 @@ class Tree {
 
   drawPie() {
     this.branches.forEach(b => b.drawDonut(true));
+  }
+
+  drawEdgesSelector() {
+    this.branches.forEach(b => {
+      let path = d3.path();
+
+      let y_start = b.top.y_layout;
+      let y_end = b.connecting_point.y_layout;
+      let idx = 0;
+      let i = 0;
+      let connecting_points = b.branch_points_sorted.filter(p => p.is_connecting_point);
+      for (i = 0; i < connecting_points.length; i++) {
+        let subbranch = b.branch_points_sorted.slice(idx, b.branch_points_sorted.indexOf(connecting_points[i]) + 1);
+        idx = b.branch_points_sorted.indexOf(connecting_points[i]);
+        y_start = subbranch[0].y_layout;
+        y_end = subbranch[subbranch.length - 1].y_layout;
+        path.moveTo(b.x_layout - 5, y_start);
+        path.lineTo(b.x_layout - 5, y_end);
+
+        this.nodelayer.append("path")
+            .attr("d", path)
+            .attr("class", "edge edge-display")
+            .attr("id", `${b.branchId}_${i}`)
+            .attr("fill", "none")
+            .attr("stroke", "blue")
+            .attr("stroke-width", this.streamgraph_options.edgeWidth);
+
+        path = d3.path();
+        y_start = y_end;
+      }
+      path.moveTo(b.x_layout - 5, y_start);
+      path.lineTo(b.x_layout - 5, b.connecting_point.y_layout);  // normally to b.bottom.y_layout, but we want to trick the layout drawing a bit
+
+      this.nodelayer.append("path")
+          .attr("d", path)
+          .attr("class", "edge edge-display")
+          .attr("id", `${b.branchId}_${i}`)
+          .attr("fill", "none")
+          .attr("stroke", "red")
+          .attr("stroke-width", this.streamgraph_options.edgeWidth);
+    });
   }
 
   drawEdges(draw_click_helpers=false) {
@@ -1398,11 +1554,92 @@ class Branch {
     this.branch_points_sorted.forEach(p => p.setXLayout(x_layout));
   }
 
+  reorderKDE_I0_streamgraph(order, topN) {
+    // sort the kde_i0 array the same way we also sort the kde_i1 array
+    const kde_i0_sorted_indices = getSortedIndices(this.bottom.kde_i1);  // note the `this.bottom.kde_i1` here!
+    const kde_i0_sorted = kde_i0_sorted_indices.map(i => this.bottom.kde_i0[i]);
+
+    this.branch_points_sorted.forEach(p => p.reorderKDE_I0(order, topN, kde_i0_sorted_indices, kde_i0_sorted));
+  }
+
   reorderKDE_I1_streamgraph(order, topN) {
     const kde_i1_sorted_indices = getSortedIndices(this.bottom.kde_i1);
     const kde_i1_sorted = kde_i1_sorted_indices.map(i => this.bottom.kde_i1[i]);
 
     this.branch_points_sorted.forEach(p => p.reorderKDE_I1(order, topN, kde_i1_sorted_indices, kde_i1_sorted));
+  }
+
+  drawStreamGraph_i0() {
+    // find out what is the real scaled treeScale
+    let treeScale_scaled;
+    if (this.tree.streamgraph_options.use_relative_sizes) {
+      treeScale_scaled = this.tree.branches[0].x_layout - this.tree.branches[1].x_layout - this.tree.streamgraph_options.padding;
+    }
+
+    const max_width_along_branch = Math.max(...this.branch_points_sorted.map(p => p.kde_i0_sorted_and_ordered_cumsum[this.tree.no_of_categories-1]))
+    const mapping = (!this.tree.streamgraph_options.use_relative_sizes)
+        ? this.tree.mapping
+        : d3.scaleLinear()
+            .domain([0, max_width_along_branch])
+            .range([0, treeScale_scaled]);
+        // : d3.scaleLinear()
+        //     .domain([0, sum(this.bottom.kde_i1)])
+        //     .range([0, treeScale_scaled]);
+    for (let i = this.tree.no_of_categories - 1; i >= 0; i--) {
+      let path = d3.path();
+      path.moveTo(
+          this.top.x_layout + this.tree.streamgraph_options.edgeWidth / 2,
+          this.top.y_layout
+      );
+      this.branch_points_sorted.forEach(point => {
+        // if (this.tree.streamgraph_options.no_scale) {
+        //   path.lineTo(
+        //       point.x_layout + (treeScale_scaled * (point.kde_i1_sorted_and_ordered_cumsum[i] / point.kde_i1_sorted_and_ordered_cumsum[point.kde_i1_sorted_and_ordered_cumsum.length -1]))
+        //       // point.x_layout + mapping(point.kde_i1_sorted_and_ordered_cumsum[i])
+        //       + this.tree.streamgraph_options.edgeWidth / 2,
+        //       point.y_layout
+        //   );
+        // } else {
+          path.lineTo(
+              point.x_layout + mapping(point.kde_i0_sorted_and_ordered_cumsum[i])
+              + this.tree.streamgraph_options.edgeWidth / 2,
+              point.y_layout
+          );
+        // }
+      });
+      const __lastPoint = this.branch_points_sorted[this.branch_points_sorted.length - 1];
+
+      // if (this.tree.streamgraph_options.no_scale) {
+      //   path.lineTo(
+      //       __lastPoint.x_layout
+      //       + (treeScale_scaled * (__lastPoint.kde_i1_sorted_and_ordered_cumsum[i] / __lastPoint.kde_i1_sorted_and_ordered_cumsum[__lastPoint.kde_i1_sorted_and_ordered_cumsum.length -1]))
+      //       + this.tree.streamgraph_options.edgeWidth / 2,
+      //       this.connecting_point.y_layout
+      //   );
+      // } else {
+        path.lineTo(
+            __lastPoint.x_layout
+            + mapping(__lastPoint.kde_i0_sorted_and_ordered_cumsum[i])
+            + this.tree.streamgraph_options.edgeWidth / 2,
+            this.connecting_point.y_layout
+        );
+      // }
+      path.lineTo(
+          this.bottom.x_layout + this.tree.streamgraph_options.edgeWidth / 2,
+          this.connecting_point.y_layout
+      );
+      path.closePath();
+
+      let color = this.tree.streamgraph_options.color_of_ignored;
+      if (i < this.tree.streamgraph_options.topN) {
+        // color = this.tree.streamgraph_options.color_scheme[this.tree.color_order.indexOf(this.bottom.topN_indices_ordered[i]) % 12];
+        color = this.tree.streamgraph_options.color_scheme[this.tree.color_mapping[this.bottom.topN_indices_ordered[i]]];
+      }
+
+      this.tree.nodelayer.append("path")
+          .attr("d", path)
+          .attr("fill", color);
+    }
   }
 
   drawStreamGraph() {
@@ -1538,6 +1775,23 @@ class Point {
     this.is_connecting_point = false;
     this.branchId_of_connection = -1;
     this.donut_data_from_point = null;
+  }
+
+  reorderKDE_I0(order, topN, kde_i0_sorted_indices, kde_i0_sorted) {
+    // sort kde_i0 by size
+    this.kde_i0_sorted_indices = kde_i0_sorted_indices;
+    this.kde_i0_sorted = kde_i0_sorted;
+
+    // get the indices of the largest topN values
+    this.topN_indices = this.kde_i0_sorted_indices.slice(0, topN);
+    this.other_indices = this.kde_i0_sorted_indices.slice(topN);
+    // reorder those indices according to the `order` array
+    this.topN_indices_ordered = this.topN_indices.sort((i, j) => order.indexOf(i) - order.indexOf(j));
+
+    this.kde_i0_sorted_and_ordered = this.topN_indices_ordered.map(i => this.kde_i0[i]);
+    this.kde_i0_sorted_and_ordered = this.kde_i0_sorted_and_ordered.concat(this.other_indices.map(i => this.kde_i0[i]));
+
+    this.kde_i0_sorted_and_ordered_cumsum = d3.cumsum(this.kde_i0_sorted_and_ordered);
   }
 
   reorderKDE_I1(order, topN, kde_i1_sorted_indices = null, kde_i1_sorted = null) {
