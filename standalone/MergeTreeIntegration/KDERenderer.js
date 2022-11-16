@@ -186,6 +186,21 @@ void main() {
     this.update_render();
   }
 
+  computeSelection_i0(branchId_list, min_and_max_kde) {
+    const n = this.mask.length;
+    const kde = this.vtkDataSet.pointData.KDE.data;
+    const branchIds = this.vtkDataSet.pointData.BranchId.data;
+    for (let i = 0; i < n; i++) {
+      if (branchId_list.has(branchIds[i]) && kde[i] >= min_and_max_kde[branchIds[i]][0] && kde[i] <= min_and_max_kde[branchIds[i]][1]) {
+        this.selection[i] = 1;
+      } else {
+        this.selection[i] = 0;
+      }
+    }
+
+    this.uniforms.texSelection.value.needsUpdate = true;
+  }
+
   computeSelection(branchId_list, scalar_value) {
     const n = this.mask.length;
     const kde = this.vtkDataSet.pointData.KDE.data;

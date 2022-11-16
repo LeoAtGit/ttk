@@ -201,6 +201,12 @@ class TreeRenderer {
       this.tree.rescale(this.width, this.height, type);
       this.centerView();
       this.drawCoordinateSystem();
+
+      this.slider_positions = this.tree.branches.map(b => b.branchId);
+      this.tree.branches.forEach(b => {
+        this.slider_positions[b.branchId] = [b.bottom.y_layout, b.top.y_layout];
+      });
+
       this.tree.drawStreamGraph_i0();
       // this.tree.drawStreamGraph();
 
@@ -209,6 +215,58 @@ class TreeRenderer {
       this.tree.drawEdges(true);
       this.tree.drawEdgesSelector();
     }
+
+    d3.selectAll(".handle").call(d3.drag().on("drag", e => {
+      d3.select(e.sourceEvent.target).attr("cy", e.y);
+      const __id = d3.select(e.sourceEvent.target).attr('id');
+      const __pos = __id.split("_")[1];
+      const __b_id = parseInt(__id.split("_")[2]);
+
+      if (__pos === 'top') {
+        this.slider_positions[__b_id][1] = e.y;
+      } else {
+        if (__pos === 'bottom') {
+          this.slider_positions[__b_id][0] = e.y;
+        } else {
+          console.log("THIS SHOULD NEVER HAPPEN")
+        }
+      }
+
+      if (g_clicked_node === null) {
+        return;
+      }
+
+      const point_id = parseInt(g_clicked_node.id.split("_")[1]);
+      const selected_point = this.points[point_id];
+      const selected_points = this.tree.findPointsOnClick(selected_point);
+
+      // for all the branches and subbranches, collect the information on the handle position
+      let b_ids = selected_points.points.map(p => p.branchId);
+      b_ids = new Set(b_ids);
+
+      let selected_points_filtered = [];
+      b_ids.forEach(b_id => {
+        selected_points_filtered = selected_points_filtered.concat(
+            selected_points.points.filter(p => p.branchId === b_id).filter(
+                    p => (p.y_layout <= this.slider_positions[b_id][0]
+                        && p.y_layout >= this.slider_positions[b_id][1])
+                ) // note: > and < must be switched because d3.js starts counting y from top
+        )
+      });
+
+      // for each branch, calculate min and max scalar value
+      let res = selected_points_filtered.map(p => p.branchId);
+      res = new Set(res);
+
+      b_ids.forEach(b_id => {
+        let kde_of_branch = selected_points_filtered.filter(p => p.branchId === b_id).map(p => p.kde);
+        res[b_id] = [Math.min(...kde_of_branch), Math.max(...kde_of_branch)];
+      });
+
+      // and then filter the view
+      kdeRenderer.computeSelection_i0(b_ids, res);
+      kdeRenderer.update_render();
+    }));
 
     d3.selectAll(".vertices").on("click", e => {
       g_clicked_node = e.target;
@@ -1348,43 +1406,63 @@ class Tree {
   }
 
   drawEdgesSelector() {
+    // draws the handles where you can change what you want to see
     this.branches.forEach(b => {
       let path = d3.path();
 
-      let y_start = b.top.y_layout;
-      let y_end = b.connecting_point.y_layout;
-      let idx = 0;
-      let i = 0;
-      let connecting_points = b.branch_points_sorted.filter(p => p.is_connecting_point);
-      for (i = 0; i < connecting_points.length; i++) {
-        let subbranch = b.branch_points_sorted.slice(idx, b.branch_points_sorted.indexOf(connecting_points[i]) + 1);
-        idx = b.branch_points_sorted.indexOf(connecting_points[i]);
-        y_start = subbranch[0].y_layout;
-        y_end = subbranch[subbranch.length - 1].y_layout;
-        path.moveTo(b.x_layout - 5, y_start);
-        path.lineTo(b.x_layout - 5, y_end);
+      // let y_start = b.top.y_layout;
+      // let y_end = b.connecting_point.y_layout;
+      // let idx = 0;
+      // let i = 0;
+      // let connecting_points = b.branch_points_sorted.filter(p => p.is_connecting_point);
+      // for (i = 0; i < connecting_points.length; i++) {
+      //   let subbranch = b.branch_points_sorted.slice(idx, b.branch_points_sorted.indexOf(connecting_points[i]) + 1);
+      //   idx = b.branch_points_sorted.indexOf(connecting_points[i]);
+      //   y_start = subbranch[0].y_layout;
+      //   y_end = subbranch[subbranch.length - 1].y_layout;
+      //   path.moveTo(b.x_layout - 5, y_start);
+      //   path.lineTo(b.x_layout - 5, y_end);
+      //
+      //   this.nodelayer.append("path")
+      //       .attr("d", path)
+      //       .attr("class", "edge edge-display")
+      //       // .attr("id", `${b.branchId}_${i}`)
+      //       .attr("fill", "none")
+      //       .attr("stroke", "blue")
+      //       .attr("stroke-width", this.streamgraph_options.edgeWidth);
+      //
+      //   path = d3.path();
+      //   y_start = y_end;
+      // }
 
-        this.nodelayer.append("path")
-            .attr("d", path)
-            .attr("class", "edge edge-display")
-            .attr("id", `${b.branchId}_${i}`)
-            .attr("fill", "none")
-            .attr("stroke", "blue")
-            .attr("stroke-width", this.streamgraph_options.edgeWidth);
-
-        path = d3.path();
-        y_start = y_end;
-      }
-      path.moveTo(b.x_layout - 5, y_start);
+      path.moveTo(b.x_layout - 5, b.top.y_layout);
       path.lineTo(b.x_layout - 5, b.connecting_point.y_layout);  // normally to b.bottom.y_layout, but we want to trick the layout drawing a bit
 
       this.nodelayer.append("path")
           .attr("d", path)
           .attr("class", "edge edge-display")
-          .attr("id", `${b.branchId}_${i}`)
+          // .attr("id", `${b.branchId}_${i}`)
           .attr("fill", "none")
           .attr("stroke", "red")
           .attr("stroke-width", this.streamgraph_options.edgeWidth);
+
+      // handle at the top of the edge
+      this.nodelayer.append("circle")
+          .attr("cx", b.x_layout - 5)
+          .attr("cy", b.top.y_layout)
+          .attr("r", 4)
+          .attr("fill", "green")
+          .attr("class", "handle")
+          .attr("id", `vertex_top_${b.branchId}`)
+
+      // handle at the bottom of the edge
+      this.nodelayer.append("circle")
+          .attr("cx", b.x_layout - 5)
+          .attr("cy", b.connecting_point.y_layout)
+          .attr("r", 4)
+          .attr("fill", "green")
+          .attr("class", "handle")
+          .attr("id", `vertex_bottom_${b.branchId}`)
     });
   }
 
