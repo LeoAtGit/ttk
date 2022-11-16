@@ -217,7 +217,8 @@ class TreeRenderer {
     }
 
     d3.selectAll(".handle").call(d3.drag().on("drag", e => {
-      d3.select(e.sourceEvent.target).attr("cy", e.y);
+      d3.select(e.sourceEvent.target).attr("y1", e.y);
+      d3.select(e.sourceEvent.target).attr("y2", e.y);
       const __id = d3.select(e.sourceEvent.target).attr('id');
       const __pos = __id.split("_")[1];
       const __b_id = parseInt(__id.split("_")[2]);
@@ -1408,61 +1409,31 @@ class Tree {
   drawEdgesSelector() {
     // draws the handles where you can change what you want to see
     this.branches.forEach(b => {
-      let path = d3.path();
-
-      // let y_start = b.top.y_layout;
-      // let y_end = b.connecting_point.y_layout;
-      // let idx = 0;
-      // let i = 0;
-      // let connecting_points = b.branch_points_sorted.filter(p => p.is_connecting_point);
-      // for (i = 0; i < connecting_points.length; i++) {
-      //   let subbranch = b.branch_points_sorted.slice(idx, b.branch_points_sorted.indexOf(connecting_points[i]) + 1);
-      //   idx = b.branch_points_sorted.indexOf(connecting_points[i]);
-      //   y_start = subbranch[0].y_layout;
-      //   y_end = subbranch[subbranch.length - 1].y_layout;
-      //   path.moveTo(b.x_layout - 5, y_start);
-      //   path.lineTo(b.x_layout - 5, y_end);
-      //
-      //   this.nodelayer.append("path")
-      //       .attr("d", path)
-      //       .attr("class", "edge edge-display")
-      //       // .attr("id", `${b.branchId}_${i}`)
-      //       .attr("fill", "none")
-      //       .attr("stroke", "blue")
-      //       .attr("stroke-width", this.streamgraph_options.edgeWidth);
-      //
-      //   path = d3.path();
-      //   y_start = y_end;
-      // }
-
-      path.moveTo(b.x_layout - 5, b.top.y_layout);
-      path.lineTo(b.x_layout - 5, b.connecting_point.y_layout);  // normally to b.bottom.y_layout, but we want to trick the layout drawing a bit
-
-      this.nodelayer.append("path")
-          .attr("d", path)
-          .attr("class", "edge edge-display")
-          // .attr("id", `${b.branchId}_${i}`)
-          .attr("fill", "none")
-          .attr("stroke", "red")
-          .attr("stroke-width", this.streamgraph_options.edgeWidth);
-
       // handle at the top of the edge
-      this.nodelayer.append("circle")
-          .attr("cx", b.x_layout - 5)
-          .attr("cy", b.top.y_layout)
-          .attr("r", 4)
-          .attr("fill", "green")
+      this.nodelayer.append("line")
           .attr("class", "handle")
-          .attr("id", `vertex_top_${b.branchId}`)
+          .attr("id", `vertex_top_${b.branchId}`)  // "vertex_" for legacy reasons, has no meaning here
+          .attr("x1", b.x_layout - 18)
+          .attr("y1", b.top.y_layout)
+          .attr("x2", b.x_layout - 9)
+          .attr("y2", b.top.y_layout)
+          .attr("marker-end", "url(#triangle)")
+          // .attr("fill", "gray")
+          .attr("stroke", "gray")
+          .attr("stroke-width", 6);
 
       // handle at the bottom of the edge
-      this.nodelayer.append("circle")
-          .attr("cx", b.x_layout - 5)
-          .attr("cy", b.connecting_point.y_layout)
-          .attr("r", 4)
-          .attr("fill", "green")
+      this.nodelayer.append("line")
           .attr("class", "handle")
-          .attr("id", `vertex_bottom_${b.branchId}`)
+          .attr("id", `vertex_top_${b.branchId}`)  // "vertex_" for legacy reasons, has no meaning here
+          .attr("x1", b.x_layout - 18)
+          .attr("y1", b.connecting_point.y_layout)
+          .attr("x2", b.x_layout - 9)
+          .attr("y2", b.connecting_point.y_layout)
+          .attr("marker-end", "url(#triangle)")
+          // .attr("fill", "gray")
+          .attr("stroke", "gray")
+          .attr("stroke-width", 6);
     });
   }
 
