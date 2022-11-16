@@ -284,6 +284,9 @@ class TreeRenderer {
 
     this.previous_id = null;
     d3.selectAll(".edge[id^='click_']").on("click", e => {
+      // hide all branch handles
+      d3.selectAll('.handle').attr('hidden', true);
+
       const clicked_edge = e.target;
       const id = clicked_edge.id;
       if (id === this.previous_id) {
@@ -325,9 +328,9 @@ class TreeRenderer {
   }
 
   render(type, topN_map) {
-    // laaaazy fix
-    this.render_i0(type, topN_map)
-    return
+    // lazy fix
+    this.render_i0(type, topN_map);
+    return;
 
     this.type = type;
 
@@ -1418,6 +1421,7 @@ class Tree {
           .attr("x2", b.x_layout - 9)
           .attr("y2", b.top.y_layout)
           .attr("marker-end", "url(#triangle)")
+          .attr("hidden", "asdf")
           // .attr("fill", "gray")
           .attr("stroke", "gray")
           .attr("stroke-width", 6);
@@ -1425,15 +1429,19 @@ class Tree {
       // handle at the bottom of the edge
       this.nodelayer.append("line")
           .attr("class", "handle")
-          .attr("id", `vertex_top_${b.branchId}`)  // "vertex_" for legacy reasons, has no meaning here
+          .attr("id", `vertex_bottom_${b.branchId}`)  // "vertex_" for legacy reasons, has no meaning here
           .attr("x1", b.x_layout - 18)
           .attr("y1", b.connecting_point.y_layout)
           .attr("x2", b.x_layout - 9)
           .attr("y2", b.connecting_point.y_layout)
           .attr("marker-end", "url(#triangle)")
+          .attr("hidden", "asdf")
           // .attr("fill", "gray")
           .attr("stroke", "gray")
           .attr("stroke-width", 6);
+
+      // d3.selectAll('.handle')
+      //     .attr('hidden', true);
     });
   }
 
@@ -1532,6 +1540,10 @@ class Tree {
             .attr("stroke-opacity", 0.7);
         }
       }
+
+      // remove the hidden attributes. Note that setting "hidden" to false still wouldn't un-hide it... >:-(
+      d3.selectAll(`#vertex_top_${b_id}`).attr('hidden', null);
+      d3.selectAll(`#vertex_bottom_${b_id}`).attr('hidden', null);
     });
   }
 
