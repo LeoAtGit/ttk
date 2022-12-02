@@ -9,8 +9,8 @@ class TreeRenderer {
     this.height = 625;
     // this.height = 1200;   // for asteroid case study (?)
     // this.colormapping = "asteroid_colors";
-    this.colormapping = "chicago_colors";
-    // this.colormapping = "climate_colors";
+    // this.colormapping = "chicago_colors";
+    this.colormapping = "climate_colors";
     // this.colormapping = "normal";  // normal operating mode
 
     let topN = 3;
@@ -114,6 +114,34 @@ class TreeRenderer {
       }
     }
 
+    // Proof of Concept:
+    // Delete all subcategories except the one with the highest values in the treeRoot.
+
+    // find treeRoot
+    const treeRootPoint = this.points[this.points.findIndex(p => p.y === Math.max(...this.points.map(p => p.y)))];
+
+    // We want each subtree to have the same order of categories (i.e. "colors") as
+    // the main tree. The order is specified by the size at the root node
+    const order = getSortedIndices(treeRootPoint.kde_i1);
+
+    for(let i = 0; i < this.points.length; i++) {
+      this.points[i].delete_fields_of_KDE_I1(order);
+      if (i === 0) {
+        // console.log(this.points[i])
+      }
+    }
+
+    // normalize the kde_i1 array over each category
+    for(let j = 0; j < this.points[0].kde_i1.length; j++) {
+      let vals = this.points.map(p => p.kde_i1[j]);
+      let min = Math.min(...vals);
+      let max = Math.max(...vals);
+
+      for(let i = 0; i < this.points.length; i++) {
+        this.points[i].kde_i1[j] = (this.points[i].kde_i1[j] - min) / (max - min);
+      }
+    }
+
     // cell information
     this.connectivityArray = this.vtkDataSet.cells.connectivityArray.data;
     const offsetsArray = this.vtkDataSet.cells.offsetsArray.data;
@@ -151,7 +179,7 @@ class TreeRenderer {
       if (p1.branchId !== p2.branchId) {
         let idx = (p2.y > p1.y) ? 1 : 0;
         this.points[this.connectivityArray[i + idx]].drawDonut = true;  // if you comment this out, the topN map stuff
-                                                                        // will be drawn incorrectly!
+                                                                        // will be drawn incorrectly! TODO: find out why
         this.points[this.connectivityArray[i + idx]].drawPoint = true;
       }
     }
@@ -163,6 +191,9 @@ class TreeRenderer {
     // save the labels if the dataset has labels. Otherwise give default values
     if (this.vtkDataSet.fieldData.hasOwnProperty("CategoryDictionary")) {
       this.labels = this.vtkDataSet.fieldData.CategoryDictionary.data.map(s => s.replaceAll("\"", ""));
+
+      // also delete the labels in accordance to the kde_i1 array
+      this.labels = order.slice(0, 4).map(i => this.labels[i])
     } else {
       this.labels = Array.from(Array(kde_i0.length).keys());
     }
@@ -1572,6 +1603,14 @@ class Point {
 
   setKDE_I1(kde) {
     this.kde_i1 = kde;
+  }
+
+  delete_fields_of_KDE_I1(order) {
+    // the order array gives you the order of the complete kde_i1 array.
+    // order[0] gives the index of the largest entry in kde_i1, and so on
+
+    // We only want to keep the first x entries.
+    this.kde_i1 = order.slice(0, 4).map(i => this.kde_i1[i])
   }
 
   setXLayout(x) {
