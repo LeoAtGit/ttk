@@ -4,8 +4,8 @@ class TreeRenderer {
 
     this.scale = 200;
     this.padding = 50;
-    this.width = 800;
-    // this.width = 700;   // for asteroid case study
+    // this.width = 800;
+    this.width = 1200;   // for asteroid case study
     this.height = 625;
     // this.height = 1200;   // for asteroid case study (?)
     // this.colormapping = "asteroid_colors";
@@ -100,8 +100,8 @@ class TreeRenderer {
       this.points[i].setBranchId(branchid[i]);
       this.points[i].setKDE(kde[i]);
 
-      // 0.6 for case study in paper with asteroids
-      if (branchid[i] === 0 && kde[i] < Math.min(...kde) + (Math.max(...kde) - Math.min(...kde)) * 0.0) {
+      // FIXME 0.1 for case study in paper with asteroids
+      if (branchid[i] === 0 && kde[i] < Math.min(...kde) + (Math.max(...kde) - Math.min(...kde)) * 0.1) {
         this.points[i].setKDE_I1(last_slice);
       } else {
         this.points[i].setKDE_I0(kde_i0.slice(i * nCompI0, (i + 1) * nCompI0));
@@ -117,6 +117,7 @@ class TreeRenderer {
     // Proof of Concept:
     // Delete all subcategories except the one with the highest values in the treeRoot.
 
+    // ### 1. Normalize all data values
     // find treeRoot
     const treeRootPoint = this.points[this.points.findIndex(p => p.y === Math.max(...this.points.map(p => p.y)))];
 
@@ -126,9 +127,6 @@ class TreeRenderer {
 
     for(let i = 0; i < this.points.length; i++) {
       this.points[i].delete_fields_of_KDE_I1(order);
-      if (i === 0) {
-        // console.log(this.points[i])
-      }
     }
 
     // normalize the kde_i1 array over each category
@@ -141,6 +139,32 @@ class TreeRenderer {
         this.points[i].kde_i1[j] = (this.points[i].kde_i1[j] - min) / (max - min);
       }
     }
+
+    // #### 2. Do a log transformation of the data
+    // find out what the min and max values are -- juuust to be sure.
+    for(let j = 0; j < this.points[0].kde_i1.length; j++) {
+      let vals = this.points.map(p => p.kde_i1[j]);
+      let min = Math.min(...vals);
+      let max = Math.max(...vals);
+      // console.log("minnnn", min)
+      // console.log("maxxxx", max)
+    }
+
+    // console.log("old", this.points[29].kde_i1)
+    for (let j = 0; j < this.points.length; j++) {
+      for (let i = 0; i < this.points[j].kde_i1.length; i++) {
+        if (this.points[j].kde_i1[i] < 0 || Number.isNaN(this.points[j].kde_i1[i])) {
+          console.log("THIS SHOULD NEVER HAPPEN ################");
+          // this.points[j].kde_i1[i] = 1;
+        }
+	    // console.log(j, i, this.points[j].kde_i1[i], Math.log(this.points[j].kde_i1[i]));
+        // this.points[j].kde_i1[i] = Math.log(this.points[j].kde_i1[i]);
+      }
+    }
+    // console.log("new", this.points[29].kde_i1)
+
+    // after the log transform, for the rendering to work properly, you have to make all the values positive
+    //TODO
 
     // cell information
     this.connectivityArray = this.vtkDataSet.cells.connectivityArray.data;
