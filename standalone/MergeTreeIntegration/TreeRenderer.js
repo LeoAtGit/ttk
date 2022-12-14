@@ -150,7 +150,12 @@ class TreeRenderer {
       const p2 = this.points[this.connectivityArray[i+1]];
       if (p1.branchId !== p2.branchId) {
         let idx = (p2.y > p1.y) ? 1 : 0;
-        // this.points[this.connectivityArray[i + idx]].drawDonut = true;
+        this.points[this.connectivityArray[i + idx]].drawDonut = true;  // if you comment this out, the topN map stuff
+                                                                        // will be drawn incorrectly!
+                                                                        // If you don't want to draw donuts at the
+                                                                        // connecting points of the tree you can comment
+                                                                        // this out. This was used e.g. in the climate
+                                                                        // use case.
         this.points[this.connectivityArray[i + idx]].drawPoint = true;
       }
     }
